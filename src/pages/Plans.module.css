@@ -1,0 +1,186 @@
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 100px 24px 60px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.title {
+  font-family: var(--font-head);
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.sub {
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.filters {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.countrySelect {
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  font-size: 15px;
+  color: var(--text);
+  outline: none;
+  min-width: 280px;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+
+.countrySelect:focus {
+  border-color: rgba(0,200,255,.4);
+}
+
+.countrySelect option {
+  background: #1a2035;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 80px 0;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255,255,255,.1);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 80px 0;
+  font-size: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  transition: all .2s;
+  animation: fadeUp .4s ease both;
+}
+
+.card:hover {
+  border-color: rgba(0,200,255,.25);
+  background: rgba(255,255,255,.06);
+  transform: translateY(-2px);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.flag {
+  font-size: 24px;
+}
+
+.country {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.planName {
+  font-family: var(--font-head);
+  font-size: 17px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.planDetails {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.data {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.sep {
+  color: var(--border2);
+}
+
+.price {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.currency {
+  font-size: 13px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.amount {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.buyBtn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #000;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 11px;
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 800;
+  transition: all .2s;
+}
+
+.buyBtn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(0,200,255,.3);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

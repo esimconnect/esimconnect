@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>eSIM Connect — Data. Calls. OTP. Everywhere.</title>
+  <meta name="description" content="Travel eSIM data plans for 200+ countries, virtual home number, and OTP forwarding — all in one app. Never miss a call or bank OTP again." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #080b12;
+      --surface:   #0e1420;
+      --surface2:  #141b2a;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #f0f4ff;
+      --muted:     #7a8aaa;
+      --accent:    #00e5ff;
+      --green:     #00e096;
+      --gold:      #ffd166;
+      --radius:    16px;
+      --font-head: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.4;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(32px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50%       { transform: translateY(-12px); }
+    }
+    @keyframes pulse-ring {
+      0%   { transform: scale(0.8); opacity: 0.6; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    @keyframes shimmer {
+      0%   { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    @keyframes orbit {
+      from { transform: rotate(0deg) translateX(80px) rotate(0deg); }
+      to   { transform: rotate(360deg) translateX(80px) rotate(-360deg); }
+    }
+    @keyframes scanline {
+      0%   { top: -10%; }
+      100% { top: 110%; }
+    }
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.4; }
+      50%       { opacity: 0.9; }
+    }
+
+    .animate-fadeup   { animation: fadeUp 0.8s ease forwards; }
+    .animate-fadein   { animation: fadeIn 0.6s ease forwards; }
+    .delay-1 { animation-delay: 0.15s; opacity: 0; }
+    .delay-2 { animation-delay: 0.30s; opacity: 0; }
+    .delay-3 { animation-delay: 0.45s; opacity: 0; }
+    .delay-4 { animation-delay: 0.60s; opacity: 0; }
+    .delay-5 { animation-delay: 0.75s; opacity: 0; }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    section { position: relative; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 20px 0;
+      transition: background 0.3s, backdrop-filter 0.3s;
+    }
+    nav.scrolled {
+      background: rgba(8,11,18,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--accent);
+      color: #000 !important;
+      padding: 10px 22px;
+      border-radius: 50px;
+      font-weight: 700 !important;
+      font-size: 14px !important;
+      transition: all 0.2s !important;
+    }
+    .nav-cta:hover {
+      background: #fff !important;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(0,229,255,0.3);
+    }
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .nav-hamburger span {
+      display: block;
+      width: 24px; height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all 0.3s;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 120px 0 80px;
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+    .hero-glow-1 {
+      position: absolute;
+      top: -10%;
+      left: -5%;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(0,229,255,0.12) 0%, transparent 65%);
+      animation: glowPulse 4s ease-in-out infinite;
+    }
+    .hero-glow-2 {
+      position: absolute;
+      bottom: -20%;
+      right: -10%;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(0,224,150,0.09) 0%, transparent 65%);
+      animation: glowPulse 5s ease-in-out infinite reverse;
+    }
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse at 50% 50%, black 20%, transparent 75%);
+    }
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,229,255,0.08);
+      border: 1px solid rgba(0,229,255,0.2);
+      border-radius: 50px;
+      padding: 6px 16px;
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 24px;
+    }
+    .hero-badge-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      position: relative;
+    }
+    .hero-badge-dot::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.3;
+      animation: pulse-ring 1.5s ease-out infinite;
+    }
+    .hero-title {
+      font-family: var(--font-head);
+      font-size: clamp(40px, 5vw, 66px);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+    }
+    .hero-title .line-accent {
+      background: linear-gradient(135deg, var(--accent), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-title .line-dim { color: rgba(240,244,255,0.55); }
+    .hero-desc {
+      font-size: 18px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 40px;
+      font-weight: 300;
+      max-width: 480px;
+    }
+    .hero-desc strong { color: var(--text); font-weight: 500; }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, var(--accent), #0099cc);
+      color: #000;
+      padding: 16px 32px;
+      border-radius: 50px;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      transition: all 0.3s;
+      box-shadow: 0 8px 32px rgba(0,229,255,0.25);
+    }
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 48px rgba(0,229,255,0.4);
+    }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text);
+      padding: 16px 28px;
+      border-radius: 50px;
+      font-weight: 500;
+      font-size: 15px;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      transition: all 0.3s;
+    }
+    .btn-secondary:hover {
+      border-color: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.04);
+    }
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      margin-top: 56px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+    }
+    .hero-stat-num {
+      font-family: var(--font-head);
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .hero-stat-num span { color: var(--accent); }
+    .hero-stat-label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    /* ── PHONE VISUAL ── */
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    .phone-wrap {
+      position: relative;
+      animation: float 5s ease-in-out infinite;
+    }
+    .phone-frame {
+      width: 260px;
+      background: #0a0f1a;
+      border-radius: 44px;
+      border: 2px solid rgba(255,255,255,0.1);
+      overflow: hidden;
+      box-shadow:
+        0 40px 80px rgba(0,0,0,0.6),
+        0 0 0 1px rgba(255,255,255,0.05),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+      position: relative;
+    }
+    .phone-frame::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(0,229,255,0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 10;
+    }
+    .phone-notch {
+      width: 100px; height: 30px;
+      background: #000;
+      border-radius: 0 0 20px 20px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 5;
+    }
+    .phone-screen {
+      padding: 16px;
+    }
+    .pscreen-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .pscreen-logo {
+      font-family: var(--font-head);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .pscreen-logo span { color: var(--accent); }
+    .pscreen-live {
+      font-size: 10px;
+      background: rgba(0,224,150,0.15);
+      color: var(--green);
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .pscreen-active {
+      background: linear-gradient(135deg, rgba(0,229,255,0.1), rgba(0,224,150,0.1));
+      border: 1px solid rgba(0,229,255,0.2);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .pscreen-active-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .pscreen-country {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pscreen-flag { font-size: 20px; }
+    .pscreen-country-name {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .pscreen-badge {
+      font-size: 9px;
+      background: var(--green);
+      color: #000;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+    .pscreen-bar-bg {
+      height: 6px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .pscreen-bar-fill {
+      height: 100%;
+      width: 42%;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      border-radius: 3px;
+    }
+    .pscreen-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .pscreen-section-title {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+    }
+    .pscreen-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .pscreen-card {
+      background: var(--surface2);
+      border-radius: 12px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .pscreen-card-flag { font-size: 18px; margin-bottom: 4px; }
+    .pscreen-card-name { font-size: 10px; color: var(--muted); }
+    .pscreen-card-price {
+      font-family: var(--font-head);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .pscreen-vn {
+      background: rgba(255,209,102,0.08);
+      border: 1px solid rgba(255,209,102,0.2);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pscreen-vn-icon { font-size: 20px; }
+    .pscreen-vn-text { font-size: 10px; line-height: 1.5; }
+    .pscreen-vn-title { font-weight: 700; color: var(--gold); font-size: 11px; }
+    .pscreen-vn-sub { color: var(--muted); }
+
+    /* Floating cards around phone */
+    .float-card {
+      position: absolute;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 12px;
+      white-space: nowrap;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .float-card-title {
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+    .float-card-sub { color: var(--muted); font-size: 11px; }
+    .float-1 {
+      top: 10%;
+      right: -20%;
+      border-color: rgba(0,229,255,0.2);
+      animation: float 4s ease-in-out infinite 0.5s;
+    }
+    .float-2 {
+      bottom: 20%;
+      left: -22%;
+      border-color: rgba(0,224,150,0.2);
+      animation: float 4.5s ease-in-out infinite 1s;
+    }
+    .float-3 {
+      bottom: 5%;
+      right: -15%;
+      border-color: rgba(255,209,102,0.2);
+      animation: float 5s ease-in-out infinite 0.2s;
+    }
+
+    /* ── TRUSTED BY ── */
+    .trusted {
+      padding: 48px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .trusted-inner {
+      display: flex;
+      align-items: center;
+      gap: 48px;
+      flex-wrap: wrap;
+    }
+    .trusted-label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .trusted-flags {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tflag {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      transition: all 0.2s;
+    }
+    .tflag:hover {
+      transform: scale(1.15);
+      border-color: rgba(0,229,255,0.3);
+    }
+    .trusted-count {
+      margin-left: auto;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .trusted-count strong {
+      color: var(--accent);
+      font-family: var(--font-head);
+      font-size: 16px;
+    }
+
+    /* ── PROBLEM ── */
+    .problem {
+      padding: 120px 0 80px;
+    }
+    .section-eyebrow {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin-bottom: 16px;
+      display: block;
+    }
+    .section-title {
+      font-family: var(--font-head);
+      font-size: clamp(32px, 4vw, 52px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+    .section-desc {
+      font-size: 18px;
+      color: var(--muted);
+      line-height: 1.7;
+      font-weight: 300;
+      max-width: 560px;
+    }
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 64px;
+    }
+    .problem-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    .problem-card:hover {
+      border-color: rgba(255,80,80,0.3);
+      transform: translateY(-4px);
+    }
+    .problem-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #ff4444, #ff8800);
+    }
+    .problem-icon {
+      font-size: 36px;
+      margin-bottom: 20px;
+      display: block;
+    }
+    .problem-title {
+      font-family: var(--font-head);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .problem-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ── SOLUTION / FEATURES ── */
+    .features {
+      padding: 80px 0 120px;
+    }
+    .features-header {
+      text-align: center;
+      max-width: 640px;
+      margin: 0 auto 80px;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    .feature-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+    }
+    .feature-card.large {
+      grid-column: span 2;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: center;
+    }
+    .feature-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,229,255,0.4), transparent);
+    }
+    .feature-icon-wrap {
+      width: 60px; height: 60px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 24px;
+    }
+    .fi-blue  { background: rgba(0,229,255,0.1); }
+    .fi-green { background: rgba(0,224,150,0.1); }
+    .fi-gold  { background: rgba(255,209,102,0.1); }
+    .fi-purple{ background: rgba(180,100,255,0.1); }
+    .feature-title {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      letter-spacing: -0.5px;
+    }
+    .feature-desc {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .feature-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .feature-list li::before {
+      content: '✓';
+      color: var(--green);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .feature-visual {
+      display: flex;
+      justify-content: center;
+    }
+    .coverage-globe {
+      width: 220px; height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(0,229,255,0.15), rgba(0,224,150,0.05) 60%, transparent 80%);
+      border: 1px solid rgba(0,229,255,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 80px;
+      position: relative;
+      box-shadow: 0 0 60px rgba(0,229,255,0.1), inset 0 0 40px rgba(0,229,255,0.05);
+    }
+    .coverage-globe::before {
+      content: '';
+      position: absolute;
+      inset: -20px;
+      border-radius: 50%;
+      border: 1px dashed rgba(0,229,255,0.1);
+      animation: orbit 20s linear infinite;
+    }
+    .orbit-dot {
+      position: absolute;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+      top: -5px;
+      left: 50%;
+      margin-left: -5px;
+      animation: orbit 20s linear infinite;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how {
+      padding: 80px 0 120px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(0,229,255,0.04) 0%, transparent 70%);
+    }
+    .how-header {
+      text-align: center;
+      max-width: 560px;
+      margin: 0 auto 80px;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      position: relative;
+    }
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 36px;
+      left: 12.5%;
+      right: 12.5%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--green), transparent);
+    }
+    .step {
+      text-align: center;
+      padding: 0 24px;
+      position: relative;
+    }
+    .step-num {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-head);
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--accent);
+      margin: 0 auto 24px;
+      position: relative;
+      z-index: 2;
+      transition: all 0.3s;
+    }
+    .step:hover .step-num {
+      border-color: var(--accent);
+      background: rgba(0,229,255,0.08);
+      box-shadow: 0 0 32px rgba(0,229,255,0.2);
+    }
+    .step-icon { font-size: 28px; }
+    .step-title {
+      font-family: var(--font-head);
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .step-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── PRICING ── */
+    .pricing {
+      padding: 80px 0 120px;
+    }
+    .pricing-header {
+      text-align: center;
+      max-width: 560px;
+      margin: 0 auto 64px;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+    .price-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 32px;
+      position: relative;
+      transition: all 0.3s;
+    }
+    .price-card:hover { transform: translateY(-4px); }
+    .price-card.featured {
+      background: linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,224,150,0.04));
+      border-color: rgba(0,229,255,0.3);
+      box-shadow: 0 0 60px rgba(0,229,255,0.08);
+    }
+    .price-badge {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--accent), var(--green));
+      color: #000;
+      font-size: 11px;
+      font-weight: 800;
+      font-family: var(--font-head);
+      padding: 4px 16px;
+      border-radius: 20px;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .price-icon { font-size: 36px; margin-bottom: 20px; display: block; }
+    .price-name {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .price-tagline {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+    .price-amount {
+      font-family: var(--font-head);
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      margin-bottom: 4px;
+      line-height: 1;
+    }
+    .price-amount sup { font-size: 22px; vertical-align: super; letter-spacing: 0; }
+    .price-amount .per {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0;
+    }
+    .price-from {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+    .price-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+    .price-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .price-features li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .price-features li .check { color: var(--green); font-size: 16px; }
+    .price-features li .dash  { color: var(--border); font-size: 16px; }
+    .price-btn {
+      display: block;
+      text-align: center;
+      padding: 14px;
+      border-radius: 12px;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      transition: all 0.3s;
+    }
+    .price-btn.primary {
+      background: linear-gradient(135deg, var(--accent), var(--green));
+      color: #000;
+    }
+    .price-btn.primary:hover {
+      box-shadow: 0 8px 32px rgba(0,229,255,0.3);
+      transform: translateY(-2px);
+    }
+    .price-btn.outline {
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .price-btn.outline:hover {
+      border-color: rgba(0,229,255,0.3);
+      background: rgba(0,229,255,0.04);
+    }
+
+    /* ── CORPORATE / B2B ── */
+    .b2b {
+      padding: 80px 0 120px;
+    }
+    .b2b-inner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 72px 64px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .b2b-inner::before {
+      content: '';
+      position: absolute;
+      top: -100px; right: -100px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(0,229,255,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .b2b-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+    .b2b-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .b2b-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .b2b-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s;
+    }
+    .b2b-card:hover {
+      border-color: rgba(0,229,255,0.2);
+      transform: translateX(6px);
+    }
+    .b2b-card-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+    .b2b-card-icon {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .b2b-card-title {
+      font-family: var(--font-head);
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .b2b-card-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+      padding-left: 56px;
+    }
+
+    /* ── CTA BANNER ── */
+    .cta-section {
+      padding: 80px 0 120px;
+    }
+    .cta-inner {
+      text-align: center;
+      background: linear-gradient(135deg, rgba(0,229,255,0.08), rgba(0,224,150,0.06));
+      border: 1px solid rgba(0,229,255,0.2);
+      border-radius: 28px;
+      padding: 80px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-inner::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      width: 600px; height: 300px;
+      background: radial-gradient(ellipse, rgba(0,229,255,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-title {
+      font-family: var(--font-head);
+      font-size: clamp(32px, 4vw, 52px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .cta-desc {
+      font-size: 18px;
+      color: var(--muted);
+      margin-bottom: 40px;
+      font-weight: 300;
+      position: relative;
+    }
+    .cta-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+    .cta-note {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--muted);
+      position: relative;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px 0;
+    }
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .footer-logo {
+      font-family: var(--font-head);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .footer-logo span { color: var(--accent); }
+    .footer-tagline {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .footer-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+    .footer-links a {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text); }
+    .footer-copy {
+      font-size: 12px;
+      color: rgba(122,138,170,0.6);
+      text-align: right;
+    }
+
+    /* ── SCROLL REVEAL ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 960px) {
+      .hero-inner       { grid-template-columns: 1fr; gap: 60px; }
+      .hero-visual      { order: -1; }
+      .hero-title       { font-size: 40px; }
+      .hero-stats       { gap: 24px; }
+      .problem-grid     { grid-template-columns: 1fr; }
+      .features-grid    { grid-template-columns: 1fr; }
+      .feature-card.large { grid-column: span 1; grid-template-columns: 1fr; }
+      .steps            { grid-template-columns: repeat(2,1fr); gap: 40px; }
+      .steps::before    { display: none; }
+      .pricing-grid     { grid-template-columns: 1fr; }
+      .b2b-inner        { grid-template-columns: 1fr; gap: 40px; padding: 40px 28px; }
+      .nav-links        { display: none; }
+      .nav-hamburger    { display: flex; }
+      .float-1, .float-2, .float-3 { display: none; }
+      .trusted-inner    { flex-direction: column; align-items: flex-start; gap: 20px; }
+      .trusted-count    { margin-left: 0; }
+    }
+
+    @media (max-width: 600px) {
+      .hero { padding: 100px 0 60px; }
+      .phone-frame { width: 220px; }
+      .hero-actions { flex-direction: column; align-items: flex-start; }
+      .steps { grid-template-columns: 1fr; }
+      .cta-inner { padding: 48px 24px; }
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+      .footer-copy { text-align: left; }
+    }
+
+    /* Shimmer text */
+    .shimmer-text {
+      background: linear-gradient(90deg, var(--accent) 0%, var(--green) 40%, var(--accent) 80%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="navbar">
+    <div class="container">
+      <div class="nav-inner">
+        <a class="nav-logo" href="#">eSIM<span>Connect</span></a>
+        <ul class="nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#how">How It Works</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#corporate">Corporate</a></li>
+          <li><a href="#" class="nav-cta">Get Started →</a></li>
+        </ul>
+        <div class="nav-hamburger" id="hamburger">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-glow-1"></div>
+      <div class="hero-glow-2"></div>
+      <div class="hero-grid"></div>
+    </div>
+    <div class="container">
+      <div class="hero-inner">
+
+        <div class="hero-content">
+          <div class="hero-badge animate-fadeup">
+            <span class="hero-badge-dot"></span>
+            Now live in 200+ countries
+          </div>
+          <h1 class="hero-title animate-fadeup delay-1">
+            Travel with<br/>
+            <span class="line-accent">full connectivity.</span><br/>
+            <span class="line-dim">No surprises.</span>
+          </h1>
+          <p class="hero-desc animate-fadeup delay-2">
+            One app for <strong>eSIM data</strong>, your <strong>home phone number</strong>,
+            and <strong>OTP forwarding</strong>. Never miss a bank call, government SMS
+            or family message — wherever you are in the world.
+          </p>
+          <div class="hero-actions animate-fadeup delay-3">
+            <a href="#" class="btn-primary">
+              <span>🚀</span> Launch App
+            </a>
+            <a href="#how" class="btn-secondary">
+              See how it works ↓
+            </a>
+          </div>
+          <div class="hero-stats animate-fadeup delay-4">
+            <div>
+              <div class="hero-stat-num">200<span>+</span></div>
+              <div class="hero-stat-label">Countries covered</div>
+            </div>
+            <div>
+              <div class="hero-stat-num">60<span>+</span></div>
+              <div class="hero-stat-label">Home number countries</div>
+            </div>
+            <div>
+              <div class="hero-stat-num">SGD<span> $9</span></div>
+              <div class="hero-stat-label">Plans from</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-visual animate-fadein delay-2">
+          <div class="phone-wrap">
+
+            <!-- Floating cards -->
+            <div class="float-card float-1">
+              <div class="float-card-title">📞 OTP Received</div>
+              <div class="float-card-sub">DBS Bank · Just now</div>
+            </div>
+            <div class="float-card float-2">
+              <div class="float-card-title" style="color:var(--green)">✅ eSIM Activated</div>
+              <div class="float-card-sub">Japan · 7 days · 10GB</div>
+            </div>
+            <div class="float-card float-3">
+              <div class="float-card-title" style="color:var(--gold)">📲 Call Forwarded</div>
+              <div class="float-card-sub">+65 XXXX · Mom</div>
+            </div>
+
+            <!-- Phone frame -->
+            <div class="phone-frame">
+              <div class="phone-notch"></div>
+              <div class="phone-screen">
+                <div class="pscreen-header">
+                  <div class="pscreen-logo">eSIM<span>Connect</span></div>
+                  <div class="pscreen-live">🟢 LIVE</div>
+                </div>
+
+                <!-- Active plan -->
+                <div class="pscreen-active">
+                  <div class="pscreen-active-top">
+                    <div class="pscreen-country">
+                      <span class="pscreen-flag">🇯🇵</span>
+                      <span class="pscreen-country-name">Japan</span>
+                    </div>
+                    <span class="pscreen-badge">ACTIVE</span>
+                  </div>
+                  <div class="pscreen-bar-bg">
+                    <div class="pscreen-bar-fill"></div>
+                  </div>
+                  <div class="pscreen-bar-label">
+                    <span>4.2 GB used</span>
+                    <span>10 GB total</span>
+                  </div>
+                </div>
+
+                <!-- Country grid -->
+                <div class="pscreen-section-title">Popular Plans</div>
+                <div class="pscreen-grid">
+                  <div class="pscreen-card">
+                    <div class="pscreen-card-flag">🇰🇷</div>
+                    <div class="pscreen-card-name">Korea</div>
+                    <div class="pscreen-card-price">SGD $9</div>
+                  </div>
+                  <div class="pscreen-card">
+                    <div class="pscreen-card-flag">🇬🇧</div>
+                    <div class="pscreen-card-name">UK</div>
+                    <div class="pscreen-card-price">SGD $12</div>
+                  </div>
+                </div>
+
+                <!-- Virtual number -->
+                <div class="pscreen-vn">
+                  <span class="pscreen-vn-icon">📞</span>
+                  <div class="pscreen-vn-text">
+                    <div class="pscreen-vn-title">Virtual Number Active</div>
+                    <div class="pscreen-vn-sub">+65 XXXX · Forwarding on</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUSTED BY -->
+  <section class="trusted">
+    <div class="container">
+      <div class="trusted-inner">
+        <span class="trusted-label">Travellers from</span>
+        <div class="trusted-flags">
+          <div class="tflag" title="Singapore">🇸🇬</div>
+          <div class="tflag" title="Australia">🇦🇺</div>
+          <div class="tflag" title="United Kingdom">🇬🇧</div>
+          <div class="tflag" title="Germany">🇩🇪</div>
+          <div class="tflag" title="Japan">🇯🇵</div>
+          <div class="tflag" title="South Korea">🇰🇷</div>
+          <div class="tflag" title="United States">🇺🇸</div>
+          <div class="tflag" title="Malaysia">🇲🇾</div>
+          <div class="tflag" title="India">🇮🇳</div>
+          <div class="tflag" title="And more">+</div>
+        </div>
+        <div class="trusted-count">Travelling to <strong>200+</strong> destinations worldwide</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE PROBLEM -->
+  <section class="problem">
+    <div class="container">
+      <div class="reveal">
+        <span class="section-eyebrow">The Problem</span>
+        <h2 class="section-title">Overseas but still<br/>tied to home.</h2>
+        <p class="section-desc">Every traveller faces the same three problems. Most apps solve one. We solve all three.</p>
+      </div>
+      <div class="problem-grid">
+        <div class="problem-card reveal">
+          <span class="problem-icon">📶</span>
+          <div class="problem-title">Expensive roaming data</div>
+          <p class="problem-desc">Your home carrier charges SGD $10–30/day for roaming. A two-week trip can add hundreds to your bill before you even check the exchange rate.</p>
+        </div>
+        <div class="problem-card reveal">
+          <span class="problem-icon">📵</span>
+          <div class="problem-title">Missed calls from home</div>
+          <p class="problem-desc">Your bank, tax office, doctor or family tries to call. They reach voicemail. WhatsApp and Telegram don't work for government agencies or hospitals.</p>
+        </div>
+        <div class="problem-card reveal">
+          <span class="problem-icon">🔐</span>
+          <div class="problem-title">OTP SMS never arrives</div>
+          <p class="problem-desc">Banking apps, Singpass, government portals — all locked behind a one-time SMS password sent to your home SIM. No SMS = locked out completely.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES / SOLUTION -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="features-header reveal">
+        <span class="section-eyebrow">The Solution</span>
+        <h2 class="section-title">Everything you need.<br/><span class="shimmer-text">One app.</span></h2>
+        <p class="section-desc" style="margin: 0 auto;">eSIM Connect is the only travel app that covers data, incoming calls, OTP forwarding — and outgoing calls — in one place.</p>
+      </div>
+
+      <div class="features-grid">
+
+        <!-- Feature 1: eSIM Data -->
+        <div class="feature-card reveal">
+          <div class="feature-icon-wrap fi-blue">📡</div>
+          <div class="feature-title">eSIM Data in 200+ Countries</div>
+          <p class="feature-desc">Buy a local data plan in seconds. No physical SIM swap. No roaming charges. Instant QR code activation before you even board the plane.</p>
+          <ul class="feature-list">
+            <li>4G/5G speeds in 200+ destinations</li>
+            <li>Plans from SGD $9 · 3 days to 30 days</li>
+            <li>Instant activation via QR code</li>
+            <li>Smart alerts at 80%, 95%, 100% usage</li>
+            <li>Top up instantly from the app</li>
+          </ul>
+        </div>
+
+        <!-- Feature 2: Virtual Number -->
+        <div class="feature-card reveal">
+          <div class="feature-icon-wrap fi-gold">📞</div>
+          <div class="feature-title">Keep Your Home Number</div>
+          <p class="feature-desc">Get a virtual number from your home country. Calls to your real number forward straight to the app via internet — no IDD charges for anyone.</p>
+          <ul class="feature-list">
+            <li>Home numbers in 60+ countries</li>
+            <li>Calls forwarded to app in real time</li>
+            <li>Callers pay local rate only</li>
+            <li>Works for banks, government, family</li>
+            <li>SGD $3/month — cancel anytime</li>
+          </ul>
+        </div>
+
+        <!-- Feature 3: OTP / SMS - large card -->
+        <div class="feature-card large reveal">
+          <div>
+            <div class="feature-icon-wrap fi-green">💬</div>
+            <div class="feature-title">Every OTP. Every SMS. Delivered.</div>
+            <p class="feature-desc">The one feature that changes everything. Your bank OTP, Singpass code, government portal PIN — everything that arrives by SMS at home arrives instantly in your app, wherever you are.</p>
+            <ul class="feature-list">
+              <li>SMS forwarded instantly to app</li>
+              <li>OTP codes displayed prominently — copy in one tap</li>
+              <li>Works for any bank, any government portal, any service</li>
+              <li>Any home country — Singapore, UK, Australia, Japan and more</li>
+              <li>Push notification the moment SMS arrives</li>
+            </ul>
+          </div>
+          <div class="feature-visual">
+            <div class="coverage-globe">
+              🌏
+              <div class="orbit-dot"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature 4: Corporate -->
+        <div class="feature-card reveal">
+          <div class="feature-icon-wrap fi-purple">🏢</div>
+          <div class="feature-title">Corporate White Label</div>
+          <p class="feature-desc">Deploy your own branded travel SIM app for staff. Your logo, your colours, corporate rates — free to set up, zero licensing fee.</p>
+          <ul class="feature-list">
+            <li>Your brand, your subdomain</li>
+            <li>Staff pays, claims from company</li>
+            <li>GST receipts for expense claims</li>
+            <li>Zero setup cost to your company</li>
+          </ul>
+        </div>
+
+        <!-- Feature 5: Outgoing -->
+        <div class="feature-card reveal">
+          <div class="feature-icon-wrap fi-blue">🔊</div>
+          <div class="feature-title">Outgoing Calls at Local Rates</div>
+          <p class="feature-desc">Call home from overseas without IDD charges. Calls go via internet from your virtual home number — recipient sees your real number, pays nothing extra.</p>
+          <ul class="feature-list">
+            <li>Call any number worldwide</li>
+            <li>From SGD $0.05/minute</li>
+            <li>Your home number shows on caller ID</li>
+            <li>Works on WiFi or eSIM data</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how" id="how">
+    <div class="container">
+      <div class="how-header reveal">
+        <span class="section-eyebrow">How It Works</span>
+        <h2 class="section-title">Up and running<br/>in 4 steps.</h2>
+        <p class="section-desc" style="margin: 0 auto;">From sign-up to fully connected in under five minutes — before you even reach the airport.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="step-num"><span class="step-icon">📱</span></div>
+          <div class="step-title">Download & Sign Up</div>
+          <p class="step-desc">Create your free account on esimconnect.world. No SIM card required. Works on any eSIM-compatible phone.</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-num"><span class="step-icon">🌍</span></div>
+          <div class="step-title">Pick Your Destination</div>
+          <p class="step-desc">Search from 200+ countries. Compare plans by data, validity and speed. Pay via Stripe or PayNow.</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-num"><span class="step-icon">📲</span></div>
+          <div class="step-title">Activate Your eSIM</div>
+          <p class="step-desc">Scan the QR code in Settings. Your eSIM activates instantly. Use it as your data SIM the moment you land.</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-num"><span class="step-icon">📞</span></div>
+          <div class="step-title">Add Virtual Number</div>
+          <p class="step-desc">Optionally add a virtual home number for SGD $3/month. Set up call forwarding once — all calls and OTP reach you anywhere.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="pricing" id="pricing">
+    <div class="container">
+      <div class="pricing-header reveal">
+        <span class="section-eyebrow">Pricing</span>
+        <h2 class="section-title">Simple, transparent<br/>pricing.</h2>
+        <p class="section-desc" style="margin: 0 auto;">No hidden fees. No monthly subscription. Pay only for what you use.</p>
+      </div>
+      <div class="pricing-grid">
+
+        <div class="price-card reveal">
+          <span class="price-icon">📡</span>
+          <div class="price-name">eSIM Data</div>
+          <p class="price-tagline">Local data wherever you travel. No roaming. Instant activation.</p>
+          <div class="price-amount"><sup>SGD $</sup>9<span class="per"> / plan</span></div>
+          <div class="price-from">Plans from 3 days · Asia, Europe, Americas & more</div>
+          <div class="price-divider"></div>
+          <ul class="price-features">
+            <li><span class="check">✓</span> 200+ countries</li>
+            <li><span class="check">✓</span> 4G / 5G speeds</li>
+            <li><span class="check">✓</span> Instant QR activation</li>
+            <li><span class="check">✓</span> Usage alerts</li>
+            <li><span class="check">✓</span> Easy top-up</li>
+          </ul>
+          <a href="#" class="price-btn outline">Browse Plans →</a>
+        </div>
+
+        <div class="price-card featured reveal">
+          <div class="price-badge">⭐ Most Popular</div>
+          <span class="price-icon">📦</span>
+          <div class="price-name">Data + Virtual Number</div>
+          <p class="price-tagline">Full travel connectivity — data plan plus your home number forwarding.</p>
+          <div class="price-amount"><sup>SGD $</sup>12<span class="per"> / trip</span></div>
+          <div class="price-from">eSIM plan from $9 + Virtual Number $3/month</div>
+          <div class="price-divider"></div>
+          <ul class="price-features">
+            <li><span class="check">✓</span> Everything in eSIM Data</li>
+            <li><span class="check">✓</span> Virtual home number</li>
+            <li><span class="check">✓</span> Incoming call forwarding</li>
+            <li><span class="check">✓</span> SMS + OTP forwarding</li>
+            <li><span class="check">✓</span> 60+ home countries</li>
+          </ul>
+          <a href="#" class="price-btn primary">Get Started →</a>
+        </div>
+
+        <div class="price-card reveal">
+          <span class="price-icon">🏢</span>
+          <div class="price-name">Corporate</div>
+          <p class="price-tagline">White label app for your company. Your brand, corporate rates, free to deploy.</p>
+          <div class="price-amount" style="font-size:32px; letter-spacing:-1px">Free<span class="per"> setup</span></div>
+          <div class="price-from">Pay only for plans used by your staff</div>
+          <div class="price-divider"></div>
+          <ul class="price-features">
+            <li><span class="check">✓</span> Your logo + colours</li>
+            <li><span class="check">✓</span> Your subdomain</li>
+            <li><span class="check">✓</span> Corporate rates</li>
+            <li><span class="check">✓</span> GST receipts</li>
+            <li><span class="check">✓</span> Zero licence fee</li>
+          </ul>
+          <a href="#corporate" class="price-btn outline">Contact Us →</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CORPORATE / B2B -->
+  <section class="b2b" id="corporate">
+    <div class="container">
+      <div class="b2b-inner reveal">
+        <div>
+          <span class="section-eyebrow">For Business</span>
+          <h2 class="section-title" style="font-size: clamp(28px,3vw,44px)">Your brand.<br/>Our platform.<br/><span class="shimmer-text">Zero cost.</span></h2>
+          <p class="section-desc">Deploy a fully white-labelled travel eSIM app for your team in 48 hours. No development. No licensing fee. Staff get corporate rates and GST receipts — you get a better travel benefit at zero cost.</p>
+          <div class="b2b-chips">
+            <div class="b2b-chip">🏦 Financial Services</div>
+            <div class="b2b-chip">✈️ Travel Agencies</div>
+            <div class="b2b-chip">🏭 Manufacturing</div>
+            <div class="b2b-chip">💼 Professional Services</div>
+            <div class="b2b-chip">🛒 Retail Chains</div>
+            <div class="b2b-chip">+ Any industry</div>
+          </div>
+        </div>
+        <div class="b2b-cards">
+          <div class="b2b-card">
+            <div class="b2b-card-top">
+              <div class="b2b-card-icon fi-blue">🎨</div>
+              <div class="b2b-card-title">Your Brand Identity</div>
+            </div>
+            <p class="b2b-card-desc">Your company logo, your colour scheme, your subdomain (company.esimconnect.world). Looks like your own app — built on our platform.</p>
+          </div>
+          <div class="b2b-card">
+            <div class="b2b-card-top">
+              <div class="b2b-card-icon fi-green">💰</div>
+              <div class="b2b-card-title">Corporate Rates + GST Receipts</div>
+            </div>
+            <p class="b2b-card-desc">Staff pay with their own card and claim reimbursement. Every purchase generates a GST-compliant receipt. Finance team loves it.</p>
+          </div>
+          <div class="b2b-card">
+            <div class="b2b-card-top">
+              <div class="b2b-card-icon fi-gold">⚡</div>
+              <div class="b2b-card-title">48-Hour Setup</div>
+            </div>
+            <p class="b2b-card-desc">No IT project. No procurement process. No budget approval needed — it's free. Send us your logo and brand colours, we handle the rest.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-inner reveal">
+        <h2 class="cta-title">Ready to roam free?</h2>
+        <p class="cta-desc">Join thousands of travellers who never miss a call, OTP or data plan again.</p>
+        <div class="cta-actions">
+          <a href="#" class="btn-primary">
+            <span>🚀</span> Launch App — It's Free
+          </a>
+          <a href="mailto:hello@esimconnect.world" class="btn-secondary">
+            📧 Contact for Corporate
+          </a>
+        </div>
+        <p class="cta-note">No subscription · No SIM card needed · Works in 200+ countries</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <div>
+          <a class="footer-logo" href="#">eSIM<span>Connect</span></a>
+          <div class="footer-tagline">Data. Calls. OTP. Everywhere.</div>
+        </div>
+        <ul class="footer-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#corporate">Corporate</a></li>
+          <li><a href="mailto:hello@esimconnect.world">Contact</a></li>
+        </ul>
+        <div class="footer-copy">
+          © 2026 eSIM Connect<br/>
+          esimconnect.world
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => entry.target.classList.add('visible'), i * 80);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => observer.observe(el));
+
+    // Smooth scroll
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

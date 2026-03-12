@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="eSIM Connect — Stay connected everywhere. Instant eSIM data plans for 190+ countries. No roaming. No contracts."/>
+  <title>eSIM Connect — Travel Without Limits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --ink:#1a1f2e;--ink2:#374151;--muted:#6b7280;--light:#f3f0eb;--white:#faf8f5;
+      --accent:#0066ff;--accent2:#00c896;--gold:#f59e0b;--red:#ef4444;
+      --border:#ddd8d0;--border2:#c9c3bb;
+      --radius:14px;--shadow:0 4px 24px rgba(0,0,0,.08);--shadow2:0 20px 60px rgba(0,0,0,.12);
+      --ff-head:'Nunito',sans-serif;--ff-body:'Plus Jakarta Sans',sans-serif;--ff-mono:'DM Mono',monospace;
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:var(--ff-body);color:var(--ink);background:var(--white);line-height:1.6;overflow-x:hidden}
+    a{text-decoration:none;color:inherit}
+    button,input,select,textarea{font-family:var(--ff-body)}
+    img{max-width:100%}
+    /* PAGES */
+    .page{display:none;min-height:100vh}
+    .page.active{display:block}
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(250,248,245,.97);backdrop-filter:blur(20px);border-bottom:1px solid #ddd8d0;padding:0 5%;height:68px;display:flex;align-items:center;justify-content:space-between}
+    .nav-logo{font-family:var(--ff-head);font-size:22px;font-weight:900;color:var(--ink);cursor:pointer;letter-spacing:-.2px}
+    .nav-logo span{color:var(--accent)}
+    .nav-links{display:flex;align-items:center;gap:32px}
+    .nav-link{font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;transition:color .2s;letter-spacing:.2px}
+    .nav-link:hover{color:var(--ink)}
+    .nav-cta{background:var(--accent);color:#fff;padding:10px 22px;border-radius:50px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .2s;letter-spacing:.2px}
+    .nav-cta:hover{background:#0052cc;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,102,255,.3)}
+    .nav-mobile{display:none;flex-direction:column;gap:4px;cursor:pointer;padding:4px}
+    .nav-mobile span{width:22px;height:2px;background:var(--ink);border-radius:2px;transition:all .3s}
+    /* HERO */
+    .hero{padding:140px 5% 100px;background:linear-gradient(160deg,#f5f0e8 0%,#faf8f5 50%,#eef5f0 100%);position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(0,102,255,.06),transparent 70%);pointer-events:none}
+    .hero::after{content:'';position:absolute;bottom:-100px;left:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(0,200,150,.06),transparent 70%);pointer-events:none}
+    .hero-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+    .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(0,102,255,.06);border:1px solid rgba(0,102,255,.15);color:var(--accent);font-size:12px;font-weight:700;padding:7px 16px;border-radius:50px;letter-spacing:.3px;text-transform:uppercase;margin-bottom:24px}
+    .hero-title{font-family:var(--ff-head);font-size:clamp(36px,5vw,56px);font-weight:900;line-height:1.15;letter-spacing:-.5px;margin-bottom:20px;color:var(--ink)}
+    .hero-title em{font-style:normal;color:var(--accent)}
+    .hero-sub{font-size:17px;color:var(--muted);line-height:1.75;margin-bottom:36px;max-width:480px;font-weight:400}
+    .hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:48px}
+    .btn-primary{background:var(--accent);color:#fff;padding:15px 32px;border-radius:50px;font-size:15px;font-weight:700;cursor:pointer;border:none;transition:all .25s;letter-spacing:.2px;display:inline-flex;align-items:center;gap:8px}
+    .btn-primary:hover{background:#0052cc;transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,102,255,.35)}
+    .btn-secondary{background:transparent;color:var(--ink);padding:15px 32px;border-radius:50px;font-size:15px;font-weight:700;cursor:pointer;border:2px solid var(--border2);transition:all .25s;display:inline-flex;align-items:center;gap:8px}
+    .btn-secondary:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+    .hero-trust{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+    .trust-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:500}
+    .trust-dot{width:6px;height:6px;border-radius:50%;background:var(--accent2)}
+    /* HERO VISUAL */
+    .hero-visual{position:relative;display:flex;justify-content:center;align-items:center}
+    .phone-mockup{width:260px;background:var(--ink);border-radius:44px;border:8px solid var(--ink);overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.25),0 0 0 1px rgba(255,255,255,.1);position:relative;z-index:2}
+    .phone-screen{background:linear-gradient(160deg,#0a0f1e,#0e1520);padding:20px 16px;min-height:480px}
+    .phone-notch{width:90px;height:24px;background:var(--ink);border-radius:12px;margin:0 auto 20px;position:relative;z-index:10}
+    .mock-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .mock-logo{font-family:'Nunito',sans-serif;font-size:14px;font-weight:900;color:#fff}
+    .mock-logo span{color:#00e5ff}
+    .mock-badge{font-size:9px;background:rgba(0,224,150,.15);color:#00e096;padding:3px 8px;border-radius:10px;font-weight:700}
+    .mock-card{background:linear-gradient(135deg,rgba(0,229,255,.1),rgba(0,224,150,.06));border:1px solid rgba(0,229,255,.2);border-radius:14px;padding:14px;margin-bottom:12px}
+    .mock-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .mock-flag{font-size:22px}
+    .mock-active{font-size:9px;background:#00e096;color:#000;padding:3px 8px;border-radius:10px;font-weight:800}
+    .mock-country{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px}
+    .mock-bar-bg{height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;margin-bottom:4px}
+    .mock-bar-fill{height:100%;width:42%;background:linear-gradient(90deg,#00e5ff,#00e096);border-radius:3px}
+    .mock-bar-label{display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.4)}
+    .mock-countries{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .mock-country-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;text-align:center}
+    .mock-cf{font-size:20px;margin-bottom:4px}
+    .mock-cn{font-size:10px;color:rgba(255,255,255,.7);font-weight:600}
+    .mock-cp{font-size:9px;color:#00e5ff}
+    .float-badge{position:absolute;background:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,.12);border:1px solid var(--border);font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;white-space:nowrap;z-index:3}
+    .float-badge.top{top:-20px;right:-40px}
+    .float-badge.bottom{bottom:40px;left:-50px}
+    .float-icon{font-size:18px}
+    /* SECTIONS */
+    .section{padding:80px 5%}
+    .section-inner{max-width:1100px;margin:0 auto}
+    .section-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:12px}
+    .section-title{font-family:var(--ff-head);font-size:clamp(26px,4vw,40px);font-weight:800;line-height:1.2;letter-spacing:-.3px;margin-bottom:16px;color:var(--ink)}
+    .section-sub{font-size:16px;color:var(--muted);max-width:540px;line-height:1.7}
+    /* COUNTRIES STRIP */
+    .countries-strip{background:#ede9e2;border-top:1px solid #ddd8d0;border-bottom:1px solid #ddd8d0;padding:28px 5%;overflow:hidden}
+    .strip-inner{display:flex;gap:32px;animation:scroll 30s linear infinite;width:max-content}
+    .strip-item{display:flex;align-items:center;gap:10px;white-space:nowrap;font-size:14px;font-weight:500;color:var(--muted)}
+    .strip-flag{font-size:20px}
+    @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+    /* HOW IT WORKS */
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:52px}
+    .step{position:relative;padding:36px 28px;background:#faf8f5;border:1px solid #ddd8d0;border-radius:20px;transition:all .3s;overflow:hidden}
+    .step::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:0;transition:opacity .3s}
+    .step:hover{transform:translateY(-6px);box-shadow:var(--shadow2);border-color:transparent}
+    .step:hover::before{opacity:1}
+    .step-num{font-family:var(--ff-head);font-size:56px;font-weight:900;color:rgba(0,102,255,.06);line-height:1;margin-bottom:16px}
+    .step-icon{font-size:32px;margin-bottom:14px;display:block}
+    .step-title{font-size:17px;font-weight:800;margin-bottom:8px;color:var(--ink)}
+    .step-desc{font-size:14px;color:var(--muted);line-height:1.7}
+    /* FEATURES */
+    .features{background:#f0ede8}
+    .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:52px}
+    .feat{background:#faf8f5;border:1px solid #ddd8d0;border-radius:20px;padding:32px;transition:all .3s}
+    .feat:hover{transform:translateY(-4px);box-shadow:var(--shadow2);border-color:var(--accent)}
+    .feat-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:18px}
+    .feat-icon.blue{background:rgba(0,102,255,.08)}
+    .feat-icon.green{background:rgba(0,200,150,.08)}
+    .feat-icon.gold{background:rgba(245,158,11,.08)}
+    .feat-icon.purple{background:rgba(139,92,246,.08)}
+    .feat-icon.red{background:rgba(239,68,68,.08)}
+    .feat-icon.teal{background:rgba(20,184,166,.08)}
+    .feat-title{font-size:16px;font-weight:700;margin-bottom:8px;color:var(--ink)}
+    .feat-desc{font-size:14px;color:var(--muted);line-height:1.7}
+    .feat-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:10px;background:rgba(0,102,255,.06);color:var(--accent);text-transform:uppercase;letter-spacing:.5px}
+    /* PRICING */
+    .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:52px}
+    .price-card{background:#faf8f5;border:2px solid #ddd8d0;border-radius:24px;padding:36px 28px;transition:all .3s;position:relative}
+    .price-card.featured{border-color:var(--accent);background:linear-gradient(160deg,#edf4ff,#faf8f5)}
+    .price-card:hover{transform:translateY(-6px);box-shadow:var(--shadow2)}
+    .price-popular{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:5px 16px;border-radius:20px;white-space:nowrap;letter-spacing:.5px}
+    .price-name{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px}
+    .price-amount{font-family:var(--ff-mono);font-size:42px;font-weight:500;color:var(--ink);line-height:1;margin-bottom:4px}
+    .price-amount span{font-size:16px;font-weight:500;color:var(--muted)}
+    .price-gst{font-size:12px;color:var(--muted);margin-bottom:20px}
+    .price-divider{height:1px;background:var(--border);margin:20px 0}
+    .price-feat{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink2);margin-bottom:10px;line-height:1.4}
+    .price-check{color:var(--accent2);font-size:16px;flex-shrink:0}
+    /* DOWNLOAD */
+    .download-section{background:linear-gradient(160deg,var(--ink) 0%,#0f2040 100%);color:#fff;position:relative;overflow:hidden}
+    .download-section::before{content:'';position:absolute;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(0,102,255,.15),transparent 70%);pointer-events:none}
+    .download-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;padding:80px 5%}
+    .download-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:rgba(0,229,255,.7);margin-bottom:12px}
+    .download-title{font-family:var(--ff-head);font-size:clamp(28px,4vw,44px);font-weight:900;line-height:1.2;margin-bottom:16px}
+    .download-sub{font-size:16px;color:rgba(255,255,255,.6);line-height:1.7;margin-bottom:36px}
+    .store-btns{display:flex;gap:14px;flex-wrap:wrap}
+    .store-btn{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 20px;cursor:pointer;transition:all .2s;min-width:160px}
+    .store-btn:hover{background:rgba(255,255,255,.15);transform:translateY(-2px)}
+    .store-icon{font-size:28px;flex-shrink:0}
+    .store-text{display:flex;flex-direction:column}
+    .store-sub{font-size:10px;color:rgba(255,255,255,.5);font-weight:500;letter-spacing:.3px}
+    .store-name{font-size:15px;font-weight:700;color:#fff}
+    .pwa-btn{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(0,102,255,.3),rgba(0,200,150,.2));border:1px solid rgba(0,229,255,.3);border-radius:14px;padding:14px 20px;cursor:pointer;transition:all .2s;min-width:160px}
+    .pwa-btn:hover{background:linear-gradient(135deg,rgba(0,102,255,.4),rgba(0,200,150,.3));transform:translateY(-2px)}
+    .download-visual{display:flex;justify-content:center;gap:20px;align-items:flex-end}
+    .qr-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:24px;text-align:center}
+    .qr-box{width:120px;height:120px;background:#fff;border-radius:12px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:48px}
+    .qr-label{font-size:12px;color:rgba(255,255,255,.5);font-weight:500}
+    /* FAQ */
+    .faq-list{margin-top:48px;max-width:760px}
+    .faq-item{border-bottom:1px solid var(--border);overflow:hidden}
+    .faq-q{display:flex;align-items:center;justify-content:space-between;padding:20px 0;cursor:pointer;font-size:15px;font-weight:600;color:var(--ink);gap:16px;transition:color .2s}
+    .faq-q:hover{color:var(--accent)}
+    .faq-arrow{width:28px;height:28px;border-radius:50%;background:var(--light);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:all .3s;color:var(--muted)}
+    .faq-item.open .faq-arrow{background:var(--accent);color:#fff;transform:rotate(180deg)}
+    .faq-a{font-size:14px;color:var(--muted);line-height:1.8;max-height:0;overflow:hidden;transition:max-height .4s ease,padding .3s}
+    .faq-item.open .faq-a{max-height:300px;padding-bottom:20px}
+    /* AUTH FORMS */
+    .auth-page{background:linear-gradient(160deg,#f5f0e8,#eef5f0);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:100px 20px 40px}
+    .auth-card{background:#faf8f5;border-radius:28px;padding:48px 44px;width:100%;max-width:440px;box-shadow:var(--shadow2);border:1px solid var(--border)}
+    .auth-logo{font-family:var(--ff-head);font-size:22px;font-weight:900;margin-bottom:32px;text-align:center}
+    .auth-logo span{color:var(--accent)}
+    .auth-tabs{display:flex;background:#ede9e2;border-radius:12px;padding:4px;margin-bottom:28px;gap:4px}
+    .auth-tab{flex:1;padding:10px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .2s;font-family:var(--ff-body)}
+    .auth-tab.active{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+    .form-group{margin-bottom:18px}
+    .form-label{font-size:12px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px}
+    .form-input{width:100%;background:#f0ede8;border:1.5px solid #ddd8d0;border-radius:12px;padding:13px 16px;font-size:15px;color:var(--ink);outline:none;transition:border-color .2s;font-family:var(--ff-body)}
+    .form-input:focus{border-color:var(--accent);background:#fff}
+    .form-input::placeholder{color:#94a3b8}
+    .or-divider{display:flex;align-items:center;gap:14px;margin:20px 0;font-size:13px;color:var(--muted);font-weight:500}
+    .or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+    .google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--ink);font-family:var(--ff-body);margin-bottom:6px}
+    .google-btn:hover{border-color:#4285f4;background:#f8f9ff;transform:translateY(-1px)}
+    .consent-row{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:16px}
+    .consent-row input{margin-top:2px;flex-shrink:0;accent-color:var(--accent);width:16px;height:16px}
+    .consent-row a{color:var(--accent);font-weight:500}
+    .submit-btn{width:100%;padding:15px;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;border:none;transition:all .2s;font-family:var(--ff-body);letter-spacing:.2px}
+    .submit-btn:hover{background:#0052cc;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,102,255,.3)}
+    .auth-switch{text-align:center;font-size:13px;color:var(--muted);margin-top:20px}
+    .auth-switch a{color:var(--accent);font-weight:600;cursor:pointer}
+    /* GUEST CHECKOUT */
+    .guest-note{background:rgba(0,102,255,.04);border:1px solid rgba(0,102,255,.1);border-radius:12px;padding:14px 16px;margin-bottom:20px;font-size:13px;color:var(--muted);line-height:1.6;display:flex;align-items:flex-start;gap:10px}
+    .guest-note-icon{font-size:18px;flex-shrink:0}
+    /* LEGAL PAGES */
+    .legal-page{padding:120px 5% 80px;max-width:800px;margin:0 auto}
+    .legal-title{font-family:var(--ff-head);font-size:clamp(26px,4vw,38px);font-weight:800;margin-bottom:8px;color:var(--ink)}
+    .legal-meta{font-size:13px;color:var(--muted);margin-bottom:48px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+    .legal-section{margin-bottom:36px}
+    .legal-h2{font-size:18px;font-weight:700;color:var(--ink);margin-bottom:12px;padding-top:8px}
+    .legal-h3{font-size:15px;font-weight:600;color:var(--ink2);margin-bottom:8px;margin-top:16px}
+    .legal-p{font-size:14px;color:var(--ink2);line-height:1.8;margin-bottom:12px}
+    .legal-list{font-size:14px;color:var(--ink2);line-height:1.8;margin-bottom:12px;padding-left:20px}
+    .legal-list li{margin-bottom:6px}
+    .legal-highlight{background:rgba(0,102,255,.04);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:14px 16px;margin:16px 0;font-size:14px;color:var(--ink2);line-height:1.7}
+    /* FOOTER */
+    footer{background:var(--ink);color:rgba(255,255,255,.6);padding:60px 5% 32px}
+    .footer-inner{max-width:1100px;margin:0 auto}
+    .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:48px;margin-bottom:48px}
+    .footer-brand{font-family:var(--ff-head);font-size:20px;font-weight:900;color:#fff;margin-bottom:12px}
+    .footer-brand span{color:#00e5ff}
+    .footer-tagline{font-size:13px;line-height:1.7;max-width:240px}
+    .footer-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.9);margin-bottom:16px}
+    .footer-link{font-size:13px;display:block;margin-bottom:10px;cursor:pointer;transition:color .2s}
+    .footer-link:hover{color:#fff}
+    .footer-bottom{border-top:1px solid rgba(255,255,255,.08);padding-top:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    .footer-copy{font-size:12px}
+    .footer-badges{display:flex;gap:12px}
+    .footer-badge{font-size:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:4px 12px;border-radius:20px;color:rgba(255,255,255,.5)}
+    /* TOAST */
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:14px 24px;border-radius:50px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.2);display:none;white-space:nowrap}
+    .toast.show{display:block;animation:toastIn .3s ease}
+    @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+    /* RESPONSIVE */
+    @media(max-width:900px){
+      .hero-inner,.download-inner{grid-template-columns:1fr;text-align:center}
+      .hero-visual{display:none}
+      .hero-sub{margin:0 auto 36px}
+      .hero-actions{justify-content:center}
+      .hero-trust{justify-content:center}
+      .steps,.features-grid,.pricing-grid,.footer-grid{grid-template-columns:1fr 1fr}
+      .download-visual{display:none}
+    }
+    @media(max-width:600px){
+      .steps,.features-grid,.pricing-grid,.footer-grid{grid-template-columns:1fr}
+      .nav-links{display:none}
+      .nav-mobile{display:flex}
+      .auth-card{padding:32px 24px}
+    }
+    /* ANIMATIONS */
+    @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    .fadeup{animation:fadeUp .6s ease forwards}
+    .fadeup-2{animation:fadeUp .6s .1s ease both}
+    .fadeup-3{animation:fadeUp .6s .2s ease both}
+    .fadeup-4{animation:fadeUp .6s .3s ease both}
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="main-nav">
+  <div class="nav-logo" onclick="showPage('home')">eSIM<span>Connect</span></div>
+  <div class="nav-links">
+    <span class="nav-link" onclick="showPage('home')">Home</span>
+    <span class="nav-link" onclick="scrollToSection('how-it-works')">How It Works</span>
+    <span class="nav-link" onclick="scrollToSection('features')">Features</span>
+    <span class="nav-link" onclick="showPage('faq')">FAQ</span>
+    <span class="nav-link" onclick="showPage('download')">Install PWA</span>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <span class="nav-link" onclick="showPage('auth')" style="font-weight:600">Login</span>
+    <button class="nav-cta" onclick="showPage('auth')">Get Started →</button>
+  </div>
+  <div class="nav-mobile" onclick="showToast('Mobile menu coming soon!')">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- HOME PAGE -->
+<!-- ══════════════════════════════════════════ -->
+<div id="page-home" class="page active">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <div class="hero-eyebrow fadeup">✦ Instant Activation · 190+ Countries</div>
+        <h1 class="hero-title fadeup-2">Travel Without<br/><em>Limits</em> or<br/>Roaming Bills</h1>
+        <p class="hero-sub fadeup-3">Instant eSIM data plans, a virtual home number, and an AI travel companion — everything you need, the moment you land.</p>
+        <div class="hero-actions fadeup-4">
+          <button class="btn-primary" onclick="showPage('auth')">Get Your eSIM →</button>
+          <button class="btn-secondary" onclick="showPage('download')">📲 Download App</button>
+        </div>
+        <div class="hero-trust fadeup-4">
+          <div class="trust-item"><span class="trust-dot"></span>No registration required</div>
+          <div class="trust-item"><span class="trust-dot"></span>Instant QR delivery</div>
+          <div class="trust-item"><span class="trust-dot"></span>From SGD $8.00</div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div style="position:relative">
+          <div class="phone-mockup">
+            <div class="phone-screen">
+              <div class="phone-notch"></div>
+              <div class="mock-header">
+                <div class="mock-logo">eSIM<span>Connect</span></div>
+                <div class="mock-badge">LIVE</div>
+              </div>
+              <div class="mock-card">
+                <div class="mock-card-top">
+                  <div>
+                    <div style="font-size:9px;color:rgba(255,255,255,.5);margin-bottom:2px">ACTIVE PLAN</div>
+                    <div class="mock-country">🇯🇵 Japan</div>
+                  </div>
+                  <div class="mock-active">ACTIVE</div>
+                </div>
+                <div class="mock-bar-bg"><div class="mock-bar-fill"></div></div>
+                <div class="mock-bar-label"><span>4.2GB used</span><span>10GB total</span></div>
+              </div>
+              <div style="font-size:9px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Popular Destinations</div>
+              <div class="mock-countries">
+                <div class="mock-country-card"><div class="mock-cf">🇰🇷</div><div class="mock-cn">South Korea</div><div class="mock-cp">From $9</div></div>
+                <div class="mock-country-card"><div class="mock-cf">🇹🇭</div><div class="mock-cn">Thailand</div><div class="mock-cp">From $8</div></div>
+                <div class="mock-country-card"><div class="mock-cf">🇦🇺</div><div class="mock-cn">Australia</div><div class="mock-cp">From $12</div></div>
+                <div class="mock-country-card"><div class="mock-cf">🇬🇧</div><div class="mock-cn">UK</div><div class="mock-cp">From $12</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="float-badge top"><span class="float-icon">🤖</span><span>AI Travel Companion</span></div>
+          <div class="float-badge bottom"><span class="float-icon">⚡</span><span>Activated in 60 sec</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COUNTRIES STRIP -->
+  <div class="countries-strip">
+    <div class="strip-inner">
+      <div class="strip-item"><span class="strip-flag">🇯🇵</span>Japan</div>
+      <div class="strip-item"><span class="strip-flag">🇰🇷</span>South Korea</div>
+      <div class="strip-item"><span class="strip-flag">🇹🇭</span>Thailand</div>
+      <div class="strip-item"><span class="strip-flag">🇦🇺</span>Australia</div>
+      <div class="strip-item"><span class="strip-flag">🇬🇧</span>United Kingdom</div>
+      <div class="strip-item"><span class="strip-flag">🇺🇸</span>USA</div>
+      <div class="strip-item"><span class="strip-flag">🇩🇪</span>Germany</div>
+      <div class="strip-item"><span class="strip-flag">🇫🇷</span>France</div>
+      <div class="strip-item"><span class="strip-flag">🇮🇹</span>Italy</div>
+      <div class="strip-item"><span class="strip-flag">🇮🇳</span>India</div>
+      <div class="strip-item"><span class="strip-flag">🇲🇾</span>Malaysia</div>
+      <div class="strip-item"><span class="strip-flag">🇻🇳</span>Vietnam</div>
+      <div class="strip-item"><span class="strip-flag">🇭🇰</span>Hong Kong</div>
+      <div class="strip-item"><span class="strip-flag">🇹🇼</span>Taiwan</div>
+      <!-- duplicate for seamless scroll -->
+      <div class="strip-item"><span class="strip-flag">🇯🇵</span>Japan</div>
+      <div class="strip-item"><span class="strip-flag">🇰🇷</span>South Korea</div>
+      <div class="strip-item"><span class="strip-flag">🇹🇭</span>Thailand</div>
+      <div class="strip-item"><span class="strip-flag">🇦🇺</span>Australia</div>
+      <div class="strip-item"><span class="strip-flag">🇬🇧</span>United Kingdom</div>
+      <div class="strip-item"><span class="strip-flag">🇺🇸</span>USA</div>
+      <div class="strip-item"><span class="strip-flag">🇩🇪</span>Germany</div>
+      <div class="strip-item"><span class="strip-flag">🇫🇷</span>France</div>
+      <div class="strip-item"><span class="strip-flag">🇮🇹</span>Italy</div>
+      <div class="strip-item"><span class="strip-flag">🇮🇳</span>India</div>
+      <div class="strip-item"><span class="strip-flag">🇲🇾</span>Malaysia</div>
+      <div class="strip-item"><span class="strip-flag">🇻🇳</span>Vietnam</div>
+      <div class="strip-item"><span class="strip-flag">🇭🇰</span>Hong Kong</div>
+      <div class="strip-item"><span class="strip-flag">🇹🇼</span>Taiwan</div>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <section class="section" id="how-it-works">
+    <div class="section-inner">
+      <div class="section-eyebrow">How It Works</div>
+      <h2 class="section-title">Connected in three simple steps</h2>
+      <p class="section-sub">No physical SIM. No store visit. No waiting. Just instant connectivity wherever you land.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <span class="step-icon">🌍</span>
+          <div class="step-title">Choose Your Destination</div>
+          <div class="step-desc">Browse 190+ countries. Filter by data size, speed, and duration. Pick the plan that suits your trip.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <span class="step-icon">💳</span>
+          <div class="step-title">Pay Securely</div>
+          <div class="step-desc">Pay by card or PayNow. No registration required — just your mobile number and email for QR delivery.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <span class="step-icon">📱</span>
+          <div class="step-title">Scan & Fly</div>
+          <div class="step-desc">Scan the QR code in your phone settings. Your eSIM activates the moment you arrive at your destination.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section features" id="features">
+    <div class="section-inner">
+      <div class="section-eyebrow">Everything Included</div>
+      <h2 class="section-title">More than just data</h2>
+      <p class="section-sub">eSIM Connect is a complete travel communications platform — not just a SIM card seller.</p>
+      <div class="features-grid">
+        <div class="feat">
+          <div class="feat-icon blue">📡</div>
+          <div class="feat-title">Instant eSIM Data</div>
+          <div class="feat-desc">4G/5G plans from SGD $8. Activate before you board. QR code delivered to your email in under 60 seconds.</div>
+        </div>
+        <div class="feat">
+          <div class="feat-icon green">📞</div>
+          <div class="feat-title">Virtual Home Number</div>
+          <div class="feat-desc">Keep your home number reachable abroad. Calls and SMS forwarded to the app via internet — no IDD charges.</div>
+          <span class="feat-badge">+SGD $3/month</span>
+        </div>
+        <div class="feat">
+          <div class="feat-icon gold">🔑</div>
+          <div class="feat-title">OTP & SMS Forwarding</div>
+          <div class="feat-desc">Never get locked out of your bank, Singpass, or Google account. All OTPs forwarded instantly to your app.</div>
+        </div>
+        <div class="feat">
+          <div class="feat-icon purple">🤖</div>
+          <div class="feat-title">AI Travel Companion</div>
+          <div class="feat-desc">Powered by Claude AI. Get destination intel, a personalised day-by-day itinerary, and local recommendations.</div>
+          <span class="feat-badge">Exclusive</span>
+        </div>
+        <div class="feat">
+          <div class="feat-icon red">🌙</div>
+          <div class="feat-title">Late Arrival Protection</div>
+          <div class="feat-desc">Arrive after 10pm? We extend your Day 1 allowance automatically. No other eSIM provider does this.</div>
+          <span class="feat-badge">Unique</span>
+        </div>
+        <div class="feat">
+          <div class="feat-icon teal">⚡</div>
+          <div class="feat-title">Smart Data Alerts</div>
+          <div class="feat-desc">Get notified at 80% and 95% usage. One-tap top-up. Auto top-up so you're never caught without data.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="section">
+    <div class="section-inner">
+      <div class="section-eyebrow">Pricing</div>
+      <h2 class="section-title">Simple, transparent pricing</h2>
+      <p class="section-sub">Sample plans for Japan. Prices vary by destination. All prices in SGD, inclusive of 9% GST shown at checkout.</p>
+      <div class="pricing-grid">
+        <div class="price-card">
+          <div class="price-name">Starter</div>
+          <div class="price-amount">$9<span>/plan</span></div>
+          <div class="price-gst">$9.81 incl. GST · 3GB · 7 Days</div>
+          <div class="price-divider"></div>
+          <div class="price-feat"><span class="price-check">✓</span>3GB high-speed data</div>
+          <div class="price-feat"><span class="price-check">✓</span>7-day validity</div>
+          <div class="price-feat"><span class="price-check">✓</span>4G LTE speeds</div>
+          <div class="price-feat"><span class="price-check">✓</span>Instant QR delivery</div>
+          <div class="price-feat"><span class="price-check">✓</span>AI Travel Companion</div>
+          <div style="margin-top:24px"><button class="btn-primary" style="width:100%;justify-content:center" onclick="showPage('auth')">Get Started</button></div>
+        </div>
+        <div class="price-card featured">
+          <div class="price-popular">⭐ Most Popular</div>
+          <div class="price-name">Explorer</div>
+          <div class="price-amount">$12<span>/plan</span></div>
+          <div class="price-gst">$13.08 incl. GST · 5GB · 10 Days</div>
+          <div class="price-divider"></div>
+          <div class="price-feat"><span class="price-check">✓</span>5GB high-speed data</div>
+          <div class="price-feat"><span class="price-check">✓</span>10-day validity</div>
+          <div class="price-feat"><span class="price-check">✓</span>4G/5G speeds</div>
+          <div class="price-feat"><span class="price-check">✓</span>Instant QR delivery</div>
+          <div class="price-feat"><span class="price-check">✓</span>AI Travel Companion</div>
+          <div class="price-feat"><span class="price-check">✓</span>Late Arrival Protection</div>
+          <div style="margin-top:24px"><button class="btn-primary" style="width:100%;justify-content:center" onclick="showPage('auth')">Get Started</button></div>
+        </div>
+        <div class="price-card">
+          <div class="price-name">Globetrotter</div>
+          <div class="price-amount">$18<span>/plan</span></div>
+          <div class="price-gst">$19.62 incl. GST · Unlimited · 7 Days</div>
+          <div class="price-divider"></div>
+          <div class="price-feat"><span class="price-check">✓</span>Unlimited data</div>
+          <div class="price-feat"><span class="price-check">✓</span>7-day validity</div>
+          <div class="price-feat"><span class="price-check">✓</span>4G speeds</div>
+          <div class="price-feat"><span class="price-check">✓</span>Instant QR delivery</div>
+          <div class="price-feat"><span class="price-check">✓</span>AI Travel Companion</div>
+          <div class="price-feat"><span class="price-check">✓</span>Auto top-up</div>
+          <div style="margin-top:24px"><button class="btn-primary" style="width:100%;justify-content:center" onclick="showPage('auth')">Get Started</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD CTA -->
+  <section class="section download-section">
+    <div class="download-inner">
+      <div>
+        <div class="download-eyebrow">Get the App</div>
+        <h2 class="download-title">Your complete travel companion in your pocket</h2>
+        <p class="download-sub">Manage your eSIM, take calls, forward OTPs, and access AI travel intel — all in one lightweight app.</p>
+        <div class="store-btns">
+          <div class="pwa-btn" onclick="showPage('download')" style="min-width:220px">
+            <span class="store-icon">🌐</span>
+            <div class="store-text"><span class="store-sub">Install as</span><span class="store-name">Web App (PWA)</span></div>
+          </div>
+          <div class="store-btn" onclick="showPage('auth')" style="min-width:180px">
+            <span class="store-icon">🚀</span>
+            <div class="store-text"><span class="store-sub">Or use in</span><span class="store-name">Your Browser</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="download-visual">
+        <div class="qr-card">
+          <div class="qr-box">📱</div>
+          <div class="qr-label">Scan to open web app</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:4px">esimconnect.world</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ PREVIEW -->
+  <section class="section">
+    <div class="section-inner">
+      <div class="section-eyebrow">FAQ</div>
+      <h2 class="section-title">Common questions</h2>
+      <div class="faq-list" id="faq-preview">
+        <!-- populated by JS -->
+      </div>
+      <div style="margin-top:32px">
+        <button class="btn-secondary" onclick="showPage('faq')">View All FAQs →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">eSIM<span>Connect</span></div>
+          <div class="footer-tagline">Your complete travel communications platform. Stay connected, stay reachable, travel with confidence.</div>
+          <div style="margin-top:16px;font-size:12px;color:rgba(255,255,255,.3)">A product of AAAI Ventures<br/>Registered in Singapore</div>
+        </div>
+        <div>
+          <div class="footer-col-title">Product</div>
+          <span class="footer-link" onclick="scrollToSection('how-it-works')">How It Works</span>
+          <span class="footer-link" onclick="scrollToSection('features')">Features</span>
+          <span class="footer-link" onclick="scrollToSection('pricing')">Pricing</span>
+          <span class="footer-link" onclick="showPage('download')">Download App</span>
+        </div>
+        <div>
+          <div class="footer-col-title">Support</div>
+          <span class="footer-link" onclick="showPage('faq')">FAQ</span>
+          <span class="footer-link" onclick="showToast('Contact: support@esimconnect.world')">Contact Us</span>
+          <span class="footer-link" onclick="showToast('Live chat coming soon!')">Live Chat</span>
+        </div>
+        <div>
+          <div class="footer-col-title">Legal</div>
+          <span class="footer-link" onclick="showPage('terms')">Terms & Conditions</span>
+          <span class="footer-link" onclick="showPage('privacy')">Privacy Policy</span>
+          <span class="footer-link" onclick="showPage('disclaimer')">Legal Disclaimer</span>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-copy">© 2026 AAAI Ventures. All rights reserved. eSIM Connect is a registered trademark.</div>
+        <div class="footer-badges">
+          <span class="footer-badge">PDPA Compliant</span>
+          <span class="footer-badge">SSL Secured</span>
+          <span class="footer-badge">Singapore</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</div><!-- end home page -->
+
+<!-- ══════════════════════════════════════════ -->
+<!-- AUTH PAGE (Login / Register / Guest) -->
+<!-- ══════════════════════════════════════════ -->
+<div id="page-auth" class="page">
+  <nav style="position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 5%;height:68px;display:flex;align-items:center;justify-content:space-between">
+    <div class="nav-logo" onclick="showPage('home')">eSIM<span>Connect</span></div>
+    <span style="font-size:13px;color:var(--muted);cursor:pointer" onclick="showPage('home')">← Back to Home</span>
+  </nav>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">eSIM<span>Connect</span></div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Login</button>
+        <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</button>
+        <button class="auth-tab" id="tab-guest" onclick="switchAuthTab('guest')">Guest</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="form-login">
+        <button class="google-btn" onclick="showToast('Google login coming soon!')">
+          <span style="font-size:18px">G</span> Continue with Google
+        </button>
+        <div class="or-divider">or login with email</div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-input" type="email" placeholder="you@email.com"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" placeholder="Your password"/>
+        </div>
+        <div style="text-align:right;margin-bottom:20px">
+          <span style="font-size:13px;color:var(--accent);cursor:pointer;font-weight:500" onclick="showToast('Password reset email sent!')">Forgot password?</span>
+        </div>
+        <button class="submit-btn" onclick="showToast('✅ Login successful! Redirecting to app...')">Login →</button>
+        <div class="auth-switch">Don't have an account? <a onclick="switchAuthTab('register')">Register free</a></div>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="form-register" style="display:none">
+        <button class="google-btn" onclick="showToast('Google signup coming soon!')">
+          <span style="font-size:18px">G</span> Sign up with Google
+        </button>
+        <div class="or-divider">or register with email</div>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" type="text" placeholder="Your full name"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-input" type="email" placeholder="you@email.com"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mobile Number</label>
+          <input class="form-input" type="tel" placeholder="+65 9123 4567"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" placeholder="Minimum 8 characters"/>
+        </div>
+        <div class="consent-row">
+          <input type="checkbox" id="consent1"/>
+          <label for="consent1">I agree to the <a onclick="showPage('terms')">Terms & Conditions</a> and <a onclick="showPage('privacy')">Privacy Policy</a>. I consent to eSIM Connect collecting and using my personal data to process my orders and deliver services.</label>
+        </div>
+        <div class="consent-row">
+          <input type="checkbox" id="consent2"/>
+          <label for="consent2">Send me promotional offers and travel deals. (Optional — you may unsubscribe anytime.)</label>
+        </div>
+        <button class="submit-btn" onclick="showToast('✅ Account created! Check your email to verify.')">Create Account →</button>
+        <div class="auth-switch">Already have an account? <a onclick="switchAuthTab('login')">Login</a></div>
+      </div>
+
+      <!-- GUEST CHECKOUT -->
+      <div id="form-guest" style="display:none">
+        <div class="guest-note">
+          <span class="guest-note-icon">ℹ️</span>
+          <span>No account needed. Just provide your mobile number and email — we'll send your eSIM QR code instantly. Your data is handled in accordance with Singapore's PDPA.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mobile Number</label>
+          <input class="form-input" type="tel" placeholder="+65 9123 4567"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address <span style="color:var(--muted);font-size:11px">(for QR code delivery)</span></label>
+          <input class="form-input" type="email" placeholder="you@email.com"/>
+        </div>
+        <div class="consent-row">
+          <input type="checkbox" id="consent-guest"/>
+          <label for="consent-guest">I agree to the <a onclick="showPage('terms')">Terms & Conditions</a>. I consent to eSIM Connect using my mobile number and email to process my order and deliver my eSIM QR code.</label>
+        </div>
+        <button class="submit-btn" onclick="showToast('✅ Proceeding to checkout...')">Continue to Purchase →</button>
+        <div class="auth-switch">Want to save your plans? <a onclick="switchAuthTab('register')">Create a free account</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- DOWNLOAD PAGE -->
+<!-- ══════════════════════════════════════════ -->
+<div id="page-download" class="page">
+  <div style="padding:120px 5% 80px;max-width:800px;margin:0 auto;text-align:center">
+    <div class="section-eyebrow" style="justify-content:center;display:block">Get the App</div>
+    <h1 class="section-title" style="text-align:center;margin:12px auto 16px">Install eSIM Connect</h1>
+    <p class="section-sub" style="margin:0 auto 48px;text-align:center">No app store needed. eSIM Connect is a Progressive Web App (PWA) — install it directly from your browser onto your home screen in seconds.</p>
+    <div style="display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:48px">
+      <div style="background:linear-gradient(135deg,#0066ff,#00c896);border-radius:24px;padding:36px 40px;text-align:center;min-width:220px;cursor:pointer;box-shadow:0 12px 40px rgba(0,102,255,.2)" onclick="showToast('Add to home screen from your browser menu!')">
+        <div style="font-size:56px;margin-bottom:14px">🌐</div>
+        <div style="color:rgba(255,255,255,.8);font-size:12px;margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase;font-weight:600">Install as</div>
+        <div style="color:#fff;font-size:20px;font-weight:800;letter-spacing:-.3px">Web App (PWA)</div>
+        <div style="color:rgba(255,255,255,.8);font-size:12px;margin-top:10px;background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px;display:inline-block">Works on all devices ✅</div>
+      </div>
+    </div>
+    <p style="text-align:center;color:var(--muted);font-size:14px;margin-bottom:40px">No app store. No downloads. No updates to manage.<br/>Just open your browser, register, and install to your home screen.</p>
+    <div style="background:var(--light);border:1px solid var(--border);border-radius:20px;padding:32px;max-width:480px;margin:0 auto">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">How to install the Web App</h3>
+      <div style="text-align:left">
+        <div style="display:flex;gap:12px;margin-bottom:12px;font-size:14px;color:var(--ink2)"><span style="width:24px;height:24px;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">1</span><span><strong>iPhone:</strong> Open in Safari → Tap Share → "Add to Home Screen"</span></div>
+        <div style="display:flex;gap:12px;margin-bottom:12px;font-size:14px;color:var(--ink2)"><span style="width:24px;height:24px;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">2</span><span><strong>Android:</strong> Open in Chrome → Tap Menu → "Add to Home Screen"</span></div>
+        <div style="display:flex;gap:12px;font-size:14px;color:var(--ink2)"><span style="width:24px;height:24px;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">3</span><span><strong>Desktop:</strong> Click the install icon in your browser address bar</span></div>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-bottom" style="border-top:none;padding-top:0">
+        <div class="footer-copy">© 2026 AAAI Ventures · <span style="cursor:pointer;color:rgba(255,255,255,.4)" onclick="showPage('terms')">Terms</span> · <span style="cursor:pointer;color:rgba(255,255,255,.4)" onclick="showPage('privacy')">Privacy</span></div>
+        <div class="footer-badges"><span class="footer-badge">Singapore</span></div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- FAQ PAGE -->
+<!-- ══════════════════════════════════════════ -->
+<div id="page-faq" class="page">
+  <div class="legal-page" style="max-width:860px">
+    <div class="section-eyebrow">Help Centre</div>
+    <h1 class="legal-title">Frequently Asked Questions</h1>
+    <div class="legal-meta">Last updated: March 2026 · <span style="color:var(--accent);cursor:pointer" onclick="showToast('Email: support@esimconnect.world')">Contact Support</span></div>
+    <div id="faq-full"></div>
+  </div>
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-bottom" style="border-top:none;padding-top:0">
+        <div class="footer-copy">© 2026 AAAI Ventures · <span style="cursor:pointer;color:rgba(255,255,255,.4)" onclick="showPage('terms')">Terms</span> · <span style="cursor:pointer;color:rgba(255,255,255,.4)" onclick="showPage('privacy')">Privacy</span></div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- TERMS & CONDITIONS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="page-terms" class="page">
+  <div class="legal-page">
+    <h1 class="legal-title">Terms & Conditions</h1>
+    <div class="legal-meta">Last updated: 8 March 2026 · Effective: 8 March 2026 · AAAI Ventures, Singapore</div>
+    <div class="legal-highlight">By using eSIM Connect, you agree to these Terms. Please read them carefully. If you do not agree, do not use our services.</div>
+    <div class="legal-section">
+      <div class="legal-h2">1. About eSIM Connect</div>
+      <p class="legal-p">eSIM Connect is a product of AAAI Ventures, a business registered in Singapore. We operate a digital marketplace for eSIM data plans and supplementary communications services including virtual phone numbers, OTP forwarding, and outgoing voice calls.</p>
+      <p class="legal-p">We act as a reseller of eSIM data plans provided by Airalo and virtual number services provided by Twilio. We are not a licensed telecommunications operator.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">2. Eligibility</div>
+      <p class="legal-p">You must be 18 years of age or older to use eSIM Connect. By using our services, you confirm that you meet this requirement.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">3. eSIM Data Plans</div>
+      <div class="legal-h3">3.1 Activation</div>
+      <p class="legal-p">eSIM plans are activated when your device first connects to the destination network. Day 1 of your plan begins upon activation. Plans with Late Arrival Protection will extend Day 1 if activation occurs between 22:00 and 23:59 local destination time.</p>
+      <div class="legal-h3">3.2 Compatibility</div>
+      <p class="legal-p">eSIM plans require an eSIM-compatible device. It is your responsibility to verify compatibility before purchase. A list of compatible devices is available on our website.</p>
+      <div class="legal-h3">3.3 No Refund Policy</div>
+      <p class="legal-p">All eSIM purchases are final. No refunds will be issued once an eSIM QR code has been delivered to your email, as the eSIM has been provisioned at that point. In cases of technical failure on our part, we will provide a replacement eSIM or credit.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">4. Virtual Numbers & Voice Services</div>
+      <p class="legal-p">Virtual numbers are provided on a monthly subscription basis via Twilio's platform. You may not use virtual numbers for illegal activities, spam, or to impersonate others. We reserve the right to terminate your virtual number without notice if misuse is detected.</p>
+      <p class="legal-p">Outgoing call rates are charged per minute from your eWallet balance. Rates are displayed before each call. We are not responsible for call quality issues caused by network conditions.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">5. Payments</div>
+      <p class="legal-p">All prices are in Singapore Dollars (SGD). 9% Goods and Services Tax (GST) is itemised at checkout. Payments are processed by Stripe (card) and PayNow (bank transfer). We do not store card details — all payment data is handled by Stripe (PCI DSS Level 1 certified).</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">6. AI Travel Companion</div>
+      <p class="legal-p">The AI Travel Companion feature is powered by the Anthropic Claude API. Destination intelligence, itineraries, and recommendations are AI-generated and may not always be accurate or up-to-date. You should verify critical travel information (safety, entry requirements, etc.) with official government sources before travelling.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">7. Limitation of Liability</div>
+      <p class="legal-p">eSIM Connect and AAAI Ventures shall not be liable for any indirect, incidental, or consequential damages arising from the use or inability to use our services, including but not limited to missed calls, failed OTPs, or loss of data connectivity.</p>
+      <p class="legal-p">Our total liability to you shall not exceed the amount paid for the specific service that gave rise to the claim.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">8. Governing Law</div>
+      <p class="legal-p">These Terms are governed by the laws of Singapore. Any disputes shall be subject to the exclusive jurisdiction of the courts of Singapore.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">9. Changes to Terms</div>
+      <p class="legal-p">We may update these Terms from time to time. Continued use of eSIM Connect after changes constitutes acceptance of the new Terms. We will notify registered users by email of material changes.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">10. Contact</div>
+      <p class="legal-p">For questions about these Terms, contact us at: <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b9d5dcded8d5f9dccad0d4dad6d7d7dcdacd97ced6cbd5dd">[email&#160;protected]</a></strong></p>
+    </div>
+  </div>
+  <footer><div class="footer-inner"><div class="footer-bottom" style="border-top:none;padding-top:0"><div class="footer-copy">© 2026 AAAI Ventures · <span style="cursor:pointer;color:rgba(255,255,255,.4)" onclick="showPage('privacy')">Privacy Policy</span> · <span style="cursor:pointer;color:rgba(255,255,255,.4)" onclick="showPage('disclaimer')">Disclaimer</span></div></div></div></footer>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- PRIVACY POLICY -->
+<!-- ══════════════════════════════════════════ -->
+<div id="page-privacy" class="page">
+  <div class="legal-page">
+    <h1 class="legal-title">Privacy Policy</h1>
+    <div class="legal-meta">Last updated: 8 March 2026 · AAAI Ventures, Singapore · PDPA Compliant</div>
+    <div class="legal-highlight">eSIM Connect is committed to protecting your personal data in accordance with Singapore's Personal Data Protection Act 2012 (PDPA). This policy explains what data we collect, why, and how we protect it.</div>
+    <div class="legal-section">
+      <div class="legal-h2">1. Data We Collect</div>
+      <ul class="legal-list">
+        <li><strong>Mobile number</strong> — for account verification and OTP forwarding services</li>
+        <li><strong>Email address</strong> — for QR code delivery, receipts, and account management</li>
+        <li><strong>Name</strong> — for registered accounts only</li>
+        <li><strong>Payment information</strong> — processed by Stripe; we do not store card details</li>
+        <li><strong>Usage data</strong> — eSIM data usage statistics to provide alerts and top-up services</li>
+        <li><strong>Device information</strong> — browser type and device model for compatibility purposes</li>
+      </ul>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">2. Why We Collect Your Data</div>
+      <ul class="legal-list">
+        <li>To process your eSIM order and deliver your QR code</li>
+        <li>To provide virtual number and call forwarding services</li>
+        <li>To send data usage alerts and top-up notifications</li>
+        <li>To comply with legal and regulatory obligations</li>
+        <li>To send promotional offers <strong>only if you have opted in</strong></li>
+      </ul>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">3. Do Not Call (DNC) Registry</div>
+      <p class="legal-p">We comply with Singapore's Do Not Call Registry. We will not send unsolicited marketing messages to telephone numbers registered on the DNC Registry. You may opt out of marketing communications at any time.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">4. Data Sharing</div>
+      <p class="legal-p">We share your data only with the following third parties, strictly as necessary to provide our services:</p>
+      <ul class="legal-list">
+        <li><strong>Airalo</strong> — to provision eSIM plans (email, order details)</li>
+        <li><strong>Twilio</strong> — to provision virtual numbers (mobile number)</li>
+        <li><strong>Stripe</strong> — to process payments (email, payment details)</li>
+        <li><strong>SendGrid</strong> — to deliver transactional emails (email)</li>
+        <li><strong>Anthropic</strong> — AI Travel Companion queries (destination and travel dates only — no personal identifiers)</li>
+      </ul>
+      <p class="legal-p">We do not sell your personal data to any third party.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">5. Data Retention</div>
+      <p class="legal-p">We retain your data for as long as your account is active or as required by law. Order records are retained for 7 years for accounting purposes. You may request deletion of your account and personal data at any time.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">6. Your Rights</div>
+      <ul class="legal-list">
+        <li><strong>Access</strong> — request a copy of your personal data</li>
+        <li><strong>Correction</strong> — request correction of inaccurate data</li>
+        <li><strong>Deletion</strong> — request deletion of your account and data</li>
+        <li><strong>Opt-out</strong> — unsubscribe from marketing at any time</li>
+      </ul>
+      <p class="legal-p">To exercise these rights, email: <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="bdcdcfd4cbdcdec4fdd8ced4d0ded2d3d3d8dec993cad2cfd1d9">[email&#160;protected]</a></strong></p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">7. Data Protection Officer</div>
+      <p class="legal-p">Our Data Protection Officer is David Lim, reachable at <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="761217001f121a1f1b3613051f1b15191818131502580119041a12">[email&#160;protected]</a></strong>.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">8. Cookies</div>
+      <p class="legal-p">We use essential cookies for session management only. We do not use advertising or tracking cookies.</p>
+    </div>
+  </div>
+  <footer><div class="footer-inner"><div class="footer-bottom" style="border-top:none;padding-top:0"><div class="footer-copy">© 2026 AAAI Ventures · <span style="cursor:pointer;color:rgba(255,255,255,.4)" onclick="showPage('terms')">Terms</span> · <span style="cursor:pointer;color:rgba(255,255,255,.4)" onclick="showPage('disclaimer')">Disclaimer</span></div></div></div></footer>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- LEGAL DISCLAIMER -->
+<!-- ══════════════════════════════════════════ -->
+<div id="page-disclaimer" class="page">
+  <div class="legal-page">
+    <h1 class="legal-title">Legal Disclaimer</h1>
+    <div class="legal-meta">Last updated: 8 March 2026 · AAAI Ventures, Singapore</div>
+    <div class="legal-section">
+      <div class="legal-h2">1. Reseller Status</div>
+      <p class="legal-p">eSIM Connect is a digital reseller of eSIM data plans and telecommunications services. We are not a licensed telecommunications operator or network provider. eSIM data services are provided by Airalo and their underlying carrier partners. Virtual number and voice services are provided by Twilio Inc.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">2. Service Availability</div>
+      <p class="legal-p">eSIM connectivity depends on local network availability in your destination country. We cannot guarantee uninterrupted service, specific speeds, or coverage in all areas. Network performance is subject to the policies of local carriers.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">3. AI-Generated Content</div>
+      <p class="legal-p">The AI Travel Companion feature generates destination intelligence, itineraries, and recommendations using artificial intelligence. This content is provided for informational purposes only and may contain errors or outdated information. eSIM Connect makes no representations as to the accuracy, completeness, or suitability of AI-generated content.</p>
+      <p class="legal-p">You should always verify travel advisories, entry requirements, safety information, and local regulations with official government sources such as the Singapore Ministry of Foreign Affairs (MFA) travel advisory portal.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">4. No Warranty</div>
+      <p class="legal-p">eSIM Connect services are provided "as is" without warranty of any kind, express or implied. We do not warrant that services will be error-free, uninterrupted, or free from viruses or other harmful components.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">5. Third-Party Links</div>
+      <p class="legal-p">Our platform may contain links to third-party websites or services. We are not responsible for the content, privacy practices, or terms of those third parties.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">6. Regulatory Compliance</div>
+      <p class="legal-p">eSIM Connect operates in compliance with Singapore's Personal Data Protection Act (PDPA), Consumer Protection (Fair Trading) Act, and applicable telecommunications reseller regulations. We are registered with the Accounting and Corporate Regulatory Authority (ACRA) of Singapore.</p>
+    </div>
+    <div class="legal-section">
+      <div class="legal-h2">7. Contact</div>
+      <p class="legal-p">For legal enquiries: <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="cda1a8aaaca18da8bea4a0aea2a3a3a8aeb9e3baa2bfa1a9">[email&#160;protected]</a></strong><br/>AAAI Ventures, Singapore</p>
+    </div>
+  </div>
+  <footer><div class="footer-inner"><div class="footer-bottom" style="border-top:none;padding-top:0"><div class="footer-copy">© 2026 AAAI Ventures · <span style="cursor:pointer;color:rgba(255,255,255,.4)" onclick="showPage('terms')">Terms</span> · <span style="cursor:pointer;color:rgba(255,255,255,.4)" onclick="showPage('privacy')">Privacy</span></div></div></div></footer>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ── FAQ DATA ──
+const FAQS = [
+  {q:"What is an eSIM?", a:"An eSIM (embedded SIM) is a digital SIM card built into your device. Instead of inserting a physical SIM, you scan a QR code and your data plan is activated instantly. No physical card, no store visit."},
+  {q:"Is my device compatible with eSIM?", a:"Most modern smartphones support eSIM including iPhone XS and later, Samsung Galaxy S20 and later, Google Pixel 3 and later, and many others. Check your device settings under 'Mobile Data' or 'SIM card' to confirm. Dual-SIM physical devices may not support eSIM."},
+  {q:"Do I need to register an account?", a:"No! You can purchase an eSIM as a guest using just your mobile number and email address. We'll send your QR code to your email instantly. Creating a free account lets you save your plans, track usage, and access purchase history."},
+  {q:"How quickly will I receive my eSIM QR code?", a:"Your QR code is delivered to your email within 60 seconds of successful payment. If you don't receive it within 5 minutes, check your spam folder or contact our support team."},
+  {q:"When should I activate my eSIM?", a:"Install the eSIM on your device before you travel, but don't activate it until you arrive at your destination. The plan validity period begins when your device first connects to the local network."},
+  {q:"What is Late Arrival Protection?", a:"If you activate your eSIM between 10pm and midnight local time at your destination, eSIM Connect automatically extends your Day 1 allowance by the hours remaining before midnight. You won't lose data just because you arrived late. No other eSIM provider offers this feature."},
+  {q:"What is a Virtual Home Number?", a:"For an additional SGD $3/month, you get a virtual phone number from your home country (e.g. a Singapore +65 number). Calls to your real home number are forwarded to this virtual number, which rings in the eSIM Connect app via internet. This means callers pay local rates and you receive calls without expensive roaming charges."},
+  {q:"Will I receive OTPs from my bank while overseas?", a:"Yes — with the Virtual Home Number feature. OTPs sent to your home mobile number are forwarded to the eSIM Connect app instantly. This means you can complete bank transactions, Singpass verifications, and any two-factor authentication without issues."},
+  {q:"Can I top up my data if I run out?", a:"Yes. You can top up with 1GB, 3GB, or 5GB from within the app with one tap using your saved payment method. You can also set up Auto Top-Up to add data automatically when you reach 10%, 20%, or a custom threshold."},
+  {q:"What payment methods are accepted?", a:"We accept Visa, Mastercard, and American Express (via Stripe, with 3D Secure support) and PayNow (instant bank transfer for Singapore users). All payments are processed securely. We do not store your card details."},
+  {q:"What is the refund policy?", a:"As eSIM plans are delivered digitally, we do not offer refunds once the QR code has been delivered and the eSIM provisioned. In the event of a technical failure on our part, we will provide a replacement eSIM or full credit. Please review our Terms & Conditions for full details."},
+  {q:"Is GST charged?", a:"Yes, 9% Singapore GST is applied to all transactions and itemised clearly at checkout. You will see both the pre-GST and GST-inclusive price before you pay."},
+  {q:"What is the AI Travel Companion?", a:"After purchasing an eSIM, Claude AI generates a personalised destination briefing (current affairs, weather, safety, economy), a day-by-day itinerary based on your travel dates and interests, and curated recommendations for food, attractions, and experiences. All available inside the app."},
+  {q:"How do I contact support?", a:"Email us at support@esimconnect.world. We aim to respond within 4 hours during Singapore business hours (9am–6pm SGT, Monday–Friday)."},
+];
+
+// ── RENDER FAQs ──
+function renderFAQs(containerId, limit) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const items = limit ? FAQS.slice(0, limit) : FAQS;
+  container.innerHTML = '';
+  items.forEach((faq, i) => {
+    const item = document.createElement('div');
+    item.className = 'faq-item';
+    item.innerHTML = `
+      <div class="faq-q" onclick="toggleFAQ(this.parentElement)">
+        <span>${faq.q}</span>
+        <span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-a">${faq.a}</div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+function toggleFAQ(item) {
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
+
+// ── PAGE ROUTING ──
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const page = document.getElementById('page-' + name);
+  if (page) {
+    page.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+  if (name === 'faq') renderFAQs('faq-full');
+  if (name === 'home') renderFAQs('faq-preview', 5);
+}
+
+function scrollToSection(id) {
+  showPage('home');
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+// ── AUTH TABS ──
+function switchAuthTab(tab) {
+  ['login','register','guest'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('

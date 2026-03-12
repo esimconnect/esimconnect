@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="theme-color" content="#080b12"/>
+  <title>eSIM Connect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#080b12;--surface:#0e1420;--surface2:#141b2a;
+      --border:rgba(255,255,255,0.07);--text:#f0f4ff;--muted:#7a8aaa;
+      --accent:#00e5ff;--green:#00e096;--gold:#ffd166;--red:#ff5050;
+      --radius:16px;--nav-h:64px;
+      --ff-head:'Syne',sans-serif;--ff-body:'DM Sans',sans-serif;
+    }
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--ff-body)}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .fu{animation:fadeUp .4s ease forwards}
+    /* LAYOUT */
+    /* DESKTOP: phone frame centered */
+    #app{display:flex;align-items:center;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at 30% 20%,rgba(0,229,255,.06),transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(0,224,150,.04),transparent 60%),var(--bg);padding:20px}
+    .phone{width:390px;height:844px;background:var(--bg);border-radius:50px;border:2px solid rgba(255,255,255,.1);overflow:hidden;position:relative;box-shadow:0 40px 100px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.03),inset 0 0 0 1px rgba(255,255,255,.02);display:flex;flex-direction:column;flex-shrink:0}
+    .island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#000;border-radius:20px;z-index:200;pointer-events:none;box-shadow:0 0 0 1px rgba(255,255,255,.06)}
+    .sbar{height:54px;flex-shrink:0;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 10px;position:relative;z-index:10}
+    .stime{font-family:var(--ff-head);font-size:15px;font-weight:700}
+    .sicons{font-size:12px;display:flex;gap:6px;align-items:center}
+    .swrap{flex:1;overflow:hidden;position:relative}
+    .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:calc(var(--nav-h) + 16px)}
+    .screen::-webkit-scrollbar{display:none}
+    /* MOBILE: fullscreen */
+    @media(max-width:500px){
+      #app{padding:0;background:var(--bg);align-items:stretch;justify-content:stretch;min-height:100vh;min-height:100dvh}
+      .phone{width:100%;height:100vh;height:100dvh;border-radius:0;border:none;box-shadow:none}
+      .island{display:none}
+      .sbar{display:none}
+    }
+    /* BOTTOM NAV */
+    .bnav{position:absolute;bottom:0;left:0;right:0;height:var(--nav-h);background:rgba(8,11,18,.96);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:100;padding-bottom:8px}
+    .ni{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px 10px;border-radius:12px;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.3px;transition:color .2s;min-width:44px}
+    .ni.on{color:var(--accent)}
+    .ni .ico{font-size:20px;transition:transform .2s;display:block}
+    .ni.on .ico{transform:translateY(-2px)}
+    /* HEADER */
+    .hdr{padding:20px 20px 14px;background:linear-gradient(180deg,var(--surface),transparent);position:sticky;top:0;z-index:50;backdrop-filter:blur(10px)}
+    .hrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .logo{font-family:var(--ff-head);font-size:22px;font-weight:800;letter-spacing:-.5px}
+    .logo b{color:var(--accent);font-weight:800}
+    .lbadge{font-size:11px;background:rgba(0,224,150,.1);color:var(--green);padding:4px 10px;border-radius:20px;font-weight:700}
+    /* SEARCH */
+    .srch{position:relative}
+    .srch input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:11px 16px 11px 40px;font-size:15px;color:var(--text);outline:none;font-family:var(--ff-body);transition:border-color .2s}
+    .srch input:focus{border-color:rgba(0,229,255,.3)}
+    .srch .si{position:absolute;left:13px;top:50%;transform:translateY(-50%);pointer-events:none}
+    /* LABELS */
+    .slabel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:18px 20px 10px;display:block}
+    /* ACTIVE BANNER */
+    .abanner{margin:0 20px 16px;background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(0,224,150,.05));border:1px solid rgba(0,229,255,.2);border-radius:var(--radius);padding:14px;cursor:pointer}
+    .abrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .abcountry{display:flex;align-items:center;gap:10px}
+    .abflag{font-size:22px}
+    .abname{font-family:var(--ff-head);font-weight:700;font-size:15px}
+    .abbadge{font-size:10px;background:var(--green);color:#000;padding:3px 10px;border-radius:20px;font-weight:800}
+    /* USAGE BAR */
+    .ubg{height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;margin-bottom:4px}
+    .ufill{height:100%;border-radius:3px;transition:width .5s}
+    .ufill.g{background:linear-gradient(90deg,var(--accent),var(--green))}
+    .ufill.o{background:linear-gradient(90deg,#ff8800,#ffaa00)}
+    .ufill.r{background:linear-gradient(90deg,var(--red),#ff8800)}
+    .ulabels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+    /* COUNTRY GRID */
+    .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px}
+    .ccard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:all .2s}
+    .ccard:active{transform:scale(.97)}
+    .cflag{width:100%;height:78px;display:flex;align-items:center;justify-content:center;font-size:44px;background:var(--surface2)}
+    .cinfo{padding:10px 12px}
+    .cname{font-family:var(--ff-head);font-weight:700;font-size:14px;margin-bottom:2px}
+    .cfrom{font-size:12px;color:var(--accent);font-weight:600}
+    /* PLAN CARDS */
+    .pback{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:14px 20px 8px;display:flex;align-items:center;gap:6px;font-family:var(--ff-body);width:100%}
+    .phero{padding:0 20px 18px;border-bottom:1px solid var(--border);margin-bottom:8px}
+    .pcountry{font-family:var(--ff-head);font-size:26px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
+    .psub{font-size:13px;color:var(--muted)}
+    .pcard{margin:0 20px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+    .pcard::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--green));opacity:0;transition:opacity .2s}
+    .pcard.pop{border-color:rgba(0,229,255,.3)}
+    .pcard.pop::after{opacity:1}
+    .popbadge{position:absolute;top:12px;right:12px;font-size:10px;background:linear-gradient(135deg,var(--accent),var(--green));color:#000;padding:3px 10px;border-radius:20px;font-weight:800}
+    .ptop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+    .pdata{font-family:var(--ff-head);font-size:32px;font-weight:800;line-height:1;letter-spacing:-1px}
+    .pdata span{font-size:14px;font-weight:500;color:var(--muted)}
+    .pprice{font-family:var(--ff-head);font-size:24px;font-weight:800;color:var(--accent);text-align:right}
+    .pgst{font-size:11px;color:var(--muted);margin-top:2px}
+    .ptags{display:flex;gap:8px;flex-wrap:wrap}
+    .ptag{font-size:11px;background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:20px;color:var(--muted)}
+    .ptag.sp{color:var(--accent);border-color:rgba(0,229,255,.2)}
+    /* CHECKOUT */
+    .coscreen{display:flex;flex-direction:column;height:100%}
+    .cohdr{padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .coback{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 0 10px;display:flex;align-items:center;gap:6px;font-family:var(--ff-body)}
+    .stepdots{display:flex;gap:6px;margin-bottom:10px}
+    .sdot{height:4px;border-radius:2px;transition:all .3s}
+    .sdot.a,.sdot.d{background:var(--accent)}
+    .sdot.d{opacity:.4}
+    .sdot.i{background:var(--border)}
+    .cotitle{font-family:var(--ff-head);font-size:20px;font-weight:800}
+    .cosub{font-size:13px;color:var(--muted);margin-top:2px}
+    .cobody{flex:1;overflow-y:auto;padding:18px 20px;scrollbar-width:none}
+    .cobody::-webkit-scrollbar{display:none}
+    /* ORDER CARD */
+    .ocard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px}
+    .otop{display:flex;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+    .oflag{font-size:36px}
+    .opname{font-family:var(--ff-head);font-weight:700;font-size:16px}
+    .opcountry{font-size:13px;color:var(--muted);margin-top:2px}
+    .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+    .si-item label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px}
+    .si-item value{font-size:14px;font-weight:600;display:block}
+    .prow{display:flex;justify-content:space-between;font-size:14px;padding:5px 0}
+    .prow.tot{border-top:1px solid var(--border);margin-top:6px;padding-top:10px;font-family:var(--ff-head);font-weight:800;font-size:18px}
+    /* VIRTUAL NUMBER */
+    .vncard{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;transition:border-color .2s}
+    .vncard.yes{border-color:var(--green);background:rgba(0,224,150,.03)}
+    .vnhead{padding:14px 16px;display:flex;align-items:center;gap:12px}
+    .vnicon{width:46px;height:46px;border-radius:12px;background:rgba(0,229,255,.1);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+    .vninfo{flex:1}
+    .vntitle{font-weight:700;font-size:15px;margin-bottom:2px}
+    .vnprice{font-size:12px;color:var(--accent);font-weight:600}
+    .vntoggle{display:flex;background:var(--surface2);border-radius:10px;padding:3px;gap:3px}
+    .vnbtn{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .2s;font-family:var(--ff-body)}
+    .vnbtn.yes.on{background:var(--green);color:#000}
+    .vnbtn.no.on{background:var(--surface);color:var(--text)}
+    .vnexp{border-top:1px solid var(--border);padding:14px 16px}
+    .whybtn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ff-body);margin-bottom:10px}
+    .vnreason{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:6px}
+    .vncs{background:var(--surface);border:1px solid rgba(0,229,255,.2);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px}
+    .vcslabel{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:block}
+    select.ifield,input.ifield{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--text);outline:none;font-family:var(--ff-body)}
+    /* PAYMENT */
+    .pmopt{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all .2s;margin-bottom:10px}
+    .pmopt.on{border-color:var(--accent);background:rgba(0,229,255,.04)}
+    .pmicon{font-size:28px;width:40px;text-align:center}
+    .pmname{font-weight:700;font-size:15px}
+    .pmdesc{font-size:12px;color:var(--muted);margin-top:2px}
+    .pmcheck{margin-left:auto;color:var(--green);font-size:18px;font-weight:700}
+    .igroup{margin-bottom:14px}
+    .ilabel{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px}
+    .irow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    /* CONFIRM */
+    .confirmsc{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;text-align:center;min-height:100%}
+    .conficon{font-size:64px;margin-bottom:14px}
+    .conftitle{font-family:var(--ff-head);font-size:28px;font-weight:800;margin-bottom:8px}
+    .confsub{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.6}
+    .qrbox{width:150px;height:150px;background:var(--surface);border:1px solid var(--border);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:56px;margin-bottom:22px}
+    .instbox{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:left;margin-bottom:16px}
+    .insttitle{font-weight:700;font-size:14px;margin-bottom:10px}
+    .inststep{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:8px}
+    .instnum{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    /* MY PLANS */
+    .ptabs{display:flex;gap:4px;padding:14px 20px 0;border-bottom:1px solid var(--border)}
+    .ptab{padding:9px 18px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--muted);font-family:var(--ff-body);border-bottom:2px solid transparent;transition:all .2s;margin-bottom:-1px}
+    .ptab.on{color:var(--accent);border-bottom-color:var(--accent)}
+    .ecard{margin:14px 20px 0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+    .ectop{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .ecflag{font-size:26px}
+    .ecname{font-family:var(--ff-head);font-weight:700;font-size:15px}
+    .ecplan{font-size:12px;color:var(--muted);margin-top:2px}
+    .ecbadge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:800}
+    .ecbadge.act{background:rgba(0,224,150,.15);color:var(--green)}
+    .ecbadge.exp{background:rgba(255,80,80,.15);color:var(--red)}
+    .ecbtns{display:flex;gap:8px;margin-top:12px}
+    .ecbtn{flex:1;padding:9px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--ff-body);transition:all .2s}
+    .ecbtn.pr{background:var(--accent);color:#000;border-color:var(--accent)}
+    .ecbtn.ai{background:rgba(0,229,255,.1);color:var(--accent);border-color:rgba(0,229,255,.2)}
+    /* ADMIN */
+    .adhdr{padding:18px 20px;border-bottom:1px solid var(--border)}
+    .adtitle{font-family:var(--ff-head);font-size:22px;font-weight:800}
+    .addate{font-size:13px;color:var(--muted);margin-top:4px}
+    .sgridx{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 20px}
+    .scard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+    .sclabel{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+    .scval{font-family:var(--ff-head);font-size:22px;font-weight:800}
+    .scval.g{color:var(--green)}.scval.a{color:var(--accent)}.scval.gold{color:var(--gold)}
+    .scch{font-size:11px;color:var(--muted);margin-top:4px}
+    .walletc{background:linear-gradient(135deg,rgba(0,229,255,.1),rgba(0,224,150,.06));border:1px solid rgba(0,229,255,.2);border-radius:var(--radius);padding:18px;margin:0 20px 14px}
+    .wlabel{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+    .wbal{font-family:var(--ff-head);font-size:28px;font-weight:800;color:var(--accent)}
+    .rchdr{display:flex;align-items:center;justify-content:space-between;padding:0 20px;margin-bottom:10px}
+    .rctitle{font-family:var(--ff-head);font-weight:700;font-size:16px}
+    .rcitem{display:flex;align-items:center;gap:12px;padding:11px 20px;border-bottom:1px solid var(--border)}
+    .rcflag{font-size:26px;width:36px;text-align:center}
+    .rccust{font-weight:600;font-size:14px}
+    .rcplan{font-size:12px;color:var(--muted);margin-top:2px}
+    .rcamt{margin-left:auto;color:var(--green);font-weight:700;font-size:14px}
+    /* PROFILE */
+    .profsc{padding:20px}
+    .profav{width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--green));display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 10px}
+    .profname{font-family:var(--ff-head);font-size:20px;font-weight:800;text-align:center;margin-bottom:4px}
+    .profemail{font-size:13px;color:var(--muted);text-align:center;margin-bottom:22px}
+    .profsect{margin-bottom:20px}
+    .profstitle{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
+    .profrow{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border);cursor:pointer}
+    .profleft{display:flex;align-items:center;gap:10px}
+    .proflabel{font-size:14px;font-weight:500}
+    .profright{color:var(--muted);font-size:13px}
+    /* TRAVEL COMPANION */
+    .tcscreen{padding-bottom:calc(var(--nav-h)+16px)}
+    .tchero{background:linear-gradient(135deg,rgba(0,229,255,.09),rgba(0,224,150,.05));border-bottom:1px solid var(--border);padding:14px 20px 0}
+    .tcback{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0;margin-bottom:12px;display:flex;align-items:center;gap:6px;font-family:var(--ff-body)}
+    .tcflag{font-size:34px;margin-bottom:6px;display:block}
+    .tccname{font-family:var(--ff-head);font-size:22px;font-weight:800;margin-bottom:2px}
+    .tcpow{font-size:11px;color:var(--muted);margin-bottom:14px}
+    .tctabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+    .tctabs::-webkit-scrollbar{display:none}
+    .tctab{padding:9px 13px;border-radius:10px 10px 0 0;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;border:none;background:transparent;color:var(--muted);font-family:var(--ff-body);border-bottom:2px solid transparent;transition:all .2s}
+    .tctab.on{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,229,255,.06)}
+    .tcbody{padding:16px 20px}
+    .tcloading{display:flex;flex-direction:column;align-items:center;padding:48px 20px;gap:14px}
+    .spinner{width:42px;height:42px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite}
+    .tcloadtxt{font-size:13px;color:var(--muted);text-align:center;line-height:1.7}
+    /* INTEL */
+    .isect{margin-bottom:18px}
+    .isecttitle{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
+    .icard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:8px}
+    .icardtitle{font-weight:700;font-size:14px;margin-bottom:5px;line-height:1.4}
+    .icardbody{font-size:13px;color:var(--muted);line-height:1.6}
+    .icardsrc{font-size:11px;color:var(--accent);margin-top:6px;font-weight:600}
+    .sevbadge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;margin-bottom:6px}
+    .sevh{background:rgba(255,80,80,.15);color:var(--red)}
+    .sevm{background:rgba(255,165,0,.15);color:orange}
+    .sevl{background:rgba(0,224,150,.15);color:var(--green)}
+    /* WEATHER */
+    .whero{background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(0,224,150,.05));border:1px solid rgba(0,229,255,.15);border-radius:18px;padding:22px;margin-bottom:14px;text-align:center}
+    .wicon{font-size:50px;margin-bottom:8px;display:block}
+    .wtemp{font-family:var(--ff-head);font-size:50px;font-weight:800;line-height:1}
+    .wdesc{font-size:14px;color:var(--muted);margin-top:6px}
+    .fcrow{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+    .fcrow::-webkit-scrollbar{display:none}
+    .fcday{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-align:center;flex-shrink:0;min-width:66px}
+    .fcdate{font-size:10px;color:var(--muted);margin-bottom:5px}
+    .fcicon{font-size:20px;margin-bottom:4px;display:block}
+    .fctemps{font-size:12px;font-weight:600}
+    /* ECONOMY */
+    .ecobox{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px}
+    .ecorate{font-family:var(--ff-head);font-size:28px;font-weight:800;color:var(--accent);margin-bottom:4px}
+    .ecorlabel{font-size:12px;color:var(--muted);margin-bottom:12px}
+    .costtip{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:8px}
+    /* RECO */
+    .rfilters{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px;scrollbar-width:none;padding-bottom:4px}
+    .rfilters::-webkit-scrollbar{display:none}
+    .rfbtn{padding:7px 13px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:var(--ff-body);transition:all .2s}
+    .rfbtn.on{background:var(--accent);color:#000;border-color:var(--accent)}
+    .rcard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px;margin-bottom:8px;display:flex;gap:12px}
+    .ricon{width:44px;height:44px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+    .rbody{flex:1}
+    .rname{font-weight:700;font-size:14px;margin-bottom:4px}
+    .rdesc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px}
+    .rmeta{display:flex;gap:6px}
+    .rbadge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;text-transform:uppercase}
+    .rbp{background:rgba(0,229,255,.1);color:var(--accent)}
+    .rbai{background:rgba(180,100,255,.1);color:#b464ff}
+    /* ITINERARY */
+    .daytabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;scrollbar-width:none;padding-bottom:4px}
+    .daytabs::-webkit-scrollbar{display:none}
+    .daytab{padding:7px 13px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:var(--ff-body);transition:all .2s}
+    .daytab.on{background:var(--accent);color:#000;border-color:var(--accent)}
+    .timeline{position:relative;padding-left:52px}
+    .timeline::before{content:'';position:absolute;left:18px;top:0;bottom:0;width:2px;background:var(--border)}
+    .tlitem{position:relative;margin-bottom:18px}
+    .tldot{position:absolute;left:-34px;width:36px;height:36px;border-radius:50%;background:var(--surface);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;top:2px}
+    .tldot.attraction{border-color:var(--accent);background:rgba(0,229,255,.08)}
+    .tldot.food{border-color:var(--green);background:rgba(0,224,150,.08)}
+    .tldot.transport{border-color:var(--gold);background:rgba(255,209,102,.08)}
+    .tldot.event{border-color:#b464ff;background:rgba(180,100,255,.08)}
+    .tltime{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:3px}
+    .tlname{font-weight:700;font-size:14px;margin-bottom:4px}
+    .tldesc{font-size:12px;color:var(--muted);line-height:1.5}
+    .tldur{font-size:11px;color:var(--accent);margin-top:4px;font-weight:600}
+    .tlnotes{background:rgba(255,209,102,.06);border:1px solid rgba(255,209,102,.15);border-radius:8px;padding:7px 10px;margin-top:6px;font-size:12px;color:var(--muted);line-height:1.5}
+    .regenbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:12px;border:1px dashed rgba(0,229,255,.3);background:rgba(0,229,255,.04);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ff-body);margin-top:12px}
+    /* CTA */
+    .ctabtn{display:block;width:100%;padding:15px;border-radius:14px;font-family:var(--ff-head);font-weight:700;font-size:16px;cursor:pointer;border:none;transition:all .2s;text-align:center}
+    .ctabtn.pr{background:linear-gradient(135deg,var(--accent),#0099cc);color:#000;box-shadow:0 8px 24px rgba(0,229,255,.2)}
+    .ctabtn.se{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+    .ctabtn.ai{background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.2);color:var(--accent)}
+    .ctabtn:disabled{opacity:.5;cursor:not-allowed}
+    .ctawrap{padding:14px 20px;border-top:1px solid var(--border);background:var(--bg);flex-shrink:0;display:flex;flex-direction:column;gap:8px}
+    /* DIALLER */
+    .dialsc{display:flex;flex-direction:column;align-items:center;padding:20px 20px;padding-bottom:calc(var(--nav-h)+16px)}
+    .dialtitle{font-family:var(--ff-head);font-size:20px;font-weight:800;margin-bottom:4px;align-self:flex-start}
+    .dialsub{font-size:13px;color:var(--muted);margin-bottom:18px;align-self:flex-start}
+    .wmini{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 14px;width:100%;margin-bottom:16px}
+    .wmlabel{font-size:11px;color:var(--muted);margin-bottom:3px}
+    .wmbal{font-family:var(--ff-head);font-size:18px;font-weight:800;color:var(--accent)}
+    .dialdisp{width:100%;text-align:center;font-family:var(--ff-head);font-size:30px;font-weight:700;letter-spacing:2px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;color:var(--text);margin-bottom:8px;min-height:60px;display:flex;align-items:center;justify-content:center}
+    .dialrate{font-size:13px;color:var(--accent);text-align:center;margin-bottom:16px;font-weight:600;min-height:20px}
+    .keypad{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;width:100%;margin-bottom:20px}
+    .key{height:60px;border-radius:14px;background:var(--surface);border:1px solid var(--border);font-family:var(--ff-head);font-size:22px;font-weight:700;cursor:pointer;color:var(--text);transition:all .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+    .key:active{transform:scale(.95)}
+    .key.call{background:linear-gradient(135deg,var(--green),#00aa66);color:#000;border-color:transparent;font-size:24px}
+    .key.end{background:rgba(255,80,80,.15);color:var(--red);border-color:rgba(255,80,80,.2)}
+    .ksub{font-size:8px;color:var(--muted);font-weight:400;letter-spacing:1px}
+    .callstate{text-align:center;padding:16px 0;width:100%}
+    .callnum{font-family:var(--ff-head);font-size:26px;font-weight:800;margin-bottom:6px}
+    .callstatus{font-size:14px;color:var(--muted);margin-bottom:4px}
+    .calldur{font-family:var(--ff-head);font-size:38px;font-weight:800;color:var(--green);margin:10px 0}
+    .callcost{font-size:13px;color:var(--gold)}
+    /* TOAST */
+    .toast{position:absolute;bottom:calc(var(--nav-h)+12px);left:16px;right:16px;background:var(--surface);border:1px solid rgba(0,229,255,.3);border-radius:14px;padding:13px 16px;font-size:14px;font-weight:500;text-align:center;z-index:500;animation:fadeUp .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+    /* MISC */
+    .albanner{display:flex;align-items:flex-start;gap:8px;background:rgba(255,165,0,.07);border:1px solid rgba(255,165,0,.2);border-radius:12px;padding:11px 13px;font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+    .empty{text-align:center;padding:40px 20px;color:var(--muted)}
+    .emicon{font-size:44px;margin-bottom:10px;display:block;opacity:.4}
+    .emtxt{font-size:14px;line-height:1.6}
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ── DATA ──
+const COUNTRIES=[
+  {name:"Japan",flag:"🇯🇵",iso:"jp",slug:"japan",from:9},
+  {name:"South Korea",flag:"🇰🇷",iso:"kr",slug:"south-korea",from:9},
+  {name:"Thailand",flag:"🇹🇭",iso:"th",slug:"thailand",from:8},
+  {name:"Australia",flag:"🇦🇺",iso:"au",slug:"australia",from:12},
+  {name:"UK",flag:"🇬🇧",iso:"gb",slug:"united-kingdom",from:12},
+  {name:"USA",flag:"🇺🇸",iso:"us",slug:"usa",from:14},
+  {name:"Germany",flag:"🇩🇪",iso:"de",slug:"germany",from:11},
+  {name:"Hong Kong",flag:"🇭🇰",iso:"hk",slug:"hong-kong",from:8},
+  {name:"Taiwan",flag:"🇹🇼",iso:"tw",slug:"taiwan",from:9},
+  {name:"Malaysia",flag:"🇲🇾",iso:"my",slug:"malaysia",from:6},
+  {name:"Indonesia",flag:"🇮🇩",iso:"id",slug:"indonesia",from:7},
+  {name:"Vietnam",flag:"🇻🇳",iso:"vn",slug:"vietnam",from:7},
+  {name:"France",flag:"🇫🇷",iso:"fr",slug:"france",from:12},
+  {name:"Italy",flag:"🇮🇹",iso:"it",slug:"italy",from:12},
+  {name:"India",flag:"🇮🇳",iso:"in",slug:"india",from:8},
+  {name:"Philippines",flag:"🇵🇭",iso:"ph",slug:"philippines",from:7},
+];
+const PLANS=[
+  {id:1,data:"3 GB",day:7,price:9.00,speed:"4G"},
+  {id:2,data:"5 GB",day:10,price:12.00,speed:"4G/5G",popular:true},
+  {id:3,data:"10 GB",day:15,price:16.00,speed:"4G/5G"},
+  {id:4,data:"Unlimited",day:7,price:18.00,speed:"4G",unlimited:true},
+];
+const MYPLANS=[{id:1,country:"Japan",flag:"🇯🇵",slug:"japan",data:"10 GB",day:15,used:4.2,total:10}];
+const HISTORY=[
+  {id:2,country:"Thailand",flag:"🇹🇭",plan:"Unlimited 7 Days",amount:18.00,date:"Feb 2026"},
+  {id:3,country:"Korea",flag:"🇰🇷",plan:"5GB 10 Days",amount:12.00,date:"Jan 2026"},
+];
+const GST=0.09;
+const sgd=n=>`SGD $${(+n).toFixed(2)}`;
+const rate=num=>{
+  if(!num)return null;
+  if(num.startsWith("+65"))return{c:"Singapore",r:0.05};
+  if(num.startsWith("+61"))return{c:"Australia",r:0.05};
+  if(num.startsWith("+44"))return{c:"United Kingdom",r:0.05};
+  if(num.startsWith("+1"))return{c:"USA / Canada",r:0.05};
+  if(num.startsWith("+81"))return{c:"Japan",r:0.06};
+  if(num.startsWith("+86"))return{c:"China",r:0.06};
+  if(num.startsWith("+60"))return{c:"Malaysia",r:0.04};
+  if(num.startsWith("+91"))return{c:"India",r:0.05};
+  if(num.startsWith("+"))return{c:"International",r:0.08};
+  return null;
+};
+
+// ── CLAUDE API ──
+async function callClaude(system,user){
+  const r=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system,messages:[{role:"user",content:user}]})
+  });
+  const d=await r.json();
+  const txt=d.content?.map(b=>b.text||"").join("")||"";
+  return JSON.parse(txt.replace(/```json|```/g,"").trim());
+}
+
+// ── STATE ──
+let S={
+  screen:"home",tab:"home",
+  selCountry:null,selPlan:null,
+  step:1,payMethod:"paynow",
+  plansTab:"active",searchQ:"",
+  wantVN:null,showWhy:false,homeCountry:"",
+  dialNum:"",callState:"idle",callDur:0,callCost:0,walletBal:12.50,
+  compCountry:null,compTab:"intel",
+  compLoading:false,compError:null,
+  intelData:null,recoData:null,itinData:null,
+  recoFilter:"all",activeDayIdx:0,
+  toast:null,loading:false,
+  callTimer:null,
+};
+
+let toastTimer=null;
+
+function showToast(msg){
+  S.toast=msg;
+  render();
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{S.toast=null;render();},3000);
+}
+
+function nav(s){
+  S.screen=s;
+  if(["home","plans","companion","dialler","admin","profile"].includes(s))S.tab=s;
+  render();
+}
+
+function setState(obj){Object.assign(S,obj);render();}
+
+// ── COMPANION ──
+async function openCompanion(country){
+  Object.assign(S,{compCountry:country,compTab:"intel",recoFilter:"all",activeDayIdx:0,
+    intelData:null,recoData:null,itinData:null,compError:null,compLoading:true});
+  nav("companion");
+  try{
+    const[intel,reco,itin]=await Promise.all([
+      callClaude("Travel intelligence assistant. Return ONLY valid JSON, no markdown.",
+        `Destination briefing for ${country.name}. Return JSON:
+{"current_affairs":[{"headline":"str","summary":"str","source":"str"}],
+"economy":{"currency_code":"str","exchange_rate_to_sgd":1.0,"summary":"str","cost_tips":["str"]},
+"weather":{"current_conditions":"str","temp_c":25,"icon":"🌤","forecast":[{"date":"Mon","high_c":28,"low_c":22,"description":"str","icon":"🌤"}]},
+"safety":[{"title":"str","description":"str","severity":"low"}],
+"events":[{"name":"str","date":"str","description":"str"}],
+"transport":[{"tip":"str"}]}`),
+      callClaude("Travel recommendations engine. Return ONLY a valid JSON array, no markdown.",
+        `8 recommendations for ${country.name}. JSON array:
+[{"name":"str","category":"food|attraction|experience|transport|shopping","description":"str","source_type":"publisher|ai_generated","source_name":"str","icon":"emoji"}]`),
+      callClaude("Expert travel planner. Return ONLY a valid JSON array, no markdown.",
+        `3-day itinerary for ${country.name}. JSON array:
+[{"day_number":1,"title":"str","items":[{"time":"09:00","type":"attraction|food|transport|event","name":"str","description":"str","duration_minutes":90,"notes":null,"icon":"emoji"}]}]`),
+    ]);
+    Object.assign(S,{intelData:intel,recoData:Array.isArray(reco)?reco:[],itinData:Array.isArray(itin)?itin:[],compLoading:false});
+  }catch(e){
+    Object.assign(S,{compError:"Could not load travel data. Please try again.",compLoading:false});
+  }
+  render();
+}
+
+// ── DIALLER ──
+let callTimerInt=null;
+function startCall(){
+  if(S.walletBal<0.10){showToast("❌ Insufficient balance");return;}
+  setState({callState:"calling",callDur:0,callCost:0});
+  setTimeout(()=>{
+    setState({callState:"connected"});
+    callTimerInt=setInterval(()=>{
+      const r2=rate(S.dialNum)?.r||0.08;
+      S.callDur++;
+      S.callCost=+((S.callDur/60)*r2).toFixed(3);
+      S.walletBal=Math.max(0,+(S.walletBal-(r2/60)).toFixed(3));
+      render();
+    },1000);
+  },2000);
+}
+function endCall(){
+  clearInterval(callTimerInt);
+  setState({callState:"ended"});
+  setTimeout(()=>setState({callState:"idle"}),2000);
+}
+function pressKey(k){
+  if(S.callState!=="idle")return;
+  if(k==="del")setState({dialNum:S.dialNum.slice(0,-1)});
+  else setState({dialNum:(S.dialNum+k).slice(0,16)});
+}
+function fmtDur(s){return`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;}
+function fmtNum(n){if(!n)return"";if(n.length<=4)return n;if(n.length<=8)return n.slice(0,4)+" "+n.slice(4);return n.slice(0,4)+" "+n.slice(4,8)+" "+n.slice(8);}
+
+// ── PURCHASE ──
+async function doPurchase(){
+  setState({loading:true});
+  await new Promise(r=>setTimeout(r,1600));
+  setState({loading:false,step:4});
+  showToast("✅ eSIM activated!");
+}
+
+// ── RENDER ──
+function e(tag,props,...children){
+  const el=document.createElement(tag);
+  if(props)Object.entries(props).forEach(([k,v])=>{
+    if(k==="className")el.className=v;
+    else if(k==="style")Object.assign(el.style,v);
+    else if(k==="innerHTML")el.innerHTML=v;
+    else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);
+    else if(k==="disabled")el.disabled=v;
+    else if(k==="value")el.value=v;
+    else if(k==="selected")el.selected=v;
+    else if(k==="placeholder")el.placeholder=v;
+    else if(k==="type")el.type=v;
+    else el.setAttribute(k,v);
+  });
+  children.flat().forEach(c=>{
+    if(c==null||c===false)return;
+    el.appendChild(typeof c==="string"?document.createTextNode(c):c);
+  });
+  return el;
+}
+function div(cls,...ch){return e("div",{className:cls},...ch);}
+function btn(cls,txt,onclick){const b=e("button",{className:cls,onClick:onclick});b.textContent=txt;return b;}
+function span(cls,txt){const s=e("span",{className:cls});s.textContent=txt;return s;}
+function h(tag,cls,txt){const el=document.createElement(tag);el.className=cls;el.textContent=txt;return el;}
+
+function renderHome(){
+  const now=new Date();
+  const filtered=COUNTRIES.filter(c=>c.name.toLowerCase().includes(S.searchQ.toLowerCase()));
+  const d=div("fu");
+  // Header
+  const hdr=div("hdr");
+  const hrow=div("hrow");
+  const logo=div("logo"); logo.innerHTML='eSIM<b>Connect</b>';
+  hrow.append(logo,span("lbadge","🟡 SANDBOX"));
+  const srch=div("srch");
+  const inp=e("input",{className:"srch",placeholder:"🔍  Search destinations..."});
+  inp.style.cssText="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:11px 16px;font-size:15px;color:var(--text);outline:none;font-family:var(--ff-body)";
+  inp.value=S.searchQ;
+  inp.addEventListener("input",ev=>setState({searchQ:ev.target.value}));
+  hdr.append(hrow,inp);
+  d.append(hdr);
+  // Active banner
+  if(MYPLANS.length&&!S.searchQ){
+    const p=MYPLANS[0],pct=Math.round(p.used/p.total*100);
+    const ab=div("abanner");
+    ab.addEventListener("click",()=>{setState({plansTab:"active"});nav("plans");});
+    const abr=div("abrow");
+    const ac=div("abcountry");
+    const abfi=document.createElement("img");
+    const abc=COUNTRIES.find(x=>x.slug===p.slug);
+    abfi.src=`https://flagcdn.com/w40/${abfc=abc?abc.iso:p.slug.slice(0,2)}.png`;
+    abfi.style.cssText="width:28px;height:20px;object-fit:cover;border-radius:3px";
+    abfi.onerror=()=>{abfi.replaceWith(span("abflag",p.flag));};
+    ac.append(abfi,span("abname",p.country));
+    abr.append(ac,span("abbadge","ACTIVE"));
+    const ubg=div("ubg"); const uf=div("ufill g"); uf.style.width=pct+"%"; ubg.append(uf);
+    const ul=div("ulabels"); ul.append(span("",""+p.used+"GB used"),span("",""+p.total+"GB total"));
+    ab.append(abr,ubg,ul); d.append(ab);
+  }
+  d.append(span("slabel","Popular Destinations"));
+  const grid=div("cgrid");
+  filtered.forEach(c=>{
+    const cc=div("ccard");
+    cc.addEventListener("click",()=>{setState({selCountry:c});nav("countryPlans");});
+    const cf=div("cflag");
+    const fimg=document.createElement("img");
+    fimg.src=`https://flagcdn.com/w80/${c.iso}.png`;
+    fimg.style.cssText="width:56px;height:40px;object-fit:cover;border-radius:6px";
+    fimg.onerror=()=>{cf.textContent=c.flag;};
+    cf.append(fimg);
+    const ci=div("cinfo");
+    ci.append(h("div","cname",c.name),h("div","cfrom","From "+sgd(c.from)));
+    cc.append(cf,ci); grid.append(cc);
+  });
+  d.append(grid);
+  return d;
+}
+
+function renderCountryPlans(){
+  const c=S.selCountry;
+  const d=div("fu");
+  const pb=btn("pback","← Back",()=>nav("home"));
+  const ph=div("phero");
+  const phfi=document.createElement("img");
+  phfi.src=`https://flagcdn.com/w80/${c.iso||"jp"}.png`;
+  phfi.style.cssText="width:56px;height:40px;object-fit:cover;border-radius:8px;margin-bottom:12px;display:block";
+  phfi.onerror=()=>{phfi.replaceWith(h("div","",c.flag));};
+  ph.append(phfi,h("div","pcountry",c.name),h("div","psub",PLANS.length+" plans · Instant activation"));
+  d.append(pb,ph);
+  PLANS.forEach(p=>{
+    const pc=div("pcard"+(p.popular?" pop":""));
+    pc.addEventListener("click",()=>{
+      setState({selPlan:{...p,country:c},step:1,wantVN:null,showWhy:false,homeCountry:""});
+      nav("checkout");
+    });
+    if(p.popular)pc.append(span("popbadge","⭐ Best Value"));
+    const pt=div("ptop");
+    const pd=div("pdata"); pd.innerHTML=(p.unlimited?"∞":p.data.replace(" GB",""))+"<span>"+(p.unlimited?" Unlimited":" GB")+"</span>";
+    const pp=div(""); pp.append(h("div","pprice",sgd(p.price)),h("div","pgst",sgd(+(p.price*(1+GST)).toFixed(2))+" w/GST"));
+    pt.append(pd,pp);
+    const tags=div("ptags");
+    tags.append(span("ptag","📅 "+p.day+" days"),span("ptag sp","⚡ "+p.speed));
+    if(p.unlimited)tags.append(span("ptag","♾️ Unlimited"));
+    pc.append(pt,tags); d.append(pc);
+  });
+  return d;
+}
+
+function renderCheckout(){
+  const p=S.selPlan;
+  if(!p)return div("");
+  const sub=p.price,gst=+(sub*GST).toFixed(2),vnc=S.wantVN?3:0,total=+(sub+gst+vnc).toFixed(2);
+
+  if(S.step===4){
+    const d=div("confirmsc fu");
+    d.append(span("conficon","🎉"),h("div","conftitle","You're Connected!"),
+      h("div","confsub","eSIM ready for "+p.country.name+(S.wantVN?" · Virtual number assigned":"")));
+    d.append(div("qrbox","📱"));
+    const ib=div("instbox");
+    ib.append(h("div","insttitle","How to activate"));
+    ["Settings → Mobile Data → Add eSIM","Scan this QR code","Follow setup instructions","Connected! 🎉"].forEach((s,i)=>{
+      const step=div("inststep");
+      const num=div("instnum"); num.textContent=i+1;
+      step.append(num,document.createTextNode(s)); ib.append(step);
+    });
+    d.append(ib);
+    const btns=div(""); btns.style.cssText="width:100%;display:flex;flex-direction:column;gap:8px";
+    const b1=btn("ctabtn pr","View My Plans →",()=>{setState({plansTab:"active"});nav("plans");});
+    const b2=btn("ctabtn ai","🤖 Open AI Travel Companion",()=>openCompanion(p.country));
+    const b3=btn("ctabtn se","Back to Home",()=>nav("home"));
+    btns.append(b1,b2,b3); d.append(btns);
+    return d;
+  }
+
+  const d=div("coscreen fu");
+  const ch=div("cohdr");
+  const cb=btn("coback","← Back",()=>S.step===1?nav("countryPlans"):setState({step:S.step-1}));
+  const dots=div("stepdots");
+  [1,2,3].forEach(s=>{
+    const dt=div("sdot "+(s<S.step?"d":s===S.step?"a":"i"));
+    dt.style.width=(s===S.step?"24px":"8px"); dots.append(dt);
+  });
+  const labels=["Review Order","Virtual Number","Payment"];
+  const subs=["Confirm your plan","Stay reachable from home","Choose payment method"];
+  ch.append(cb,dots,h("div","cotitle",labels[S.step-1]),h("div","cosub",subs[S.step-1]));
+  d.append(ch);
+
+  const body=div("cobody");
+
+  if(S.step===1){
+    const oc=div("ocard");
+    const ot=div("otop");
+    const otfi=document.createElement("img");
+    otfi.src=`https://flagcdn.com/w80/${p.country.iso||"jp"}.png`;
+    otfi.style.cssText="width:44px;height:32px;object-fit:cover;border-radius:6px;flex-shrink:0";
+    otfi.onerror=()=>{otfi.replaceWith(span("oflag",p.country.flag));};
+    ot.append(otfi,div("",h("div","opname",p.data+" · "+p.day+" Days"),h("div","opcountry",p.country.name)));
+    const sg=div("sgrid");
+    [["Data",p.data],["Validity",p.day+" Days"],["Speed",p.speed],["Type",p.unlimited?"Unlimited":"Fixed"]].forEach(([l,v])=>{
+      const si=div("si-item");
+      const lbl=document.createElement("label"); lbl.textContent=l;
+      const val=document.createElement("value"); val.textContent=v;
+      si.append(lbl,val); sg.append(si);
+    });
+    const pr1=div("prow"); pr1.append(span("","")); pr1.innerHTML=`<span style="color:var(--muted)">Plan price</span><span>${sgd(sub)}</span>`;
+    const pr2=div("prow"); pr2.innerHTML=`<span style="color:var(--muted)">GST (9%)</span><span>${sgd(gst)}</span>`;
+    const pt=div("prow tot"); pt.innerHTML=`<span>Total</span><span style="color:var(--accent)">${sgd(total)}</span>`;
+    oc.append(ot,sg,pr1,pr2,pt); body.append(oc);
+  }
+
+  if(S.step===2){
+    const vc=div("vncard"+(S.wantVN===true?" yes":S.wantVN===false?" no":""));
+    const vh=div("vnhead");
+    const vi=div("vnicon"); vi.textContent="📞";
+    const vinfo=div("vninfo");
+    vinfo.append(h("div","vntitle","Add Virtual Home Number"),h("div","vnprice","+SGD $3.00 / month"));
+    const vt=div("vntoggle");
+    const byY=btn("vnbtn yes"+(S.wantVN===true?" on":""),"Yes",()=>setState({wantVN:true}));
+    const byN=btn("vnbtn no"+(S.wantVN===false?" on":""),"No",()=>setState({wantVN:false,showWhy:false}));
+    vt.append(byY,byN); vh.append(vi,vinfo,vt);
+    const ve=div("vnexp");
+    const wb=btn("whybtn",(S.showWhy?"▼ ":"▶ ")+"Why do I need this?",()=>setState({showWhy:!S.showWhy}));
+    ve.append(wb);
+    if(S.showWhy){
+      [["❌","Without this, calls to your home number won't reach you overseas"],
+       ["❌","OTP SMS from banks won't arrive — locking you out"],
+       ["✅","All calls forwarded to this app via internet"],
+       ["✅","Every OTP delivered instantly — banking, Singpass, everything works"],
+       ["✅","Works for SG, UK, AU, US, DE and 60+ countries"],
+      ].forEach(([ico,txt])=>{
+        const r=div("vnreason"); r.append(document.createTextNode(ico+" "+txt)); ve.append(r);
+      });
+    }
+    vc.append(vh,ve); body.append(vc);
+    if(S.wantVN===true){
+      const cs=div("vncs");
+      cs.append(span("vcslabel","Your Home Country"));
+      const sel=document.createElement("select"); sel.className="ifield";
+      [["","Select home country..."],["SG","🇸🇬 Singapore (+65)"],["AU","🇦🇺 Australia (+61)"],
+       ["GB","🇬🇧 United Kingdom (+44)"],["US","🇺🇸 United States (+1)"],["DE","🇩🇪 Germany (+49)"],
+       ["JP","🇯🇵 Japan (+81)"],["KR","🇰🇷 South Korea (+82)"],["MY","🇲🇾 Malaysia (+60)"],
+       ["IN","🇮🇳 India (+91)"],["HK","🇭🇰 Hong Kong (+852)"],["TW","🇹🇼 Taiwan (+886)"]
+      ].forEach(([v,l])=>{const o=document.createElement("option");o.value=v;o.textContent=l;if(v===S.homeCountry)o.selected=true;sel.append(o);});
+      sel.addEventListener("change",ev=>setState({homeCountry:ev.target.value}));
+      cs.append(sel);
+      if(S.homeCountry){
+        const ok=div(""); ok.style.cssText="background:rgba(0,224,150,.06);border:1px solid rgba(0,224,150,.2);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:12px;color:var(--green);font-weight:600";
+        ok.textContent="✅ Virtual number will be assigned after payment";
+        cs.append(ok);
+      }
+      body.append(cs);
+    }
+    if(S.wantVN===false) body.append(div("albanner","⚠️ You may miss calls and OTP SMS from home while overseas"));
+  }
+
+  if(S.step===3){
+    [{id:"paynow",icon:"🇸🇬",name:"PayNow",desc:"Instant bank transfer — free"},
+     {id:"card",icon:"💳",name:"Credit / Debit Card",desc:"Visa, Mastercard, Amex"}].forEach(pm=>{
+      const po=div("pmopt"+(S.payMethod===pm.id?" on":""));
+      po.addEventListener("click",()=>setState({payMethod:pm.id}));
+      po.append(span("pmicon",pm.icon));
+      const pi=div(""); pi.append(h("div","pmname",pm.name),h("div","pmdesc",pm.desc));
+      po.append(pi);
+      if(S.payMethod===pm.id)po.append(span("pmcheck","✓"));
+      body.append(po);
+    });
+    if(S.payMethod==="card"){
+      const ig1=div("igroup"); ig1.append(span("ilabel","Card Number"));
+      const inp1=document.createElement("input"); inp1.className="ifield"; inp1.placeholder="4242 4242 4242 4242"; ig1.append(inp1);
+      const irow=div("irow");
+      [["Expiry","MM/YY"],["CVV","123"]].forEach(([l,ph])=>{
+        const ig=div("igroup"); ig.append(span("ilabel",l));
+        const inp=document.createElement("input"); inp.className="ifield"; inp.placeholder=ph; ig.append(inp); irow.append(ig);
+      });
+      body.append(ig1,irow);
+    }
+    if(S.payMethod==="paynow"){
+      const qrbox=div(""); qrbox.style.cssText="text-align:center;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:16px;margin-bottom:14px";
+      qrbox.innerHTML=`<div style="font-size:60px;margin-bottom:10px">📱</div><div style="font-weight:700;margin-bottom:4px">Scan PayNow QR</div><div style="font-size:13px;color:var(--muted)">Pay ${sgd(total)}</div>`;
+      body.append(qrbox);
+    }
+  }
+
+  d.append(body);
+  const disabled=S.loading||(S.step===2&&S.wantVN===null);
+  const ctxt=S.loading?"⏳ Processing...":S.step===1?`Continue → ${sgd(total)}`:S.step===2?(S.wantVN===null?"Select an option above":`Continue → ${sgd(total)}`):(`Pay ${sgd(total)}`);
+  const cb2=btn("ctabtn pr",ctxt,()=>{
+    if(S.step===1)setState({step:2});
+    else if(S.step===2)setState({step:3});
+    else doPurchase();
+  });
+  cb2.disabled=disabled;
+  const cw=div("ctawrap"); cw.append(cb2); d.append(cw);
+  return d;
+}
+
+function renderMyPlans(){
+  const d=div("fu");
+  const hdr=div("hdr"); hdr.innerHTML='<div class="hrow"><div class="logo">My Plans</div></div>'; d.append(hdr);
+  const tabs=div("ptabs");
+  ["active","history"].forEach(t=>{
+    const tb=btn("ptab"+(S.plansTab===t?" on":""),t==="active"?"Active Plans":"History",()=>setState({plansTab:t}));
+    tabs.append(tb);
+  });
+  d.append(tabs);
+  if(S.plansTab==="active"){
+    if(MYPLANS.length){
+      MYPLANS.forEach(p=>{
+        const pct=Math.round(p.used/p.total*100);
+        const ec=div("ecard");
+        const et=div("ectop");
+        const el=div("ecflag");
+        const elfi=document.createElement("img");
+        const elc=COUNTRIES.find(x=>x.slug===p.slug);
+        elfi.src=`https://flagcdn.com/w40/${elc?elc.iso:"jp"}.png`;
+        elfi.style.cssText="width:32px;height:24px;object-fit:cover;border-radius:4px";
+        elfi.onerror=()=>{elfi.replaceWith(span("",p.flag));};
+        el.append(elfi);
+        const ei=div(""); ei.append(h("div","ecname",p.country),h("div","ecplan",p.data+" · "+p.day+" days"));
+        const left=div(""); left.style.display="flex"; left.style.gap="10px"; left.style.alignItems="center"; left.append(el,ei);
+        et.append(left,span("ecbadge act","ACTIVE"));
+        const ubg=div("ubg"); const uf=div("ufill g"); uf.style.width=pct+"%"; ubg.append(uf);
+        const ul=div("ulabels"); ul.style.marginTop="4px";
+        ul.append(span("",p.used+"GB used"),span("",p.total+"GB total"));
+        const btns2=div("ecbtns");
+        btns2.append(
+          btn("ecbtn pr","📱 QR",()=>showToast("📱 QR code sent to email!")),
+          btn("ecbtn","⚡ Top Up",()=>showToast("⚡ Top-up coming soon!")),
+          btn("ecbtn ai","🤖 AI",()=>openCompanion({name:p.country,flag:p.flag,slug:p.slug}))
+        );
+        ec.append(et,ubg,ul,btns2); d.append(ec);
+      });
+    } else {
+      const em=div("empty"); em.append(span("emicon","📡"),h("div","emtxt","No active plans.\nBrowse destinations to get started!")); d.append(em);
+    }
+  } else {
+    HISTORY.forEach(p=>{
+      const ec=div("ecard");
+      const et=div("ectop");
+      const left=div(""); left.style.display="flex"; left.style.gap="10px"; left.style.alignItems="center";
+      left.append(span("ecflag",p.flag));
+      const info=div(""); info.append(h("div","ecname",p.country),h("div","ecplan",p.plan+" · "+p.date));
+      left.append(info); et.append(left,span("ecbadge exp","EXPIRED"));
+      const pr=div("prow"); pr.innerHTML=`<span style="color:var(--muted)">Amount paid</span><span style="font-weight:700">${sgd(p.amount)}</span>`;
+      const btns2=div("ecbtns");
+      btns2.append(btn("ecbtn","📄 Receipt",()=>showToast("📄 Receipt downloaded!")),btn("ecbtn pr","🔄 Repurchase",()=>showToast("Opening plans...")));
+      ec.append(et,pr,btns2); d.append(ec);
+    });
+  }
+  return d;
+}
+
+function renderTravelCompanion(){
+  const c=S.compCountry;
+  if(!c)return div("");
+  const d=div("tcscreen fu");
+  const hero=div("tchero");
+  hero.append(btn("tcback","← Back to My Plans",()=>nav("plans")));
+  hero.append(span("tcflag",c.flag||"🌍"),h("div","tccname",c.name),span("tcpow","🤖 Powered by Claude AI"));
+  const tabs=div("tctabs");
+  [["intel","📰 Intel"],["weather","🌤 Weather"],["economy","💱 Economy"],["safety","🛡 Safety"],["reco","📍 Discover"],["itinerary","🗓 Itinerary"]].forEach(([id,lbl])=>{
+    const t=btn("tctab"+(S.compTab===id?" on":""),lbl,()=>setState({compTab:id}));
+    tabs.append(t);
+  });
+  hero.append(tabs); d.append(hero);
+  const body=div("tcbody");
+
+  if(S.compLoading){
+    const ld=div("tcloading");
+    ld.append(div("spinner"),h("div","tcloadtxt","🤖 Claude is researching "+c.name+"...\nBuilding intel, recommendations & itinerary"));
+    body.append(ld);
+  } else if(S.compError){
+    const er=div(""); er.style.cssText="text-align:center;padding:32px 0";
+    er.innerHTML=`<div style="font-size:40px;margin-bottom:12px">😕</div><div style="font-weight:700;margin-bottom:8px">Could not load</div><div style="font-size:13px;color:var(--muted);margin-bottom:16px">${S.compError}</div>`;
+    er.append(btn("ctabtn pr","Try Again",()=>openCompanion(c)));
+    body.append(er);
+  } else if(S.intelData){
+    const intel=S.intelData;
+    if(S.compTab==="intel"){
+      [["📰 Current Affairs",intel.current_affairs?.map(i=>({title:i.headline,body:i.summary,src:i.source}))],
+       ["🎉 Events",intel.events?.map(i=>({title:i.name,body:i.date+" — "+i.description}))],
+       ["🚌 Getting Around",intel.transport?.map(i=>({body:i.tip}))]
+      ].forEach(([title,items])=>{
+        if(!items?.length)return;
+        const sec=div("isect");
+        sec.append(span("isecttitle",title));
+        items.forEach(item=>{
+          const ic=div("icard");
+          if(item.title)ic.append(h("div","icardtitle",item.title));
+          ic.append(h("div","icardbody",item.body||""));
+          if(item.src)ic.append(span("icardsrc","Source: "+item.src));
+          sec.append(ic);
+        });
+        body.append(sec);
+      });
+    }
+    if(S.compTab==="weather"){
+      const w=intel.weather;
+      const wh=div("whero");
+      wh.append(span("wicon",w?.icon||"🌤"),h("div","wtemp",(w?.temp_c||"--")+"°C"),h("div","wdesc",w?.current_conditions||""));
+      body.append(wh);
+      body.append(span("isecttitle","📅 5-Day Forecast"));
+      const fr=div("fcrow");
+      w?.forecast?.forEach(day=>{
+        const fc=div("fcday");
+        fc.append(span("fcdate",day.date),span("fcicon",day.icon||"🌤"),h("div","fctemps",day.high_c+"°/"+day.low_c+"°"),h("div","",day.description||""));
+        fc.lastChild.style.cssText="font-size:10px;color:var(--muted);margin-top:2px";
+        fr.append(fc);
+      });
+      body.append(fr);
+    }
+    if(S.compTab==="economy"){
+      const ec=intel.economy;
+      const eb=div("ecobox");
+      const rateVal=ec?.exchange_rate_to_sgd?(1/ec.exchange_rate_to_sgd).toFixed(2):"--";
+      eb.append(h("div","ecorate",`1 SGD = ${rateVal} ${ec?.currency_code||""}`),
+        h("div","ecorlabel","Updated today"),h("div","",ec?.summary||""));
+      eb.lastChild.style.cssText="font-size:13px;color:var(--muted);line-height:1.6";
+      body.append(eb,span("isecttitle","💡 Cost Tips"));
+      ec?.cost_tips?.forEach(tip=>{
+        const ct=div("costtip"); ct.append(span("","💰 "),document.createTextNode(tip)); body.append(ct);
+      });
+    }
+    if(S.compTab==="safety"){
+      intel.safety?.forEach(item=>{
+        const ic=div("icard");
+        const sv=item.severity||"low";
+        const sb=span("sevbadge sev"+sv[0],(sv==="high"?"⚠️ HIGH":sv==="medium"?"⚡ MEDIUM":"✅ LOW")+" RISK");
+        ic.append(sb,h("div","icardtitle",item.title||""),h("div","icardbody",item.description||""));
+        body.append(ic);
+      });
+    }
+    if(S.compTab==="reco"&&S.recoData){
+      const rf=div("rfilters");
+      [["all","🌟 All"],["food","🍜 Food"],["attraction","🏛 Sights"],["experience","🎭 Exp"],["transport","🚇 Transport"],["shopping","🛍 Shopping"]].forEach(([f,l])=>{
+        const fb=btn("rfbtn"+(S.recoFilter===f?" on":""),l,()=>setState({recoFilter:f}));
+        rf.append(fb);
+      });
+      body.append(rf);
+      S.recoData.filter(r=>S.recoFilter==="all"||r.category===S.recoFilter).forEach(r=>{
+        const rc=div("rcard");
+        const ri=div("ricon"); ri.textContent=r.icon||"📍";
+        const rb=div("rbody");
+        rb.append(h("div","rname",r.name),h("div","rdesc",r.description||""));
+        const rm=div("rmeta"); rm.append(span("rbadge "+(r.source_type==="publisher"?"rbp":"rbai"),r.source_type==="publisher"?r.source_name:"AI Pick"));
+        rb.append(rm); rc.append(ri,rb); body.append(rc);
+      });
+    }
+    if(S.compTab==="itinerary"&&S.itinData){
+      const dt=div("daytabs");
+      S.itinData.forEach((day,i)=>{
+        const tb=btn("daytab"+(S.activeDayIdx===i?" on":""),"Day "+day.day_number+" · "+day.title,()=>setState({activeDayIdx:i}));
+        dt.append(tb);
+      });
+      body.append(dt);
+      const tl=div("timeline");
+      S.itinData[S.activeDayIdx]?.items?.forEach(item=>{
+        const ti=div("tlitem");
+        const td=div("tldot "+(item.type||"attraction")); td.textContent=item.icon||"📍";
+        const tb2=div("");
+        tb2.append(span("tltime",item.time||""),h("div","tlname",item.name||""),h("div","tldesc",item.description||""),span("tldur","⏱ "+(item.duration_minutes||0)+" mins"));
+        if(item.notes){const tn=div("tlnotes");tn.textContent="💡 "+item.notes;tb2.append(tn);}
+        ti.append(td,tb2); tl.append(ti);
+      });
+      body.append(tl);
+      const rb=btn("regenbtn","🔄 Regenerate Itinerary",async()=>{
+        setState({itinData:null});
+        try{
+          const d2=await callClaude("Expert travel planner. Return ONLY valid JSON array.",`3-day itinerary for ${c.name}. JSON:[{"day_number":1,"title":"str","items":[{"time":"09:00","type":"attraction","name":"str","description":"str","duration_minutes":90,"notes":null,"icon":"emoji"}]}]`);
+          setState({itinData:Array.isArray(d2)?d2:[]});
+        }catch(e2){showToast("❌ Could not regenerate");}
+      });
+      body.append(rb);
+    }
+  }
+  d.append(body);
+  return d;
+}
+
+function renderDialler(){
+  const d=div("dialsc fu");
+  d.append(h("div","dialtitle","Outgoing Calls"),h("div","dialsub","From your virtual home number"));
+  const wm=div("wmini");
+  wm.append(div("",h("div","wmlabel","Wallet Balance"),h("div","wmbal",sgd(S.walletBal))));
+  wm.append(btn("ecbtn pr","Top Up",()=>showToast("💳 Top-up coming soon!")));
+  d.append(wm);
+  if(S.callState==="idle"||S.callState==="ended"){
+    const dd=div("dialdisp");
+    dd.textContent=S.dialNum?fmtNum(S.dialNum):"Enter number";
+    dd.style.color=S.dialNum?"var(--text)":"var(--muted)";
+    const ri=rate(S.dialNum);
+    const dr=div("dialrate"); dr.textContent=ri?ri.c+" · SGD $"+ri.r.toFixed(2)+"/min":S.dialNum?"Enter country code (e.g. +65)":"";
+    d.append(dd,dr);
+    const kp=div("keypad");
+    [["1",""],["2","ABC"],["3","DEF"],["4","GHI"],["5","JKL"],["6","MNO"],
+     ["7","PQRS"],["8","TUV"],["9","WXYZ"],["*",""],["0","+"],["#",""]].forEach(([k,s])=>{
+      const kb=div("key"); kb.append(document.createTextNode(k));
+      if(s){const ks=span("ksub",s);kb.append(ks);}
+      kb.addEventListener("click",()=>pressKey(k==="0"&&!S.dialNum?"+":k));
+      kp.append(kb);
+    });
+    const del=div("key"); del.textContent="⌫"; del.addEventListener("click",()=>pressKey("del")); 
+    const call=div("key call"); call.textContent="📞"; call.addEventListener("click",startCall);
+    kp.append(del,call,div("key"," "));
+    d.append(kp);
+  } else {
+    const cs=div("callstate");
+    cs.append(h("div","callnum",fmtNum(S.dialNum)),h("div","callstatus",S.callState==="calling"?"📡 Calling...":"🔊 Connected"));
+    if(S.callState==="connected"){
+      cs.append(h("div","calldur",fmtDur(S.callDur)),h("div","callcost","Cost: "+sgd(S.callCost)));
+    }
+    const eb=div("key end"); eb.style.cssText="width:64px;height:64px;border-radius:50%;margin:24px auto 0;display:flex";
+    eb.textContent="📵"; eb.addEventListener("click",endCall);
+    cs.append(eb); d.append(cs);
+  }
+  return d;
+}
+
+function renderAdmin(){
+  const d=div("fu");
+  const ah=div("adhdr"); ah.append(h("div","adtitle","Dashboard"),h("div","addate",new Date().toLocaleDateString("en-SG",{weekday:"long",day:"numeric",month:"long"})));
+  const sg=div("sgridx");
+  [["Today's Revenue","SGD $127.53","g","↑ 9 plans"],["Today's Profit","SGD $38.26","a","Margin 30%"],["Month Revenue","SGD $3,847","gold",""],["Active Plans","47","",""]].forEach(([l,v,c,s])=>{
+    const sc=div("scard"); sc.append(h("div","sclabel",l),h("div","scval "+c,v));
+    if(s)sc.append(h("div","scch",s)); sg.append(sc);
+  });
+  const wc=div("walletc"); wc.append(h("div","wlabel","Airalo Wallet Balance"),h("div","wbal","USD $847.32"));
+  const rh=div("rchdr"); rh.append(h("div","rctitle","Recent Transactions"),span("","View all"));
+  rh.lastChild.style.cssText="color:var(--accent);font-size:13px;font-weight:600";
+  d.append(ah,sg,wc,rh);
+  [["🇯🇵","Li Wei","Japan 5GB · 2 mins ago","+$16.36"],["🇹🇭","Ahmad B.","Thailand Unlimited · 18 mins ago","+$16.35"],
+   ["🇰🇷","Sarah T.","Korea 3GB · 42 mins ago","+$9.70"],["🇬🇧","David Ng","UK 5GB · 1 hr ago","+$14.17"]].forEach(([f,c,p,a])=>{
+    const ri=div("rcitem"); ri.append(span("rcflag",f),div("",h("div","rccust",c),h("div","rcplan",p)),span("rcamt",a)); d.append(ri);
+  });
+  return d;
+}
+
+function renderProfile(){
+  const d=div("profsc fu");
+  const av=div("profav"); av.textContent="👤";
+  d.append(av,h("div","profname","David Lim"),h("div","profemail","davidlim@esimconnect.world"));
+  [["Account",[["👤","Personal Info","→"],["🔔","Notifications","→"],["💳","Payment Methods","→"]]],
+   ["Virtual Number",[["📞","My Virtual Number","+65 XXXX"],["⚙️","Forwarding Settings","→"]]],
+   ["App",[["🌐","Language","English"],["⭐","Loyalty Points","0 pts"],["🚪","Sign Out","→"]]]
+  ].forEach(([title,rows])=>{
+    const ps=div("profsect"); ps.append(h("div","profstitle",title));
+    rows.forEach(([ico,lbl,val])=>{
+      const pr=div("profrow");
+      pr.append(div("profleft",span("",ico+" "),span("proflabel",lbl)),span("profright",val));
+      pr.addEventListener("click",()=>showToast(ico+" "+lbl+" tapped"));
+      ps.append(pr);
+    });
+    d.append(ps);
+  });
+  return d;
+}
+
+// ── MAIN RENDER ──
+const NAV_ITEMS=[
+  {id:"home",icon:"🌍",label:"Explore"},
+  {id:"plans",icon:"📡",label:"My Plans"},
+  {id:"companion",icon:"🤖",label:"AI Travel"},
+  {id:"dialler",icon:"📞",label:"Calls"},
+  {id:"admin",icon:"📊",label:"Dashboard"},
+];
+
+function render(){
+  const app=document.getElementById("app");
+  app.innerHTML="";
+  const now=new Date();
+  const ts=now.toLocaleTimeString("en-SG",{hour:"2-digit",minute:"2-digit",hour12:false});
+
+  const phone=div("phone");
+  phone.append(div("island"));
+
+  const sb=div("sbar");
+  sb.append(span("stime",ts),div("sicons","●●●  WiFi  🔋"));
+  phone.append(sb);
+
+  const sw=div("swrap");
+  const sc=div("screen");
+
+  let content;
+  if(S.screen==="home")content=renderHome();
+  else if(S.screen==="countryPlans")content=renderCountryPlans();
+  else if(S.screen==="checkout")content=renderCheckout();
+  else if(S.screen==="plans")content=renderMyPlans();
+  else if(S.screen==="companion")content=renderTravelCompanion();
+  else if(S.screen==="dialler")content=renderDialler();
+  else if(S.screen==="admin")content=renderAdmin();
+  else if(S.screen==="profile")content=renderProfile();
+  else content=renderHome();
+
+  sc.append(content);
+
+  const bnav=div("bnav");
+  NAV_ITEMS.forEach(item=>{
+    const ni=div("ni"+(S.tab===item.id?" on":""));
+    ni.append(span("ico",item.icon),document.createTextNode(item.label));
+    ni.addEventListener("click",()=>{S.tab=item.id;nav(item.id);});
+    bnav.append(ni);
+  });
+
+  sw.append(sc,bnav);
+  if(S.toast){const t=div("toast");t.textContent=S.toast;sw.append(t);}
+  phone.append(sw);
+  app.append(phone);
+}
+
+render();
+setInterval(()=>{
+  if(S.callState!=="connected")render();
+},30000);
+</script>
+</body>
+</html>
