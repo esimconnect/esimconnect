@@ -10,12 +10,10 @@ export default function Navbar() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get current session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -25,38 +23,54 @@ export default function Navbar() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    setMenuOpen(false);
     navigate('/');
   };
+
+  const isActive = (path) => location.pathname === path ? styles.active : '';
 
   return (
     <nav className={styles.nav}>
       <div className={styles.inner}>
-        <Link to="/" className={styles.logo}>
+        <Link to="/" className={styles.logo} onClick={() => setMenuOpen(false)}>
           eSIM<span>Connect</span>
           <span className={styles.dot}></span>
         </Link>
 
         <div className={`${styles.links} ${menuOpen ? styles.open : ''}`}>
-          <Link to="/plans" className={location.pathname === '/plans' ? styles.active : ''}>
-            Plans
-          </Link>
 
           {user ? (
             <>
-              <Link
-                to="/dashboard"
-                className={location.pathname === '/dashboard' ? styles.active : styles.loginBtn}
-              >
-                Dashboard
+              <Link to="/register" className={styles.ctaBtn} onClick={() => setMenuOpen(false)}>
+                Get Started
               </Link>
-              <button className={styles.ctaBtn} onClick={handleSignOut}>
+              <Link to="/login" className={styles.loginBtn} onClick={() => setMenuOpen(false)}>
+                Sign In
+              </Link>
+              <Link to="/plans" className={isActive('/plans')} onClick={() => setMenuOpen(false)}>
+                Plans
+              </Link>
+              <Link to="/purchases" className={isActive('/purchases')} onClick={() => setMenuOpen(false)}>
+                My Purchases
+              </Link>
+              <Link to="/itinerary" className={isActive('/itinerary')} onClick={() => setMenuOpen(false)}>
+                My Iti
+              </Link>
+              <button className={styles.signOutBtn} onClick={handleSignOut}>
                 Sign Out
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" className={styles.loginBtn}>Sign In</Link>
-              <Link to="/register" className={styles.ctaBtn}>Get Started</Link>
+              <Link to="/register" className={styles.ctaBtn} onClick={() => setMenuOpen(false)}>
+                Get Started
+              </Link>
+              <Link to="/login" className={styles.loginBtn} onClick={() => setMenuOpen(false)}>
+                Sign In
+              </Link>
+              <Link to="/plans" className={isActive('/plans')} onClick={() => setMenuOpen(false)}>
+                Plans
+              </Link>
             </>
           )}
         </div>

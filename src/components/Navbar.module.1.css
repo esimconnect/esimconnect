@@ -47,7 +47,7 @@
 .links {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 32px;
 }
 
 .links a {
@@ -78,24 +78,6 @@
 .ctaBtn:hover {
   transform: scale(1.03);
   box-shadow: 0 4px 20px rgba(0,200,255,.3);
-}
-
-.signOutBtn {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 600;
-  padding: 7px 16px;
-  cursor: pointer;
-  transition: all .2s;
-  font-family: var(--font-head);
-}
-
-.signOutBtn:hover {
-  border-color: rgba(255,255,255,.3);
-  color: var(--text);
 }
 
 .hamburger {
@@ -133,9 +115,4 @@
   }
 
   .links.open { display: flex; }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
 }
