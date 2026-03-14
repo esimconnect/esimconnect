@@ -30,6 +30,7 @@ export default function Plans() {
     let query = supabase
       .from('esim_plans')
       .select('*, countries(name, flag_emoji)')
+      .eq('is_active', true)
       .order('price_sgd');
 
     if (selectedCountry) {
@@ -89,7 +90,9 @@ export default function Plans() {
                   <span className={styles.currency}>SGD</span>
                   <span className={styles.amount}>{plan.price_sgd}</span>
                 </div>
-                <button className={styles.buyBtn}>Buy Now →</button>
+                <button className={styles.buyBtnDisabled} disabled title="Coming soon">
+                  Coming Soon
+                </button>
               </div>
             ))}
           </div>
