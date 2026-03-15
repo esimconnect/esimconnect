@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import styles from './Plans.module.css';
@@ -8,6 +9,7 @@ export default function Plans() {
   const [countries, setCountries] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState('');
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCountries();
@@ -42,6 +44,11 @@ export default function Plans() {
     setLoading(false);
   };
 
+  const handleBuy = (plan) => {
+    const country = countries.find(c => c.id === plan.country_id);
+    navigate('/checkout', { state: { plan, country } });
+  };
+
   return (
     <div className={styles.page}>
       <Navbar />
@@ -50,7 +57,6 @@ export default function Plans() {
           <h1 className={styles.title}>eSIM Plans</h1>
           <p className={styles.sub}>Affordable data plans for 190+ countries</p>
         </div>
-
         <div className={styles.filters}>
           <select
             className={styles.countrySelect}
@@ -65,7 +71,6 @@ export default function Plans() {
             ))}
           </select>
         </div>
-
         {loading ? (
           <div className={styles.loading}>
             <div className={styles.spinner}></div>
@@ -90,8 +95,11 @@ export default function Plans() {
                   <span className={styles.currency}>SGD</span>
                   <span className={styles.amount}>{plan.price_sgd}</span>
                 </div>
-                <button className={styles.buyBtnDisabled} disabled title="Coming soon">
-                  Coming Soon
+                <button
+                  className={styles.buyBtn}
+                  onClick={() => handleBuy(plan)}
+                >
+                  Buy Now →
                 </button>
               </div>
             ))}
