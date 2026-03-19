@@ -1,0 +1,3 @@
+name = "claude-proxy"
+compatibility_date = "2025-03-19"
+main = "src/index.js"
