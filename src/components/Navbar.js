@@ -38,7 +38,6 @@ export default function Navbar() {
         </Link>
 
         <div className={`${styles.links} ${menuOpen ? styles.open : ''}`}>
-
           {user ? (
             <>
               <Link to="/register" className={styles.ctaBtn} onClick={() => setMenuOpen(false)}>
@@ -70,6 +69,12 @@ export default function Navbar() {
               </Link>
               <Link to="/plans" className={isActive('/plans')} onClick={() => setMenuOpen(false)}>
                 Plans
+              </Link>
+              <Link to="/purchases" className={isActive('/purchases')} onClick={() => setMenuOpen(false)}>
+                My Purchases
+              </Link>
+              <Link to="/itinerary" className={isActive('/itinerary')} onClick={() => setMenuOpen(false)}>
+                My Iti
               </Link>
             </>
           )}
