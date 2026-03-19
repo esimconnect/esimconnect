@@ -11,13 +11,14 @@ export default function Register() {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: name } }
@@ -26,10 +27,52 @@ export default function Register() {
     if (error) {
       setError(error.message);
       setLoading(false);
+    } else if (data?.user?.identities?.length === 0) {
+      // Email already registered but unconfirmed — Supabase returns empty identities
+      setError('An account with this email already exists. Please sign in or check your inbox.');
+      setLoading(false);
     } else {
-      navigate('/dashboard');
+      // Success — show confirmation message
+      setConfirmed(true);
+      setLoading(false);
     }
   };
+
+  if (confirmed) {
+    return (
+      <div className={styles.page}>
+        <Navbar />
+        <main className={styles.main}>
+          <div className={styles.card}>
+            <div className={styles.cardHead}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📧</div>
+              <h1 className={styles.title}>Check your email</h1>
+              <p className={styles.sub}>
+                We sent a confirmation link to <strong>{email}</strong>.<br />
+                Click it to activate your account, then sign in.
+              </p>
+            </div>
+            <button
+              className={styles.submitBtn}
+              style={{ marginTop: '24px' }}
+              onClick={() => navigate('/login')}
+            >
+              Go to Sign In →
+            </button>
+            <p className={styles.switchText} style={{ marginTop: '16px' }}>
+              Didn't receive it? Check your spam folder or{' '}
+              <span
+                style={{ color: 'var(--accent)', cursor: 'pointer' }}
+                onClick={() => setConfirmed(false)}
+              >
+                try again
+              </span>
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
@@ -40,9 +83,7 @@ export default function Register() {
             <h1 className={styles.title}>Create account</h1>
             <p className={styles.sub}>Join eSIM Connect — travel smarter</p>
           </div>
-
           {error && <div className={styles.error}>{error}</div>}
-
           <form onSubmit={handleRegister} className={styles.form}>
             <div className={styles.field}>
               <label>Full Name</label>
@@ -54,7 +95,6 @@ export default function Register() {
                 required
               />
             </div>
-
             <div className={styles.field}>
               <label>Email</label>
               <input
@@ -65,7 +105,6 @@ export default function Register() {
                 required
               />
             </div>
-
             <div className={styles.field}>
               <label>Password</label>
               <input
@@ -77,12 +116,10 @@ export default function Register() {
                 required
               />
             </div>
-
             <button type="submit" className={styles.submitBtn} disabled={loading}>
               {loading ? <span className={styles.spinner}></span> : 'Create Account →'}
             </button>
           </form>
-
           <p className={styles.switchText}>
             Already have an account? <Link to="/login">Sign in</Link>
           </p>
