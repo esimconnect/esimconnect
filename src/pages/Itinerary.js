@@ -133,7 +133,7 @@ export default function Itinerary() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: MODEL, max_tokens: 1000,
+          model: MODEL, max_tokens: 4000,
           messages: [{
             role: 'user',
             content: `For a trip to ${trip.destination}, suggest 3-5 destination-specific activity categories that are unique or especially relevant to this destination beyond generic categories like food, shopping, attractions. Return ONLY a JSON array, no other text, no markdown:
@@ -189,7 +189,7 @@ Return ONLY valid JSON, no markdown, no extra text:
       const response = await fetch(CLAUDE_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: MODEL, max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+        body: JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
       });
       const data = await response.json();
       const text = data.content?.map(b => b.text || '').join('');
@@ -265,7 +265,7 @@ Return ONLY valid JSON, no markdown:
       const response = await fetch(CLAUDE_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: MODEL, max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+        body: JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
       });
       const data = await response.json();
       const text = data.content?.map(b => b.text || '').join('');
