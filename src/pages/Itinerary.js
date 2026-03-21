@@ -277,6 +277,84 @@ Return ONLY valid JSON, no markdown:
     setRouting(false);
   };
 
+
+  // Plan My Own state
+  const [manualMode, setManualMode] = useState(false);
+  const [basket, setBasket] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [manualName, setManualName] = useState('');
+  const [manualAddress, setManualAddress] = useState('');
+  const [manualCategory, setManualCategory] = useState('Attractions');
+  const [buildingManualRoute, setBuildingManualRoute] = useState(false);
+
+  const searchPlaces = async () => {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    setSearchResults([]);
+    try {
+      const dest = encodeURIComponent(activeTrip?.destination || '');
+      const q = encodeURIComponent(searchQuery);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}+${dest}&format=json&limit=5&addressdetails=1`, {
+        headers: { 'Accept-Language': 'en' }
+      });
+      const data = await res.json();
+      setSearchResults(data.map(r => ({
+        name: r.name || r.display_name.split(',')[0],
+        address: r.display_name,
+        lat: parseFloat(r.lat),
+        lng: parseFloat(r.lon),
+        category: manualCategory,
+      })));
+    } catch (e) {
+      setSearchResults([]);
+    }
+    setSearching(false);
+  };
+
+  const addToBasket = (place) => {
+    const id = `manual_${Date.now()}`;
+    setBasket(prev => [...prev, { ...place, id }]);
+    setSearchResults([]);
+    setSearchQuery('');
+  };
+
+  const addManualToBasket = () => {
+    if (!manualName.trim()) return;
+    const id = `manual_${Date.now()}`;
+    setBasket(prev => [...prev, {
+      id, name: manualName, address: manualAddress,
+      category: manualCategory, lat: null, lng: null,
+    }]);
+    setManualName('');
+    setManualAddress('');
+  };
+
+  const removeFromBasket = (id) => setBasket(prev => prev.filter(i => i.id !== id));
+
+  const buildManualRoute = async () => {
+    if (basket.length === 0) return;
+    setBuildingManualRoute(true);
+    setError('');
+    const prompt = `You are a travel routing expert. The user has selected these places for their trip to ${activeTrip?.destination || 'their destination'}.\nPlaces: ${JSON.stringify(basket)}\nCreate an optimised day-by-day route across ${activeTrip?.duration || 3} days. Order stops geographically. For each stop provide travel time and transport mode from previous stop and a Google Maps URL.\nReturn ONLY valid JSON no markdown: {"destination":"city","days":[{"day":1,"date":"Day 1","theme":"Theme","stops":[{"order":1,"name":"Place","category":"Category","address":"Address","desc":"description","duration":"1 hr","travelFromPrev":null,"transportMode":null,"lat":1.3521,"lng":103.8198,"mapsUrl":"https://www.google.com/maps/search/?api=1&query=Place"}]}]}`;
+    try {
+      const response = await fetch(CLAUDE_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
+      });
+      const data = await response.json();
+      const text = data.content?.map(b => b.text || '').join('');
+      const clean = text.replace(/```json|```/g, '').trim();
+      setRoutedPlan(JSON.parse(clean));
+      setManualMode(false);
+    } catch (err) {
+      setError('Failed to build route. Please try again.');
+    }
+    setBuildingManualRoute(false);
+  };
+
   const transportIcons = { Walk: '🚶', MRT: '🚇', Metro: '🚇', Bus: '🚌', Taxi: '🚕', Grab: '🚗', Train: '🚆', 'Tuk-tuk': '🛺' };
 
   const inputStyle = {
@@ -513,13 +591,111 @@ Return ONLY valid JSON, no markdown:
             <div style={{ position: 'sticky', bottom: '24px', marginTop: '24px', background: 'rgba(10,15,26,0.95)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backdropFilter: 'blur(20px)', flexWrap: 'wrap', gap: '12px' }}>
               <div style={{ fontSize: '14px', color: 'var(--muted)' }}><span style={{ color: 'var(--text)', fontWeight: 700 }}>{selectedCount}</span> activities selected</div>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button onClick={() => { setSuggestions(null); setShowInterests(false); setShowManual(true); }} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '10px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>✏️ Plan My Own</button>
+                <button onClick={() => { setManualMode(true); setSuggestions(null); }} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '10px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>✏️ Plan My Own</button>
                 <button onClick={buildRoute} disabled={selectedCount === 0} style={{ background: selectedCount === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, var(--accent), var(--accent2))', color: selectedCount === 0 ? 'var(--muted)' : '#000', border: 'none', borderRadius: '10px', padding: '10px 24px', fontWeight: 800, fontSize: '14px', fontFamily: 'var(--font-head)', cursor: selectedCount === 0 ? 'not-allowed' : 'pointer' }}>Build My Route →</button>
               </div>
             </div>
           </div>
         )}
 
+
+        {/* Plan My Own */}
+        {manualMode && !buildingManualRoute && !routedPlan && (
+          <div style={{ maxWidth: '720px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-head)', fontSize: '20px', fontWeight: 900 }}>✏️ Plan My Own Trip</h2>
+                <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '4px' }}>Search or add places — build your basket, then route it</p>
+              </div>
+              <button onClick={() => { setManualMode(false); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>← Back</button>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', marginBottom: '8px', display: 'block' }}>Category</label>
+              <select value={manualCategory} onChange={e => setManualCategory(e.target.value)} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 16px', fontSize: '14px', color: 'var(--text)', outline: 'none' }}>
+                {['Food & Dining', 'Shopping Malls', 'Specialty Shops', 'Attractions', 'Nature & Parks', 'Culture & Arts', 'Nightlife', 'Wellness & Spas', 'Sports & Activities', 'Transport', 'Other'].map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Search a Place</div>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                <input type="text" placeholder={`Search in ${activeTrip?.destination || 'destination'}...`}
+                  value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && searchPlaces()}
+                  style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 16px', fontSize: '14px', color: 'var(--text)', outline: 'none' }} />
+                <button onClick={searchPlaces} disabled={searching} style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', color: '#000', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}>
+                  {searching ? '...' : 'Search'}
+                </button>
+              </div>
+              {searchResults.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {searchResults.map((r, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '10px' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: '14px' }}>{r.name}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>📍 {r.address}</div>
+                      </div>
+                      <button onClick={() => addToBasket(r)} style={{ background: 'rgba(0,200,255,0.1)', border: '1px solid rgba(0,200,255,0.25)', color: 'var(--accent)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Add Manually</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <input type="text" placeholder="Place name" value={manualName} onChange={e => setManualName(e.target.value)}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 16px', fontSize: '14px', color: 'var(--text)', outline: 'none' }} />
+                <input type="text" placeholder="Address (optional)" value={manualAddress} onChange={e => setManualAddress(e.target.value)}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 16px', fontSize: '14px', color: 'var(--text)', outline: 'none' }} />
+                <button onClick={addManualToBasket} disabled={!manualName.trim()} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '10px', padding: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>+ Add to Basket</button>
+              </div>
+            </div>
+
+            {basket.length > 0 && (
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
+                  Your Basket — {basket.length} place{basket.length !== 1 ? 's' : ''}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {basket.map((item, i) => (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', padding: '12px 16px', background: 'rgba(0,200,255,0.05)', border: '1px solid rgba(0,200,255,0.15)', borderRadius: '12px' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ background: 'var(--accent)', color: '#000', borderRadius: '6px', padding: '1px 8px', fontSize: '11px', fontWeight: 800 }}>{i + 1}</span>
+                          <span style={{ fontWeight: 700, fontSize: '14px' }}>{item.name}</span>
+                          <span style={{ fontSize: '11px', color: 'var(--muted)', background: 'rgba(255,255,255,0.06)', padding: '1px 8px', borderRadius: '6px' }}>{item.category}</span>
+                        </div>
+                        {item.address && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>📍 {item.address}</div>}
+                      </div>
+                      <button onClick={() => removeFromBasket(item.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '16px', cursor: 'pointer', padding: '0 4px' }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ position: 'sticky', bottom: '24px', background: 'rgba(10,15,26,0.95)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backdropFilter: 'blur(20px)', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
+                <span style={{ color: 'var(--text)', fontWeight: 700 }}>{basket.length}</span> places in basket
+              </div>
+              <button onClick={buildManualRoute} disabled={basket.length === 0} style={{ background: basket.length === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, var(--accent), var(--accent2))', color: basket.length === 0 ? 'var(--muted)' : '#000', border: 'none', borderRadius: '10px', padding: '10px 24px', fontWeight: 800, fontSize: '14px', fontFamily: 'var(--font-head)', cursor: basket.length === 0 ? 'not-allowed' : 'pointer' }}>
+                Plan My Route →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {buildingManualRoute && (
+          <div style={{ textAlign: 'center', padding: '60px 24px' }}>
+            <div className={styles.spinner} style={{ margin: '0 auto 20px' }}></div>
+            <p style={{ color: 'var(--muted)', fontSize: '15px' }}>Building your custom route...</p>
+          </div>
+        )}
         {/* Routing spinner */}
         {routing && (
           <div style={{ textAlign: 'center', padding: '60px 24px' }}>
