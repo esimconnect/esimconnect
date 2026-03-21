@@ -70,6 +70,8 @@ export default function Itinerary() {
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState('');
   const [duration, setDuration] = useState('');
+  const [hotelAddress, setHotelAddress] = useState('');
+  const [generatingProgress, setGeneratingProgress] = useState('');
 
   useEffect(() => { init(); }, []);
 
@@ -171,19 +173,7 @@ export default function Itinerary() {
     const end = new Date(start);
     end.setDate(start.getDate() + parseInt(activeTrip.duration) - 1);
 
-    const prompt = `You are an expert travel planner. Create a ${activeTrip.duration}-day itinerary for ${activeTrip.destination}.
-Trip dates: ${start.toDateString()} to ${end.toDateString()}
-Selected interests: ${interests.join(', ')}
-
-STRICT RULES:
-1. Only suggest real, verifiable, well-known establishments with confirmed physical addresses
-2. Prioritise UNESCO sites, Michelin-rated restaurants, government tourism board listed attractions, major chains
-3. Never invent business names or addresses
-4. Include real lat/lng coordinates for each place
-5. Note trust source (Michelin-listed, UNESCO, Tourism Board etc)
-
-Return ONLY valid JSON, no markdown, no extra text:
-{"destination":"${activeTrip.destination}","flag":"${activeTrip.flag || '🌍'}","disclaimer":"Suggestions are AI-generated from publicly known verified establishments. Always confirm opening hours before visiting.","days":[{"day":1,"date":"Mon, 21 Apr","theme":"Arrival & First Impressions","categories":{"Food & Dining":[{"id":"d1_f1","name":"Example Restaurant","address":"123 Example Street, City","desc":"Description","duration":"1 hr","trustSource":"Michelin-listed","lat":1.3521,"lng":103.8198}]}}]}`;
+    const prompt = `You are an expert travel planner creating a geographically optimised itinerary for ${activeTrip.destination}. ${hotelAddress ? 'Starting point each day: ' + hotelAddress : ''} Trip: ${start.toDateString()} to ${end.toDateString()} - ${activeTrip.duration} days. Interests: ${interests.join(', ')}. RULES: 1 Each day focuses on ONE neighbourhood group nearby places to minimise travel. 2 Never repeat the same location across multiple days. 3 Each day MUST include breakfast lunch and dinner near that days neighbourhood. 4 Group activities by category within each day: Attractions Shopping Culture Food and Dining. 5 Only real verifiable establishments prioritise UNESCO Michelin Tourism Board venues. 6 Never invent names or addresses. 7 Include real lat lng coordinates. 8 Note trust source. Return ONLY valid JSON no markdown: {destination: activeTrip destination, disclaimer: AI-generated from verified establishments, days array with neighbourhood theme categories}`;
 
     try {
       const response = await fetch(CLAUDE_API, {

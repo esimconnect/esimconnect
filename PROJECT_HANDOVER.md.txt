@@ -1,0 +1,676 @@
+File 1 src/App.js
+
+Java Script
+
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Home from './pages/Home';
+import Plans from './pages/Plans';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/plans" element={<Plans />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/order-confirmation" element={<OrderConfirmation />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+FILE 2  src/pages/Plans.js
+
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import Navbar from '../components/Navbar';
+import styles from './Plans.module.css';
+
+export default function Plans() {
+  const [plans, setPlans] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchCountries();
+  }, []);
+
+  useEffect(() => {
+    fetchPlans();
+  }, [selectedCountry]);
+
+  const fetchCountries = async () => {
+    const { data } = await supabase
+      .from('countries')
+      .select('id, name, iso_code, flag_emoji')
+      .order('name');
+    if (data) setCountries(data);
+  };
+
+  const fetchPlans = async () => {
+    setLoading(true);
+    let query = supabase
+      .from('esim_plans')
+      .select('*, countries(name, flag_emoji)')
+      .eq('is_active', true)
+      .order('price_sgd');
+
+    if (selectedCountry) {
+      query = query.eq('country_id', selectedCountry);
+    }
+
+    const { data } = await query;
+    if (data) setPlans(data);
+    setLoading(false);
+  };
+
+  const handleBuy = (plan) => {
+    const country = countries.find(c => c.id === plan.country_id);
+    navigate('/checkout', { state: { plan, country } });
+  };
+
+  return (
+    <div className={styles.page}>
+      <Navbar />
+      <main className={styles.main}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>eSIM Plans</h1>
+          <p className={styles.sub}>Affordable data plans for 190+ countries</p>
+        </div>
+        <div className={styles.filters}>
+          <select
+            className={styles.countrySelect}
+            value={selectedCountry}
+            onChange={e => setSelectedCountry(e.target.value)}
+          >
+            <option value="">🌍 All Countries</option>
+            {countries.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.flag_emoji} {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {loading ? (
+          <div className={styles.loading}>
+            <div className={styles.spinner}></div>
+          </div>
+        ) : plans.length === 0 ? (
+          <div className={styles.empty}>No plans found for this destination yet.</div>
+        ) : (
+          <div className={styles.grid}>
+            {plans.map(plan => (
+              <div key={plan.id} className={styles.card}>
+                <div className={styles.cardTop}>
+                  <span className={styles.flag}>{plan.countries?.flag_emoji}</span>
+                  <span className={styles.country}>{plan.countries?.name}</span>
+                </div>
+                <div className={styles.planName}>{plan.plan_name}</div>
+                <div className={styles.planDetails}>
+                  <span className={styles.data}>{plan.data_gb}GB</span>
+                  <span className={styles.sep}>·</span>
+                  <span>{plan.validity_days} days</span>
+                </div>
+                <div className={styles.price}>
+                  <span className={styles.currency}>SGD</span>
+                  <span className={styles.amount}>{plan.price_sgd}</span>
+                </div>
+                <button
+                  className={styles.buyBtn}
+                  onClick={() => handleBuy(plan)}
+                >
+                  Buy Now →
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+
+FILE 3 - src/pages/Checkout.js
+
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { supabase } from '../lib/supabase';
+import Navbar from '../components/Navbar';
+
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+
+function CheckoutForm({ plan, country }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [email, setEmail] = useState('');
+
+  const subtotal = parseFloat(plan.price_sgd);
+  const gst = parseFloat((subtotal * 0.09).toFixed(2));
+  const total = parseFloat((subtotal + gst).toFixed(2));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const orderNumber = 'ESC-' + Date.now();
+
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          user_id: user?.id || null,
+          guest_email: user ? null : email,
+          plan_id: plan.id,
+          country_id: plan.country_id,
+          subtotal_sgd: subtotal,
+          gst_sgd: gst,
+          total_sgd: total,
+          payment_method: 'card',
+          payment_status: 'pending',
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      navigate('/order-confirmation', {
+        state: { order, plan, country }
+      });
+
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {!localStorage.getItem('user') && (
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', color: '#374151' }}>
+            Email Address
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            required
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '16px'
+            }}
+          />
+        </div>
+      )}
+
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', marginBottom: '8px', color: '#374151' }}>
+          Card Details
+        </label>
+        <div style={{
+          padding: '12px',
+          border: '1px solid #d1d5db',
+          borderRadius: '8px',
+          backgroundColor: 'white'
+        }}>
+          <CardElement options={{
+            style: {
+              base: {
+                fontSize: '16px',
+                color: '#374151',
+                '::placeholder': { color: '#9ca3af' }
+              }
+            }
+          }} />
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ color: '#ef4444', marginBottom: '16px', fontSize: '14px' }}>
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={!stripe || loading}
+        style={{
+          width: '100%',
+          padding: '14px',
+          backgroundColor: loading ? '#9ca3af' : '#2563eb',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '16px',
+          fontWeight: '600',
+          cursor: loading ? 'not-allowed' : 'pointer'
+        }}
+      >
+        {loading ? 'Processing...' : `Pay SGD ${total.toFixed(2)}`}
+      </button>
+    </form>
+  );
+}
+
+export default function Checkout() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { plan, country } = location.state || {};
+
+  useEffect(() => {
+    if (!plan) navigate('/plans');
+  }, [plan, navigate]);
+
+  if (!plan) return null;
+
+  const subtotal = parseFloat(plan.price_sgd);
+  const gst = parseFloat((subtotal * 0.09).toFixed(2));
+  const total = parseFloat((subtotal + gst).toFixed(2));
+
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+      <Navbar />
+      <main style={{ maxWidth: '480px', margin: '0 auto', padding: '32px 16px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '24px', color: '#111827' }}>
+          Checkout
+        </h1>
+
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>
+            Order Summary
+          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: '#6b7280' }}>{country?.flag_emoji} {country?.name}</span>
+            <span style={{ fontWeight: '600' }}>{plan.plan_name}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: '#6b7280' }}>Data</span>
+            <span>{plan.data_gb}GB · {plan.validity_days} days</span>
+          </div>
+          <hr style={{ margin: '12px 0', borderColor: '#e5e7eb' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: '#6b7280' }}>Subtotal</span>
+            <span>SGD {subtotal.toFixed(2)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: '#6b7280' }}>GST (9%)</span>
+            <span>SGD {gst.toFixed(2)}</span>
+          </div>
+          <hr style={{ margin: '12px 0', borderColor: '#e5e7eb' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontWeight: '700', color: '#111827' }}>Total</span>
+            <span style={{ fontWeight: '700', color: '#2563eb', fontSize: '18px' }}>
+              SGD {total.toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>
+            Payment Details
+          </h2>
+          <Elements stripe={stripePromise}>
+            <CheckoutForm plan={plan} country={country} />
+          </Elements>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+
+
+
+FILE 4 - src/pages/OrderConfirmation.js
+
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+
+export default function OrderConfirmation() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { order, plan, country } = location.state || {};
+
+  if (!order) {
+    navigate('/plans');
+    return null;
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+      <Navbar />
+      <main style={{ maxWidth: '480px', margin: '0 auto', padding: '32px 16px' }}>
+
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            backgroundColor: '#d1fae5',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+            fontSize: '32px'
+          }}>
+            ✅
+          </div>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', marginBottom: '8px' }}>
+            Order Confirmed!
+          </h1>
+          <p style={{ color: '#6b7280' }}>
+            Thank you for your purchase. Your eSIM will be delivered shortly.
+          </p>
+        </div>
+
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>
+            Order Details
+          </h2>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span style={{ color: '#6b7280' }}>Order Number</span>
+            <span style={{ fontWeight: '600', color: '#111827' }}>{order.order_number}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span style={{ color: '#6b7280' }}>Destination</span>
+            <span>{country?.flag_emoji} {country?.name}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span style={{ color: '#6b7280' }}>Plan</span>
+            <span>{plan?.plan_name}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span style={{ color: '#6b7280' }}>Data</span>
+            <span>{plan?.data_gb}GB · {plan?.validity_days} days</span>
+          </div>
+          <hr style={{ margin: '12px 0', borderColor: '#e5e7eb' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: '#6b7280' }}>Subtotal</span>
+            <span>SGD {parseFloat(order.subtotal_sgd).toFixed(2)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: '#6b7280' }}>GST (9%)</span>
+            <span>SGD {parseFloat(order.gst_sgd).toFixed(2)}</span>
+          </div>
+          <hr style={{ margin: '12px 0', borderColor: '#e5e7eb' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontWeight: '700', color: '#111827' }}>Total Paid</span>
+            <span style={{ fontWeight: '700', color: '#2563eb', fontSize: '18px' }}>
+              SGD {parseFloat(order.total_sgd).toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: '#fffbeb',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '24px',
+          border: '1px solid #fde68a'
+        }}>
+          <p style={{ color: '#92400e', fontSize: '14px', margin: 0 }}>
+            🕐 Your eSIM QR code is being prepared and will be delivered to your email shortly.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <button
+            onClick={() => navigate('/dashboard')}
+            style={{
+              width: '100%',
+              padding: '14px',
+              backgroundColor: '#2563eb',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Go to Dashboard
+          </button>
+          <button
+            onClick={() => navigate('/plans')}
+            style={{
+              width: '100%',
+              padding: '14px',
+              backgroundColor: 'white',
+              color: '#2563eb',
+              border: '1px solid #2563eb',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Browse More Plans
+          </button>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+
+
+FILE 5 — src/pages/Plans.module.css
+
+.page {
+  min-height: 100vh;
+  background-color: #f9fafb;
+}
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+.sub {
+  color: #6b7280;
+  font-size: 16px;
+}
+.filters {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+}
+.countrySelect {
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+  min-width: 250px;
+  background: white;
+}
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 64px;
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.empty {
+  text-align: center;
+  color: #6b7280;
+  padding: 64px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.flag {
+  font-size: 24px;
+}
+.country {
+  font-size: 14px;
+  color: #6b7280;
+}
+.planName {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+.planDetails {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 14px;
+}
+.data {
+  font-weight: 600;
+  color: #111827;
+}
+.sep {
+  color: #d1d5db;
+}
+.price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.currency {
+  font-size: 14px;
+  color: #6b7280;
+}
+.amount {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+}
+.buyBtn {
+  width: 100%;
+  padding: 12px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: auto;
+}
+.buyBtn:hover {
+  background-color: #1d4ed8;
+}
+.buyBtnDisabled {
+  width: 100%;
+  padding: 12px;
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: not-allowed;
+  margin-top: auto;
+}
+
+
+SUPABASE NOTES
+Orders table RLS policy applied:
+
+CREATE POLICY "Allow all operations"
+ON "public"."orders"
+AS PERMISSIVE
+FOR ALL
+TO public
+USING (true)
+WITH CHECK (true);
+```
+
+**Environment variables needed in `.env`:**
+```
+REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
+REACT_APP_SUPABASE_URL=https://caiyjwcvwnquqfwoozjm.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=your_anon_key
+
+
+
+
+
+
