@@ -41,13 +41,125 @@ function MapBounds({ markers }) {
   return null;
 }
 
-function NumberedIcon(number) {
+const DAY_COLORS = ['#00c8ff','#ff6b9d','#4cd964','#f5a623','#bf5af2','#ff9f0a','#30d158','#64d2ff'];
+
+function NumberedIcon(number, day) {
+  const color = DAY_COLORS[((day || 1) - 1) % DAY_COLORS.length];
   return L.divIcon({
-    html: `<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#00c8ff,#00a8e8);color:#000;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);">${number}</div>`,
+    html: `<div style="width:28px;height:28px;border-radius:50%;background:${color};color:#000;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);">${number}</div>`,
     className: '',
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   });
+}
+
+
+function AddPlaceSearch({ activeTrip, onAdd }) {
+  const [query, setQuery] = React.useState('');
+  const [results, setResults] = React.useState([]);
+  const [searching, setSearching] = React.useState(false);
+  const [confirming, setConfirming] = React.useState(null);
+
+  const search = async () => {
+    if (!query.trim()) return;
+    setSearching(true);
+    setResults([]);
+    try {
+      const dest = encodeURIComponent((activeTrip && activeTrip.destination) || '');
+      const q = encodeURIComponent(query);
+      const res = await fetch(
+        'https://nominatim.openstreetmap.org/search?q=' + q + '+' + dest + '&format=json&limit=5&addressdetails=1',
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const data = await res.json();
+      setResults(data.map(r => ({
+        name: r.name || r.display_name.split(',')[0],
+        address: r.display_name,
+        lat: parseFloat(r.lat),
+        lng: parseFloat(r.lon),
+      })));
+    } catch(e) {}
+    setSearching(false);
+  };
+
+  const addConfirmed = () => {
+    if (!confirming) return;
+    onAdd({
+      ...confirming,
+      id: 'custom_' + Math.random().toString(36).substr(2, 8),
+      category: 'My Additions',
+      subcategory: 'Custom',
+      trustSource: 'Added by you',
+      desc: '',
+      duration: '1 hr',
+    });
+    setConfirming(null);
+    setQuery('');
+    setResults([]);
+  };
+
+  return (
+    <div style={{ background: 'rgba(0,200,255,0.04)', border: '1px solid rgba(0,200,255,0.2)', borderRadius: '16px', padding: '16px 20px', marginBottom: '8px' }}>
+      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)', marginBottom: '10px' }}>
+        🔍 Can't find a place? Search & add it
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && search()}
+          placeholder={'Search a place in ' + ((activeTrip && activeTrip.destination) || 'your destination') + '...'}
+          style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 12px', color: 'var(--text)', fontSize: '13px' }}
+        />
+        <button
+          onClick={search}
+          disabled={searching}
+          style={{ background: 'var(--accent)', color: '#000', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+        >
+          {searching ? '...' : 'Search'}
+        </button>
+      </div>
+      {results.length > 0 && !confirming && (
+        <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {results.map((r, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 12px', gap: '8px' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '13px' }}>{r.name}</div>
+                <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>📍 {r.address}</div>
+              </div>
+              <button
+                onClick={() => setConfirming(r)}
+                style={{ background: 'rgba(0,200,255,0.15)', border: '1px solid var(--accent)', color: 'var(--accent)', borderRadius: '6px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                + Add
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {confirming && (
+        <div style={{ marginTop: '10px', background: 'rgba(76,217,100,0.08)', border: '1px solid rgba(76,217,100,0.3)', borderRadius: '10px', padding: '12px 16px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>✅ Confirm adding this place?</div>
+          <div style={{ fontWeight: 700, fontSize: '14px' }}>{confirming.name}</div>
+          <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>📍 {confirming.address}</div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+            <button
+              onClick={addConfirmed}
+              style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', color: '#000', border: 'none', borderRadius: '8px', padding: '6px 18px', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
+            >
+              ✓ Yes, Add It
+            </button>
+            <button
+              onClick={() => setConfirming(null)}
+              style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '6px 14px', fontSize: '13px', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Itinerary() {
@@ -66,6 +178,7 @@ export default function Itinerary() {
   const [selected, setSelected] = useState({});
   const [routing, setRouting] = useState(false);
   const [routedPlan, setRoutedPlan] = useState(null);
+  const [activeMapDay, setActiveMapDay] = React.useState(null);
   const [error, setError] = useState('');
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -173,29 +286,28 @@ export default function Itinerary() {
     const end = new Date(start);
     end.setDate(start.getDate() + parseInt(activeTrip.duration) - 1);
 
-    const prompt = `You are an expert travel planner creating a geographically optimised itinerary for ${activeTrip.destination}. ${hotelAddress ? 'Starting point each day: ' + hotelAddress : ''} Trip: ${start.toDateString()} to ${end.toDateString()} - ${activeTrip.duration} days. Interests: ${interests.join(', ')}. RULES: 1 Each day focuses on ONE neighbourhood group nearby places to minimise travel. 2 Never repeat the same location across multiple days. 3 Each day MUST include breakfast lunch and dinner near that days neighbourhood. 4 Group activities by category within each day: Attractions Shopping Culture Food and Dining. 5 Only real verifiable establishments prioritise UNESCO Michelin Tourism Board venues. 6 Never invent names or addresses. 7 Include real lat lng coordinates. 8 Note trust source. Return ONLY valid JSON no markdown: {destination: activeTrip destination, disclaimer: AI-generated from verified establishments, days array with neighbourhood theme categories}`;
+    const prompt = `You are an expert travel curator. Generate a rich flat list of suggested places for a ${activeTrip.duration}-day trip to ${activeTrip.destination}. Interests: ${interests.join(', ')}. DO NOT group by day — return a flat list across all categories giving the user maximum choice. Rules: 1. Only real verifiable establishments. 2. Prioritise UNESCO Michelin Tourism Board venues. 3. Never invent names or addresses. 4. Accurate lat/lng. 5. Note trust source. 6. Include meal options breakfast lunch dinner plus interest-specific venues. 7. Aim for ${Math.ceil(parseInt(activeTrip.duration) * 6)} suggestions. Return ONLY valid JSON no markdown: {"destination":"${activeTrip.destination}","flag":"🌏","disclaimer":"AI-generated from verified sources","places":[{"id":"p1","name":"Place Name","category":"Food & Dining","subcategory":"Breakfast","address":"Full address","desc":"Short description","duration":"1 hr","trustSource":"Michelin","lat":1.3521,"lng":103.8198}]}`;
 
     try {
       const response = await fetch(CLAUDE_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
+        body: JSON.stringify({ model: MODEL, max_tokens: 8000, messages: [{ role: 'user', content: prompt }] })
       });
       const data = await response.json();
       const text = data.content?.map(b => b.text || '').join('');
       const clean = text.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(clean);
+      parsed.places?.forEach((item, i) => {
+        if (item.coordinates && !item.lat) { item.lat = item.coordinates.lat; item.lng = item.coordinates.lng; }
+        if (!item.id) item.id = 'p_' + i + '_' + Math.random().toString(36).substr(2,5);
+        if (!item.address) item.address = item.name + ', ' + parsed.destination;
+        if (!item.trustSource) item.trustSource = item.source || '';
+        if (!item.desc) item.desc = item.type || '';
+      });
       setSuggestions(parsed);
       const preSelected = {};
-      parsed.days.forEach((day, di) => {
-        Object.values(day.categories).forEach((items, ci) => {
-          items.forEach((item, ii) => {
-            const uid = `d${di}_c${ci}_i${ii}`;
-            item.id = uid;
-            preSelected[uid] = true;
-          });
-        });
-      });
+      parsed.places?.forEach(item => { preSelected[item.id] = true; });
       setSelected(preSelected);
     } catch (err) {
       setError('Failed to generate suggestions. Please try again.');
@@ -235,36 +347,41 @@ export default function Itinerary() {
   const buildRoute = async () => {
     setRouting(true);
     setError('');
-    const selectedByDay = suggestions.days.map(day => {
-      const items = [];
-      Object.entries(day.categories).forEach(([cat, catItems]) => {
-        catItems.forEach(item => { if (selected[item.id]) items.push({ ...item, category: cat }); });
-      });
-      return { day: day.day, date: day.date, theme: day.theme, items };
-    }).filter(d => d.items.length > 0);
+    const selectedItems = (suggestions?.places || []).filter(item => selected[item.id]);
+    const start = new Date(activeTrip.startDate);
+    const tripDays = parseInt(activeTrip.duration);
+    const dateLabels = Array.from({ length: tripDays }, (_, i) => {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    });
 
-    const prompt = `You are a travel routing expert. Optimise a day-by-day route for ${activeTrip.destination}.
-Selected activities: ${JSON.stringify(selectedByDay)}
+    const prompt = `You are an expert travel routing AI. The user has selected ${selectedItems.length} places for a ${tripDays}-day trip to ${activeTrip.destination}.
 
-Rules:
-1. Order stops geographically to minimise travel
-2. Provide travel time and transport mode (Walk/MRT/Metro/Bus/Taxi/Grab/Train) between each stop
-3. Keep real addresses and coordinates from input
-4. Generate Google Maps URL per stop: https://www.google.com/maps/search/?api=1&query=PLACE+NAME+CITY
+Your job:
+1. CLUSTER the selected places geographically — group nearby places to minimise travel within each day
+2. SLOT each cluster into a day (${dateLabels.map((d,i)=>'Day '+(i+1)+' = '+d).join(', ')})
+3. Within each day ORDER stops to minimise travel distance
+4. Ensure logical daily flow — include a meal stop, spread activities evenly
+5. Provide travel time and transport mode (Walk/MRT/Bus/Grab/Taxi) between each stop
+6. Generate Google Maps URL per stop: https://www.google.com/maps/search/?api=1&query=PLACE+CITY
+
+Selected places: ${JSON.stringify(selectedItems)}
 
 Return ONLY valid JSON, no markdown:
-{"destination":"${activeTrip.destination}","days":[{"day":1,"date":"Mon, 21 Apr","theme":"Theme","stops":[{"order":1,"name":"Place","category":"Food & Dining","address":"Full address","desc":"Description","duration":"1 hr","trustSource":"Source","travelFromPrev":null,"transportMode":null,"lat":1.3521,"lng":103.8198,"mapsUrl":"https://www.google.com/maps/search/?api=1&query=Place+City"}]}]}`;
+{"destination":"${activeTrip.destination}","days":[{"day":1,"date":"${dateLabels[0]}","stops":[{"order":1,"name":"Place","category":"Food & Dining","address":"Full address","desc":"Description","duration":"1 hr","trustSource":"Source","travelFromPrev":null,"transportMode":null,"lat":1.3521,"lng":103.8198,"mapsUrl":"https://www.google.com/maps/search/?api=1&query=Place+City"}]}]}`;
 
     try {
       const response = await fetch(CLAUDE_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
+        body: JSON.stringify({ model: MODEL, max_tokens: 8000, messages: [{ role: 'user', content: prompt }] })
       });
       const data = await response.json();
       const text = data.content?.map(b => b.text || '').join('');
       const clean = text.replace(/```json|```/g, '').trim();
       setRoutedPlan(JSON.parse(clean));
+      setActiveMapDay(null);
+      setSuggestions(null);
     } catch (err) {
       setError('Failed to build route. Please try again.');
     }
@@ -504,12 +621,16 @@ Return ONLY valid JSON, no markdown:
         )}
 
         {/* STEP 3: Suggestions + Map */}
-        {suggestions && !routedPlan && !routing && (
+        {suggestions && !routedPlan && !routing && (() => {
+          const allPlaces = suggestions.places || [];
+          const categories = [...new Set(allPlaces.map(p => p.category))];
+          const selectedMarkers = allPlaces.filter(p => p.lat && p.lng);
+          return (
           <div style={{ maxWidth: '760px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontFamily: 'var(--font-head)', fontSize: '20px', fontWeight: 900 }}>{suggestions.flag} {suggestions.destination} — Select Your Activities</h2>
-                <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '4px' }}>Tick what you want · untick what you don't · then build your route</p>
+                <h2 style={{ fontFamily: 'var(--font-head)', fontSize: '20px', fontWeight: 900 }}>{suggestions.flag} {suggestions.destination} — Pick Your Places</h2>
+                <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '4px' }}>Tick what you want · Claude will cluster & optimise your route</p>
               </div>
               <button onClick={() => { setSuggestions(null); setShowInterests(true); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>← Back to Interests</button>
             </div>
@@ -518,82 +639,74 @@ Return ONLY valid JSON, no markdown:
               ℹ️ {suggestions.disclaimer}
             </div>
 
-            {/* Map Step 3 */}
-            {(() => {
-              const markers = getMapMarkers(suggestions, false);
-              return markers.length > 0 ? (
-                <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)', marginBottom: '24px', height: '320px' }}>
-                  <MapContainer center={[markers[0].lat, markers[0].lng]} zoom={12} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='© OpenStreetMap' />
-                    <MapBounds markers={markers} />
-                    {markers.map((m, i) => (
-                      <Marker key={m.id || i} position={[m.lat, m.lng]} icon={NumberedIcon(i + 1)}>
-                        <Popup><strong>{m.name}</strong><br /><span style={{ fontSize: '11px', color: '#666' }}>{m.address}</span></Popup>
-                      </Marker>
-                    ))}
-                  </MapContainer>
-                </div>
-              ) : null;
-            })()}
+            {selectedMarkers.length > 0 && (
+              <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)', marginBottom: '24px', height: '320px' }}>
+                <MapContainer center={[selectedMarkers[0].lat, selectedMarkers[0].lng]} zoom={12} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="© OpenStreetMap" />
+                  <MapBounds markers={selectedMarkers} />
+                  {selectedMarkers.map((m, i) => (
+                    <Marker key={m.id || i} position={[m.lat, m.lng]} icon={NumberedIcon(i + 1, 1)}>
+                      <Popup><strong>{m.name}</strong><br /><span style={{ fontSize: '11px', color: '#666' }}>{m.address}</span></Popup>
+                    </Marker>
+                  ))}
+                </MapContainer>
+              </div>
+            )}
 
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-              <button onClick={() => { const all = {}; suggestions.days.forEach(d => Object.values(d.categories).forEach(items => items.forEach(i => { all[i.id] = true; }))); setSelected(all); }} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>Select All</button>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+              <button onClick={() => { const all = {}; allPlaces.forEach(p => { all[p.id] = true; }); setSelected(all); }} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>Select All</button>
               <button onClick={() => setSelected({})} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>Deselect All</button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {suggestions.days.map(day => (
-                <div key={day.day} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden' }}>
-                  <div style={{ background: 'rgba(0,200,255,0.08)', borderBottom: '1px solid var(--border)', padding: '14px 24px', display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-                    <span style={{ background: 'var(--accent)', color: '#000', borderRadius: '8px', padding: '2px 10px', fontSize: '12px', fontWeight: 800 }}>Day {day.day}</span>
-                    <span style={{ fontSize: '13px', color: 'var(--muted)' }}>{day.date}</span>
-                    <span style={{ fontWeight: 700, fontSize: '15px' }}>{day.theme}</span>
-                  </div>
-                  <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                    {Object.entries(day.categories).map(([cat, items]) => (
-                      <div key={cat}>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>{cat}</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {items.map(item => (
-                            <label key={item.id} style={cardStyle(selected[item.id])}>
-                              <input type="checkbox" checked={!!selected[item.id]} onChange={() => toggleItem(item.id)}
-                                style={{ marginTop: '3px', accentColor: 'var(--accent)', width: '16px', height: '16px', flexShrink: 0 }} />
-                              <div style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
-                                  <div style={{ fontWeight: 700, fontSize: '14px' }}>
-                                    {item.name}
-                                    {item.duration && <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '12px', marginLeft: '8px' }}>· {item.duration}</span>}
-                                  </div>
-                                  {item.trustSource && (
-                                    <span style={{ fontSize: '10px', background: 'rgba(76,217,100,0.1)', color: '#4cd964', border: '1px solid rgba(76,217,100,0.2)', borderRadius: '6px', padding: '2px 7px', whiteSpace: 'nowrap', fontWeight: 700 }}>✓ {item.trustSource}</span>
-                                  )}
-                                </div>
-                                <div style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '3px' }}>{item.desc}</div>
-                                {item.address && <div style={{ fontSize: '11px', color: 'var(--muted2)', marginTop: '4px' }}>📍 {item.address}</div>}
+            <AddPlaceSearch
+              activeTrip={activeTrip}
+              onAdd={(place) => {
+                setSuggestions(prev => ({ ...prev, places: [...(prev.places || []), place] }));
+                setSelected(prev => ({ ...prev, [place.id]: true }));
+              }}
+            />
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '24px' }}>
+              {categories.map(cat => {
+                const items = allPlaces.filter(p => p.category === cat);
+                return (
+                  <div key={cat} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden' }}>
+                    <div style={{ background: 'rgba(0,200,255,0.06)', borderBottom: '1px solid var(--border)', padding: '12px 20px', fontSize: '12px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px' }}>{cat}</div>
+                    <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {items.map(item => (
+                        <label key={item.id} style={cardStyle(selected[item.id])}>
+                          <input type="checkbox" checked={!!selected[item.id]} onChange={() => toggleItem(item.id)} style={{ marginTop: '3px', accentColor: 'var(--accent)', width: '16px', height: '16px', flexShrink: 0 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
+                              <div style={{ fontWeight: 700, fontSize: '14px' }}>
+                                {item.name}
+                                {item.subcategory && <span style={{ fontWeight: 400, color: 'var(--accent)', fontSize: '11px', marginLeft: '8px', background: 'rgba(0,200,255,0.1)', borderRadius: '4px', padding: '1px 6px' }}>{item.subcategory}</span>}
+                                {item.duration && <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '12px', marginLeft: '8px' }}>· {item.duration}</span>}
                               </div>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                              {item.trustSource && <span style={{ fontSize: '10px', background: 'rgba(76,217,100,0.1)', color: '#4cd964', border: '1px solid rgba(76,217,100,0.2)', borderRadius: '6px', padding: '2px 7px', whiteSpace: 'nowrap', fontWeight: 700 }}>✓ {item.trustSource}</span>}
+                            </div>
+                            <div style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '3px' }}>{item.desc}</div>
+                            {item.address && <div style={{ fontSize: '11px', color: 'var(--muted2)', marginTop: '4px' }}>📍 {item.address}</div>}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Sticky CTA */}
             <div style={{ position: 'sticky', bottom: '24px', marginTop: '24px', background: 'rgba(10,15,26,0.95)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backdropFilter: 'blur(20px)', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ fontSize: '14px', color: 'var(--muted)' }}><span style={{ color: 'var(--text)', fontWeight: 700 }}>{selectedCount}</span> activities selected</div>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button onClick={() => { setManualMode(true); setSuggestions(null); }} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '10px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>✏️ Plan My Own</button>
-                <button onClick={buildRoute} disabled={selectedCount === 0} style={{ background: selectedCount === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, var(--accent), var(--accent2))', color: selectedCount === 0 ? 'var(--muted)' : '#000', border: 'none', borderRadius: '10px', padding: '10px 24px', fontWeight: 800, fontSize: '14px', fontFamily: 'var(--font-head)', cursor: selectedCount === 0 ? 'not-allowed' : 'pointer' }}>Build My Route →</button>
+              <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
+                <span style={{ color: 'var(--text)', fontWeight: 700 }}>{selectedCount}</span> places selected · Claude will cluster & sort into <span style={{ color: 'var(--text)', fontWeight: 700 }}>{activeTrip && activeTrip.duration}</span> days
               </div>
+              <button onClick={buildRoute} disabled={selectedCount === 0} style={{ background: selectedCount === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, var(--accent), var(--accent2))', color: selectedCount === 0 ? 'var(--muted)' : '#000', border: 'none', borderRadius: '10px', padding: '10px 24px', fontWeight: 800, fontSize: '14px', fontFamily: 'var(--font-head)', cursor: selectedCount === 0 ? 'not-allowed' : 'pointer' }}>Build My Route →</button>
             </div>
           </div>
-        )}
+          );
+        })()}
 
-
-        {/* Plan My Own */}
+                {/* Plan My Own */}
         {manualMode && !buildingManualRoute && !routedPlan && (
           <div style={{ maxWidth: '720px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
@@ -707,38 +820,59 @@ Return ONLY valid JSON, no markdown:
                 <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '4px' }}>Stops ordered and optimised · tap 📍 Maps for navigation</p>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => setRoutedPlan(null)} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>← Edit Selection</button>
+                <button onClick={() => { setRoutedPlan(null); setSuggestions(suggestions); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>← Edit Selection</button>
+                <button onClick={() => { setRoutedPlan(null); setSuggestions(suggestions); buildRoute(); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--accent)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>🔄 Re-Build</button>
+                <button onClick={() => window.print()} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>🖨️ Print</button>
+                <button onClick={() => { const text = routedPlan.days.map(d => 'Day ' + d.day + ': ' + d.theme + '\n' + (d.stops || []).map(s => s.order + '. ' + s.name + ' - ' + s.address).join('\n')).join('\n\n'); navigator.clipboard.writeText(text).then(() => alert('Itinerary copied!')); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>📋 Copy</button>
+
                 <button onClick={() => { setSuggestions(null); setRoutedPlan(null); setShowInterests(false); setShowManual(false); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Start Over</button>
               </div>
             </div>
 
-            {/* Map Step 5 */}
+            {/* Map Step 5 - Interactive Day Filter */}
             {(() => {
-              const markers = getRouteMarkers(routedPlan);
-              return markers.length > 0 ? (
-                <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)', marginBottom: '28px', height: '360px' }}>
-                  <MapContainer center={[markers[0].lat, markers[0].lng]} zoom={12} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='© OpenStreetMap' />
-                    <MapBounds markers={markers} />
-                    {markers.map((m, i) => (
-                      <Marker key={i} position={[m.lat, m.lng]} icon={NumberedIcon(m.order || i + 1)}>
-                        <Popup>
-                          <strong>Stop {m.order}: {m.name}</strong><br />
-                          <span style={{ fontSize: '11px', color: '#666' }}>{m.address}</span><br />
-                          {m.mapsUrl && <a href={m.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px' }}>Open in Maps</a>}
-                        </Popup>
-                      </Marker>
+              const allMarkers = getRouteMarkers(routedPlan);
+              if (allMarkers.length === 0) return null;
+              const days = routedPlan.days || [];
+              return (
+                <div style={{ marginBottom: '28px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    <button onClick={() => setActiveMapDay(null)} style={{ background: activeMapDay === null ? 'var(--accent)' : 'rgba(255,255,255,0.06)', color: activeMapDay === null ? '#000' : 'var(--muted)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>All Days</button>
+                    {days.map(day => (
+                      <button key={day.day} onClick={() => setActiveMapDay(day.day)} style={{ background: activeMapDay === day.day ? DAY_COLORS[(day.day-1) % DAY_COLORS.length] : 'rgba(255,255,255,0.06)', color: activeMapDay === day.day ? '#000' : 'var(--muted)', border: '1px solid ' + (activeMapDay === day.day ? DAY_COLORS[(day.day-1) % DAY_COLORS.length] : 'var(--border)'), borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Day {day.day}</button>
                     ))}
-                  </MapContainer>
+                  </div>
+                  {(() => {
+                    const filtered = activeMapDay === null ? allMarkers : allMarkers.filter(m => m.day === activeMapDay);
+                    if (filtered.length === 0) return null;
+                    const borderColor = activeMapDay === null ? 'var(--border)' : DAY_COLORS[(activeMapDay-1) % DAY_COLORS.length];
+                    return (
+                      <div style={{ borderRadius: '16px', overflow: 'hidden', border: '2px solid ' + borderColor, height: '360px' }}>
+                        <MapContainer key={'map_' + activeMapDay} center={[filtered[0].lat, filtered[0].lng]} zoom={13} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
+                          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="© OpenStreetMap" />
+                          <MapBounds markers={filtered} />
+                          {filtered.map((m, i) => (
+                            <Marker key={i} position={[m.lat, m.lng]} icon={NumberedIcon(m.order || i+1, m.day || 1)}>
+                              <Popup>
+                                <strong>Stop {m.order}: {m.name}</strong><br />
+                                <span style={{ fontSize: '11px', color: '#666' }}>{m.address}</span><br />
+                                {m.mapsUrl && <a href={m.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px' }}>Open in Maps</a>}
+                              </Popup>
+                            </Marker>
+                          ))}
+                        </MapContainer>
+                      </div>
+                    );
+                  })()}
                 </div>
-              ) : null;
+              );
             })()}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {routedPlan.days?.map(day => (
                 <div key={day.day} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden' }}>
-                  <div style={{ background: 'rgba(0,200,255,0.08)', borderBottom: '1px solid var(--border)', padding: '14px 24px', display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-                    <span style={{ background: 'var(--accent)', color: '#000', borderRadius: '8px', padding: '2px 10px', fontSize: '12px', fontWeight: 800 }}>Day {day.day}</span>
+                  <div style={{ background: 'rgba(0,200,255,0.08)', borderBottom: '1px solid var(--border)', borderLeft: `4px solid ${DAY_COLORS[(day.day - 1) % DAY_COLORS.length]}`, padding: '14px 24px', display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                    <span style={{ background: DAY_COLORS[(day.day - 1) % DAY_COLORS.length], color: '#000', borderRadius: '8px', padding: '2px 10px', fontSize: '12px', fontWeight: 800 }}>Day {day.day}</span>
                     <span style={{ fontSize: '13px', color: 'var(--muted)' }}>{day.date}</span>
                     <span style={{ fontWeight: 700, fontSize: '15px' }}>{day.theme}</span>
                   </div>
