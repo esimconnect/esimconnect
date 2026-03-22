@@ -187,9 +187,13 @@ export default function Itinerary() {
       const parsed = JSON.parse(clean);
       setSuggestions(parsed);
       const preSelected = {};
-      parsed.days.forEach(day => {
-        Object.values(day.categories).forEach(items => {
-          items.forEach(item => { preSelected[item.id] = true; });
+      parsed.days.forEach((day, di) => {
+        Object.values(day.categories).forEach((items, ci) => {
+          items.forEach((item, ii) => {
+            const uid = `d${di}_c${ci}_i${ii}`;
+            item.id = uid;
+            preSelected[uid] = true;
+          });
         });
       });
       setSelected(preSelected);
