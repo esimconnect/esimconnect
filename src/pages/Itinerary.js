@@ -179,17 +179,29 @@ export default function Itinerary() {
   const [routing, setRouting] = useState(false);
   const [routedPlan, setRoutedPlan] = useState(null);
   const [activeMapDay, setActiveMapDay] = React.useState(null);
+
+  // Load saved itinerary from sessionStorage if present
+  useEffect(() => {
+    const loaded = sessionStorage.getItem("loadedItinerary");
+    if (loaded) {
+      try {
+        setRoutedPlan(JSON.parse(loaded));
+        sessionStorage.removeItem("loadedItinerary");
+      } catch(e) {}
+    }
+  }, []);
   const [savedStatus, setSavedStatus] = React.useState('');
 
   const saveItinerary = async () => {
     if (!user) { setSavedStatus('Login to save'); setTimeout(() => setSavedStatus(''), 3000); return; }
     setSavedStatus('saving');
-    const { error } = await supabase.from('saved_itineraries').insert({
+    const { data: saveData, error } = await supabase.from('saved_itineraries').insert({
       user_id: user.id,
       destination: routedPlan.destination,
       trip_data: routedPlan,
     });
     if (error) {
+      console.error('Save error:', error.message, error.code, error.details);
       setSavedStatus('error');
     } else {
       setSavedStatus('saved');

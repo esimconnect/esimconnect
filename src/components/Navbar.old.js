@@ -54,8 +54,7 @@ export default function Navbar() {
               </Link>
               <Link to="/itinerary" className={isActive('/itinerary')} onClick={() => setMenuOpen(false)}>
                 Itinerary
-              </Link>
-              <Link to="/saved-itineraries" className={isActive('/saved-itineraries')} onClick={() => setMenuOpen(false)}>
+              <Link to='/saved-itineraries' className={isActive('/saved-itineraries')} onClick={() => setMenuOpen(false)}>
                 Saved Trips
               </Link>
               <button className={styles.signOutBtn} onClick={handleSignOut}>
@@ -78,9 +77,9 @@ export default function Navbar() {
               </Link>
               <Link to="/itinerary" className={isActive('/itinerary')} onClick={() => setMenuOpen(false)}>
                 Itinerary
-              </Link>
-              <Link to="/saved-itineraries" className={isActive('/saved-itineraries')} onClick={() => setMenuOpen(false)}>
+              <Link to='/saved-itineraries' className={isActive('/saved-itineraries')} onClick={() => setMenuOpen(false)}>
                 Saved Trips
+              </Link>
               </Link>
             </>
           )}
