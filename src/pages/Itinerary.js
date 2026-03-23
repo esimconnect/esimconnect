@@ -179,6 +179,40 @@ export default function Itinerary() {
   const [routing, setRouting] = useState(false);
   const [routedPlan, setRoutedPlan] = useState(null);
   const [activeMapDay, setActiveMapDay] = React.useState(null);
+  const [savedStatus, setSavedStatus] = React.useState('');
+
+  const saveItinerary = async () => {
+    if (!user) { setSavedStatus('Login to save'); setTimeout(() => setSavedStatus(''), 3000); return; }
+    setSavedStatus('saving');
+    const { error } = await supabase.from('saved_itineraries').insert({
+      user_id: user.id,
+      destination: routedPlan.destination,
+      trip_data: routedPlan,
+    });
+    if (error) {
+      setSavedStatus('error');
+    } else {
+      setSavedStatus('saved');
+    }
+    setTimeout(() => setSavedStatus(''), 3000);
+  };
+
+  const saveAsPDF = () => {
+    const style = document.createElement('style');
+    style.id = 'pdf-print-style';
+    style.innerHTML = `
+      @media print {
+        body * { visibility: hidden; }
+        #itinerary-print-area, #itinerary-print-area * { visibility: visible; }
+        #itinerary-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+        .no-print { display: none !important; }
+        .day-card { page-break-inside: avoid; margin-bottom: 24px; }
+      }
+    `;
+    document.head.appendChild(style);
+    window.print();
+    setTimeout(() => { const el = document.getElementById('pdf-print-style'); if (el) el.remove(); }, 1000);
+  };
   const [error, setError] = useState('');
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -822,7 +856,10 @@ Return ONLY valid JSON, no markdown:
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button onClick={() => { setRoutedPlan(null); setSuggestions(suggestions); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>← Edit Selection</button>
                 <button onClick={() => { setRoutedPlan(null); setSuggestions(suggestions); buildRoute(); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--accent)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>🔄 Re-Build</button>
-                <button onClick={() => window.print()} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>🖨️ Print</button>
+                <button onClick={saveItinerary} style={{ background: savedStatus === 'saved' ? 'rgba(76,217,100,0.15)' : 'rgba(255,255,255,0.06)', border: '1px solid ' + (savedStatus === 'saved' ? 'rgba(76,217,100,0.4)' : 'var(--border)'), color: savedStatus === 'saved' ? '#4cd964' : savedStatus === 'error' ? '#ff6b6b' : 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                  {savedStatus === 'saving' ? '⏳ Saving...' : savedStatus === 'saved' ? '✓ Saved!' : savedStatus === 'error' ? '❌ Error' : savedStatus === 'Login to save' ? '🔒 Login to Save' : '💾 Save'}
+                </button>
+                <button onClick={saveAsPDF} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>📄 Save PDF</button>
                 <button onClick={() => { const text = routedPlan.days.map(d => 'Day ' + d.day + ': ' + d.theme + '\n' + (d.stops || []).map(s => s.order + '. ' + s.name + ' - ' + s.address).join('\n')).join('\n\n'); navigator.clipboard.writeText(text).then(() => alert('Itinerary copied!')); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>📋 Copy</button>
 
                 <button onClick={() => { setSuggestions(null); setRoutedPlan(null); setShowInterests(false); setShowManual(false); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Start Over</button>
@@ -868,7 +905,7 @@ Return ONLY valid JSON, no markdown:
               );
             })()}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div id="itinerary-print-area" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {routedPlan.days?.map(day => (
                 <div key={day.day} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden' }}>
                   <div style={{ background: 'rgba(0,200,255,0.08)', borderBottom: '1px solid var(--border)', borderLeft: `4px solid ${DAY_COLORS[(day.day - 1) % DAY_COLORS.length]}`, padding: '14px 24px', display: 'flex', alignItems: 'baseline', gap: '12px' }}>
