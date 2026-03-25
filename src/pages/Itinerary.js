@@ -332,7 +332,7 @@ export default function Itinerary() {
     const end = new Date(start);
     end.setDate(start.getDate() + parseInt(activeTrip.duration) - 1);
 
-    const prompt = `You are an expert travel curator. Generate a rich flat list of suggested places for a ${activeTrip.duration}-day trip to ${activeTrip.destination}. Interests: ${interests.join(', ')}. DO NOT group by day — return a flat list across all categories giving the user maximum choice. Rules: 1. Only real verifiable establishments. 2. Prioritise UNESCO Michelin Tourism Board venues. 3. Never invent names or addresses. 4. Accurate lat/lng. 5. Note trust source. 6. Include meal options breakfast lunch dinner plus interest-specific venues. 7. Aim for ${Math.ceil(parseInt(activeTrip.duration) * 6)} suggestions. Return ONLY valid JSON no markdown: {"destination":"${activeTrip.destination}","flag":"🌏","disclaimer":"AI-generated from verified sources","places":[{"id":"p1","name":"Place Name","category":"Food & Dining","subcategory":"Breakfast","address":"Full address","desc":"Short description","duration":"1 hr","trustSource":"Michelin","lat":1.3521,"lng":103.8198}]}`;
+    const prompt = `You are an expert travel curator. Generate a rich flat list of suggested places for a ${activeTrip.duration}-day trip to ${activeTrip.destination}. Interests: ${interests.join(', ')}. DO NOT group by day — return a flat list across all categories giving the user maximum choice. ${hotelAddress ? "The traveller is staying at: " + hotelAddress + "." : ""} Rules: 1. Only real verifiable establishments. 2. Prioritise UNESCO Michelin Tourism Board venues. 3. Never invent names or addresses. 4. Accurate lat/lng. 5. Note trust source. 6. Include meal options breakfast lunch dinner plus interest-specific venues. 7. Aim for ${Math.ceil(parseInt(activeTrip.duration) * 6)} suggestions. Return ONLY valid JSON no markdown: {"destination":"${activeTrip.destination}","flag":"🌏","disclaimer":"AI-generated from verified sources","places":[{"id":"p1","name":"Place Name","category":"Food & Dining","subcategory":"Breakfast","address":"Full address","desc":"Short description","duration":"1 hr","trustSource":"Michelin","lat":1.3521,"lng":103.8198}]}`;
 
     try {
       const response = await fetch(CLAUDE_API, {
@@ -403,6 +403,7 @@ export default function Itinerary() {
 
     const prompt = `You are an expert travel routing AI. The user has selected ${selectedItems.length} places for a ${tripDays}-day trip to ${activeTrip.destination}.
 
+${hotelAddress ? "Starting point (hotel): " + hotelAddress + ". For Day 1 first stop, calculate travel time from this hotel. " : ""}
 Your job:
 1. CLUSTER the selected places geographically — group nearby places to minimise travel within each day
 2. SLOT each cluster into a day (${dateLabels.map((d,i)=>'Day '+(i+1)+' = '+d).join(', ')})
@@ -573,7 +574,7 @@ Return ONLY valid JSON, no markdown:
                 <h2 style={{ fontFamily: 'var(--font-head)', fontSize: '18px', fontWeight: 800, marginBottom: '20px' }}>
                   {showManual ? 'Plan a Different Trip' : 'Plan a Trip'}
                 </h2>
-                <form onSubmit={(e) => { e.preventDefault(); proceedToInterests({ destination, startDate, duration, flag: '🌍' }); }}
+                <form onSubmit={(e) => { e.preventDefault(); proceedToInterests({ destination, startDate, duration, flag: '🌍', hotelAddress }); }}
                   style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={labelStyle}>Destination</label>
@@ -588,6 +589,10 @@ Return ONLY valid JSON, no markdown:
                       <label style={labelStyle}>Duration (days)</label>
                       <input type="number" placeholder="7" min="1" max="21" value={duration} onChange={e => setDuration(e.target.value)} required style={inputStyle} />
                     </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={labelStyle}>Hotel / Starting Point <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 400 }}>(optional — improves route accuracy)</span></label>
+                    <input type='text' placeholder='e.g. Marina Bay Sands, Singapore' value={hotelAddress} onChange={e => setHotelAddress(e.target.value)} style={inputStyle} />
                   </div>
                   <button type="submit" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', color: '#000', border: 'none', borderRadius: '12px', padding: '14px', fontWeight: 800, fontSize: '15px', fontFamily: 'var(--font-head)', cursor: 'pointer' }}>
                     Next: Choose Interests →
