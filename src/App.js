@@ -1,6 +1,7 @@
 import Itinerary from './pages/Itinerary';
 import Purchases from './pages/Purchases';
 import SavedItineraries from './pages/SavedItineraries';
+import TermsAndConditions from './pages/TermsAndConditions';
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
@@ -25,6 +26,7 @@ function App() {
         <Route path="/itinerary" element={<Itinerary />} />
         <Route path="/purchases" element={<Purchases />} />
         <Route path="/saved-itineraries" element={<SavedItineraries />} />
+        <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -62,6 +62,13 @@ export default function Home() {
           </div>
         </div>
       </main>
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '24px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>© 2026 AAAi Ventures Pte. Ltd. · Singapore</div>
+        <div style={{ display: 'flex', gap: '20px' }}>
+          <Link to="/terms" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>Terms &amp; Conditions</Link>
+          <a href="mailto:support@esimconnect.world" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>Contact</a>
+        </div>
+      </footer>
     </div>
   );
 }
