@@ -8,6 +8,7 @@ export default function Register() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = React.useState(false);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -116,7 +117,13 @@ export default function Register() {
                 required
               />
             </div>
-            <button type="submit" className={styles.submitBtn} disabled={loading}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', margin: '8px 0' }}>
+              <input type='checkbox' id='terms' checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)} style={{ marginTop: '3px', accentColor: 'var(--accent)', width: '16px', height: '16px', flexShrink: 0, cursor: 'pointer' }} />
+              <label htmlFor='terms' style={{ fontSize: '13px', color: 'var(--muted)', cursor: 'pointer', lineHeight: '1.5' }}>
+                I agree to the <a href='/terms' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>Terms and Conditions</a>
+              </label>
+            </div>
+            <button type="submit" className={styles.submitBtn} disabled={loading || !agreedToTerms} style={{ opacity: agreedToTerms ? 1 : 0.5 }}>
               {loading ? <span className={styles.spinner}></span> : 'Create Account →'}
             </button>
           </form>
