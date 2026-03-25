@@ -733,6 +733,7 @@ Return ONLY valid JSON, no markdown:
                             </div>
                             <div style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '3px' }}>{item.desc}</div>
                             {item.address && <div style={{ fontSize: '11px', color: 'var(--muted2)', marginTop: '4px' }}>📍 {item.address}</div>}
+                            <div style={{ marginTop: '6px' }}><a href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name + ' ' + (item.address || ''))} target='_blank' rel='noopener noreferrer' style={{ fontSize: '11px', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600, background: 'rgba(0,200,255,0.08)', border: '1px solid rgba(0,200,255,0.2)', borderRadius: '6px', padding: '2px 8px' }}>View on Maps</a></div>
                           </div>
                         </label>
                       ))}
