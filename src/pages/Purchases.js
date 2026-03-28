@@ -23,14 +23,30 @@ export default function Purchases() {
   };
 
   const fetchEsims = async (userId) => {
-    const { data } = await supabase
-      .from('esims')
+    // Read from orders table and map to eSIM display format
+    const { data, error } = await supabase
+      .from('orders')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    if (data) setEsims(data);
+    console.log('fetchEsims data:', data, 'error:', error);
+    if (data) setEsims(data.map(o => ({
+      id: o.id,
+      country_flag: null,
+      country_name: o.country_name,
+      plan_name: o.package_title,
+      status: o.status || 'active',
+      validity_days: o.validity_days,
+      data_total_gb: parseFloat(o.data_amount) || null,
+      data_used_gb: 0,
+      data_remaining_gb: parseFloat(o.data_amount) || null,
+      is_unlimited: o.data_amount === 'Unlimited',
+      activated_at: o.created_at,
+      expires_at: null,
+      qr_code_url: o.qr_url,
+      iccid: o.iccid,
+    })));
   };
-
   const fetchOrders = async (userId) => {
     const { data } = await supabase
       .from('orders')
@@ -196,17 +212,17 @@ export default function Purchases() {
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'
                 }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '15px' }}>Order #{order.order_number}</div>
+                    <div style={{ fontWeight: 700, fontSize: '15px' }}>Order {order.order_code || "—"}</div>
                     <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
                       {new Date(order.created_at).toLocaleDateString()} · {order.payment_method || 'Card'}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 800, fontSize: '16px' }}>SGD {parseFloat(order.total_sgd || 0).toFixed(2)}</div>
-                      {order.gst_sgd > 0 && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>incl. GST SGD {parseFloat(order.gst_sgd).toFixed(2)}</div>}
+                      <div style={{ fontWeight: 800, fontSize: '16px' }}>SGD {parseFloat(order.price_sgd || 0).toFixed(2)}</div>
+                      
                     </div>
-                    <StatusBadge status={order.payment_status} />
+                    <StatusBadge status={order.status || "completed"} />
                   </div>
                 </div>
               ))}
