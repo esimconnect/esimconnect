@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar';
 import styles from './Dashboard.module.css';
 
 const LAST_UPDATED = '25 March 2026';
-const COMPANY = 'AAAi Ventures Pte. Ltd.';
+const COMPANY = 'Kairos Ventures Pte. Ltd.';
 const APP = 'eSimConnect';
 const EMAIL = 'legal@esimconnect.world';
 const ADDRESS = 'Singapore';
