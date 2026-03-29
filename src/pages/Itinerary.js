@@ -98,6 +98,7 @@ function AddPlaceSearch({ activeTrip, onAdd }) {
     setResults([]);
   };
 
+
   return (
     <div style={{ background: 'rgba(0,200,255,0.04)', border: '1px solid rgba(0,200,255,0.2)', borderRadius: '16px', padding: '16px 20px', marginBottom: '8px' }}>
       <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)', marginBottom: '10px' }}>
@@ -179,6 +180,47 @@ export default function Itinerary() {
   const [routing, setRouting] = useState(false);
   const [routedPlan, setRoutedPlan] = useState(null);
   const [activeMapDay, setActiveMapDay] = React.useState(null);
+  const [showGateModal, setShowGateModal] = React.useState(false);
+  const [gateReason, setGateReason] = React.useState('guest');
+  const [isPlanBuyer, setIsPlanBuyer] = React.useState(false);
+  const [itineraryCount, setItineraryCount] = React.useState(0);
+
+  // ── Dev bypass — set to false to activate gates in production ──────────
+  const IS_DEV = true;
+
+  // ── Gate check ───────────────────────────────────────────────────────────
+  const checkGate = async () => {
+    if (IS_DEV) return true;
+    if (isPlanBuyer) return true;
+    if (!user) {
+      const guestCount = parseInt(localStorage.getItem('esim_iti_count') || '0');
+      if (guestCount >= 2) {
+        setGateReason('guest');
+        setShowGateModal(true);
+        return false;
+      }
+      localStorage.setItem('esim_iti_count', String(guestCount + 1));
+      fetch('https://claude-proxy.davidlimyk.workers.dev/track-usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'itinerary_search', type: 'guest' }),
+      }).catch(() => {});
+      return true;
+    }
+    if (itineraryCount >= 5) {
+      setGateReason('registered');
+      setShowGateModal(true);
+      return false;
+    }
+    await supabase.from('usage_logs').insert({
+      user_id: user.id,
+      action: 'itinerary_search',
+      type: 'registered',
+    });
+    setItineraryCount(prev => prev + 1);
+    return true;
+  };
+
 
   // Load saved itinerary from sessionStorage if present
   useEffect(() => {
@@ -191,9 +233,14 @@ export default function Itinerary() {
     }
   }, []);
   const [savedStatus, setSavedStatus] = React.useState('');
-
+  const [savingList, setSavingList] = React.useState('');
   const saveItinerary = async () => {
-    if (!user) { setSavedStatus('Login to save'); setTimeout(() => setSavedStatus(''), 3000); return; }
+
+    if (!user) {
+      setGateReason('guest');
+      setShowGateModal(true);
+      return;
+    }
     setSavedStatus('saving');
     const { data: saveData, error } = await supabase.from('saved_itineraries').insert({
       user_id: user.id,
@@ -207,6 +254,28 @@ export default function Itinerary() {
       setSavedStatus('saved');
     }
     setTimeout(() => setSavedStatus(''), 3000);
+  };
+
+  const savePickedPlaces = async () => {
+    if (!user) { setGateReason('guest'); setShowGateModal(true); return; }
+    setSavingList('saving');
+    const pickedPlaces = (suggestions?.places || []).filter(p => selected[p.id]);
+    const { error } = await supabase.from('saved_itineraries').insert({
+      user_id: user.id,
+      destination: suggestions?.destination || activeTrip?.destination,
+      stage: 'suggestions',
+      selected_places: pickedPlaces,
+      trip_data: {
+        destination: suggestions?.destination || activeTrip?.destination,
+        flag: suggestions?.flag || activeTrip?.flag || '🌍',
+        startDate: activeTrip?.startDate,
+        duration: activeTrip?.duration,
+        places: pickedPlaces,
+      },
+    });
+    if (error) { setSavingList('error'); }
+    else { setSavingList('saved'); }
+    setTimeout(() => setSavingList(''), 3000);
   };
 
   const saveAsPDF = () => {
@@ -230,15 +299,35 @@ export default function Itinerary() {
   const [startDate, setStartDate] = useState('');
   const [duration, setDuration] = useState('');
   const [hotelAddress, setHotelAddress] = useState('');
+  const [globalStartPoint, setGlobalStartPoint] = useState('');
+  const [dayStartPoints, setDayStartPoints] = useState({});
+  const [showDayOverrides, setShowDayOverrides] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState('');
 
   useEffect(() => { init(); }, []);
 
   const init = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { navigate('/login'); return; }
-    setUser(user);
-    await detectLatestTrip(user.id);
+    // Guests allowed — no redirect to login
+    if (user) {
+      setUser(user);
+      await detectLatestTrip(user.id);
+      // Check if plan buyer
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
+        .limit(1);
+      if (orders && orders.length > 0) setIsPlanBuyer(true);
+      // Get itinerary search count
+      const { data: logs } = await supabase
+        .from('usage_logs')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('action', 'itinerary_search');
+      if (logs) setItineraryCount(logs.length);
+    }
     setLoading(false);
   };
 
@@ -322,6 +411,10 @@ export default function Itinerary() {
   const generateSuggestions = async () => {
     const interests = selectedInterestLabels();
     if (interests.length === 0) { setError('Please select at least one interest.'); return; }
+
+    // ── Gate check ─────────────────────────────────────────────────────
+    const allowed = await checkGate();
+    if (!allowed) return;
     setError('');
     setGenerating(true);
     setSuggestions(null);
@@ -403,7 +496,7 @@ export default function Itinerary() {
 
     const prompt = `You are an expert travel routing AI. The user has selected ${selectedItems.length} places for a ${tripDays}-day trip to ${activeTrip.destination}.
 
-${hotelAddress ? "Starting point (hotel): " + hotelAddress + ". For Day 1 first stop, calculate travel time from this hotel. " : ""}
+${(globalStartPoint || hotelAddress) ? "Starting point (hotel): " + (globalStartPoint || hotelAddress) + ". For Day 1 first stop, calculate travel time from this hotel. " : ""}
 Your job:
 1. CLUSTER the selected places geographically — group nearby places to minimise travel within each day
 2. SLOT each cluster into a day (${dateLabels.map((d,i)=>'Day '+(i+1)+' = '+d).join(', ')})
@@ -531,9 +624,72 @@ Return ONLY valid JSON, no markdown:
 
   if (loading) return <div className={styles.loadingPage}><div className={styles.spinner}></div></div>;
 
+
+  const GateModal = () => (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 1000, padding: '20px',
+    }}>
+      <div style={{
+        background: '#0d1117', border: '1px solid rgba(0,200,255,0.3)',
+        borderRadius: '20px', padding: '36px', maxWidth: '420px', width: '100%',
+        textAlign: 'center',
+      }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>✈️</div>
+        <h2 style={{ fontWeight: 900, marginBottom: '10px', fontSize: '22px' }}>
+          {gateReason === 'guest' ? "You've used your 2 free searches!" : "You've used your 5 free searches!"}
+        </h2>
+        <p style={{ color: 'var(--muted)', fontSize: '14px', marginBottom: '24px', lineHeight: 1.6 }}>
+          {gateReason === 'guest'
+            ? 'Register free to get 5 searches, or buy a data plan for unlimited itinerary planning.'
+            : 'Buy a data plan to unlock unlimited itinerary planning — free forever with any purchase.'}
+        </p>
+        <div style={{
+          background: 'rgba(0,200,255,0.05)', border: '1px solid rgba(0,200,255,0.15)',
+          borderRadius: '14px', padding: '16px', marginBottom: '24px', textAlign: 'left',
+        }}>
+          {gateReason === 'guest' && (
+            <div style={{ marginBottom: '10px', fontSize: '13px', display: 'flex', gap: '10px' }}>
+              <span>🆓</span><span><strong>Register free</strong> — get 5 searches + save trips</span>
+            </div>
+          )}
+          <div style={{ marginBottom: '10px', fontSize: '13px', display: 'flex', gap: '10px' }}>
+            <span>♾️</span><span><strong>Buy any data plan</strong> — unlimited searches forever</span>
+          </div>
+          <div style={{ marginBottom: '10px', fontSize: '13px', display: 'flex', gap: '10px' }}>
+            <span>📱</span><span><strong>Re-download QR codes</strong> anytime from My Purchases</span>
+          </div>
+          <div style={{ fontSize: '13px', display: 'flex', gap: '10px' }}>
+            <span>🧾</span><span><strong>Full order history</strong> — all eSIMs in one place</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <button onClick={() => { setShowGateModal(false); navigate('/plans'); }} style={{
+            background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+            border: 'none', borderRadius: '12px', padding: '14px',
+            color: '#000', fontWeight: 800, fontSize: '15px', cursor: 'pointer',
+          }}>Buy a Data Plan — Unlock Unlimited →</button>
+          {gateReason === 'guest' && (
+            <button onClick={() => { setShowGateModal(false); navigate('/register'); }} style={{
+              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '12px', padding: '14px', color: 'inherit',
+              fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+            }}>Register Free — Get 5 Searches</button>
+          )}
+          <button onClick={() => setShowGateModal(false)} style={{
+            background: 'none', border: 'none', color: 'var(--muted)',
+            fontSize: '13px', cursor: 'pointer', padding: '8px',
+          }}>Maybe later</button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className={styles.page}>
       <Navbar />
+      {showGateModal && <GateModal />}
       <main className={styles.main}>
         <div className={styles.header}>
           <div>
@@ -748,11 +904,56 @@ Return ONLY valid JSON, no markdown:
               })}
             </div>
 
-            <div style={{ position: 'sticky', bottom: '24px', marginTop: '24px', background: 'rgba(10,15,26,0.95)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backdropFilter: 'blur(20px)', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
-                <span style={{ color: 'var(--text)', fontWeight: 700 }}>{selectedCount}</span> places selected · Claude will cluster & sort into <span style={{ color: 'var(--text)', fontWeight: 700 }}>{activeTrip && activeTrip.duration}</span> days
+            {/* ── Start Point + Save List + Build Route ── */}
+            <div style={{ marginTop: '24px', background: 'rgba(10,15,26,0.95)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px 24px', backdropFilter: 'blur(20px)' }}>
+              {/* Save picked places */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
+                  <span style={{ color: 'var(--text)', fontWeight: 700 }}>{selectedCount}</span> places selected · Claude will cluster & sort into <span style={{ color: 'var(--text)', fontWeight: 700 }}>{activeTrip && activeTrip.duration}</span> days
+                </div>
+                <button onClick={savePickedPlaces} disabled={selectedCount === 0} style={{
+                  background: selectedCount === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(0,200,255,0.1)',
+                  border: '1px solid ' + (selectedCount === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(0,200,255,0.3)'),
+                  color: selectedCount === 0 ? 'var(--muted)' : 'var(--accent)',
+                  borderRadius: '10px', padding: '8px 18px', fontWeight: 700, fontSize: '13px', cursor: selectedCount === 0 ? 'not-allowed' : 'pointer',
+                }}>
+                  {savingList === 'saving' ? '⏳ Saving...' : savingList === 'saved' ? '✅ Saved!' : savingList === 'error' ? '❌ Error' : '💾 Save List'}
+                </button>
               </div>
-              <button onClick={buildRoute} disabled={selectedCount === 0} style={{ background: selectedCount === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, var(--accent), var(--accent2))', color: selectedCount === 0 ? 'var(--muted)' : '#000', border: 'none', borderRadius: '10px', padding: '10px 24px', fontWeight: 800, fontSize: '14px', fontFamily: 'var(--font-head)', cursor: selectedCount === 0 ? 'not-allowed' : 'pointer' }}>Build My Route →</button>
+              {/* Global Start Point */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '10px', color: 'var(--accent)' }}>🏨 Where are you staying? <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional — improves routing)</span></div>
+                <input type="text" placeholder="e.g. Marina Bay Sands, Singapore"
+                  value={globalStartPoint} onChange={e => setGlobalStartPoint(e.target.value)}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '10px 14px', color: 'inherit', fontSize: '14px', boxSizing: 'border-box', marginBottom: '10px' }}
+                />
+                <div onClick={() => setShowDayOverrides(!showDayOverrides)}
+                  style={{ fontSize: '12px', color: 'var(--accent)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  {showDayOverrides ? '▲' : '▼'} Set different start point per day (optional)
+                </div>
+                {showDayOverrides && (
+                  <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {Array.from({ length: parseInt(activeTrip?.duration || 1) }, (_, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '13px', color: 'var(--muted)', minWidth: '45px' }}>Day {i+1}</span>
+                        <input type="text" placeholder={`Override for Day ${i+1} (leave blank to use global)`}
+                          value={dayStartPoints[i+1] || ''} onChange={e => setDayStartPoints(prev => ({ ...prev, [i+1]: e.target.value }))}
+                          style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: 'inherit', fontSize: '13px' }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Build Route button */}
+              <button onClick={buildRoute} disabled={selectedCount === 0} style={{
+                width: '100%', background: selectedCount === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, var(--accent), var(--accent2))',
+                color: selectedCount === 0 ? 'var(--muted)' : '#000', border: 'none', borderRadius: '12px',
+                padding: '14px 24px', fontWeight: 800, fontSize: '15px', fontFamily: 'var(--font-head)',
+                cursor: selectedCount === 0 ? 'not-allowed' : 'pointer',
+              }}>
+                {selectedCount === 0 ? 'Select places to build your route' : `Build My Route → (${selectedCount} places)`}
+              </button>
             </div>
           </div>
           );
