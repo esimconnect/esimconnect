@@ -1,5 +1,6 @@
 import Itinerary from './pages/Itinerary';
 import Purchases from './pages/Purchases';
+import FindMyOrder from './pages/FindMyOrder';
 import SavedItineraries from './pages/SavedItineraries';
 import TermsAndConditions from './pages/TermsAndConditions';
 import React from 'react';
@@ -25,6 +26,7 @@ function App() {
         <Route path="/order-confirmation" element={<OrderConfirmation />} />
         <Route path="/itinerary" element={<Itinerary />} />
         <Route path="/purchases" element={<Purchases />} />
+          <Route path="/find-order" element={<FindMyOrder />} />
         <Route path="/saved-itineraries" element={<SavedItineraries />} />
         <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="*" element={<Navigate to="/" replace />} />

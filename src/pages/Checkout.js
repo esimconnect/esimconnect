@@ -608,6 +608,33 @@ export default function Checkout() {
                 </div>
               ))}
 
+              {/* Register nudge for guests */}
+              {!user && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(0,200,255,0.08), rgba(123,47,255,0.08))',
+                  border: '1px solid rgba(0,200,255,0.25)',
+                  borderRadius: '16px', padding: '20px', marginBottom: '16px', textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '28px', marginBottom: '8px' }}>🔐</div>
+                  <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '6px' }}>Save your eSIM forever</div>
+                  <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '16px', lineHeight: 1.5 }}>
+                    Create a free account to re-download your QR codes anytime, track orders, and get 5 free itinerary searches.
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button onClick={() => navigate('/register')} style={{
+                      background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+                      border: 'none', borderRadius: '10px', padding: '12px',
+                      color: '#000', fontWeight: 800, fontSize: '14px', cursor: 'pointer',
+                    }}>Create Free Account →</button>
+                    <button onClick={() => navigate('/login')} style={{
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '10px', padding: '10px', color: 'inherit',
+                      fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+                    }}>Already have an account? Sign In</button>
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
                 <button className={styles.submitBtn} onClick={() => navigate('/purchases')}>
                   View My Purchases →

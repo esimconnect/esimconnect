@@ -177,6 +177,28 @@ function orderConfirmationEmail(order, userEmail) {
         </ol>
       </div>
 
+      <!-- Register Nudge -->
+      <div style="background:linear-gradient(135deg,rgba(0,200,255,0.08),rgba(123,47,255,0.08));border:1px solid rgba(0,200,255,0.2);border-radius:16px;padding:24px;margin-bottom:24px;text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;">🔐</div>
+        <h3 style="margin:0 0 8px;font-size:16px;color:#ffffff;">Never lose your eSIM</h3>
+        <p style="color:#888;font-size:13px;margin:0 0 16px;line-height:1.6;">
+          Create a free account to re-download your QR codes anytime, track all your orders, and get 5 free AI itinerary searches.
+        </p>
+        <a href="https://esimconnect.world/register" style="display:inline-block;background:linear-gradient(135deg,#00c8ff,#7b2fff);color:#000;font-weight:800;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;">
+          Create Free Account →
+        </a>
+        <p style="color:#666;font-size:12px;margin:12px 0 0;">
+          Already have an account? <a href="https://esimconnect.world/login" style="color:#00c8ff;">Sign in here</a>
+        </p>
+      </div>
+
+      <!-- Find My Order -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;margin-bottom:24px;text-align:center;">
+        <p style="color:#888;font-size:13px;margin:0;">
+          📧 Lost access to this email? <a href="https://esimconnect.world/find-order" style="color:#00c8ff;">Find your order here</a>
+        </p>
+      </div>
+
       <!-- Support -->
       <p style="color:#888;font-size:13px;text-align:center;">
         Need help? Contact us at <a href="mailto:support@esimconnect.world" style="color:#00c8ff;">support@esimconnect.world</a>
