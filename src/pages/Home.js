@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import styles from './Home.module.css';
+import AffiliateBar from '../components/AffiliateBar';
 
 export default function Home() {
   return (
@@ -62,6 +63,9 @@ export default function Home() {
           </div>
         </div>
       </main>
+      <div style={{ padding: '0 32px' }}>
+        <AffiliateBar context="itinerary" />
+      </div>
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '24px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>© 2026 Kairos Ventures Pte. Ltd. · Singapore</div>
         <div style={{ display: 'flex', gap: '20px' }}>

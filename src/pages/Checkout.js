@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import styles from './Auth.module.css';
+import AffiliateBar from '../components/AffiliateBar';
 
 const WORKER_URL = 'https://claude-proxy.davidlimyk.workers.dev';
 
@@ -562,7 +563,9 @@ export default function Checkout() {
               <div style={{ textAlign: 'center', marginBottom: '28px' }}>
                 <div style={{ fontSize: '56px', marginBottom: '12px' }}>🎉</div>
                 <h2 style={{ fontWeight: 800, marginBottom: '8px' }}>You're all set!</h2>
-                <p style={{ color: 'var(--muted)', fontSize: '14px' }}>
+
+        {/* ── Affiliate partners ── */}
+        <AffiliateBar context="success" />                <p style={{ color: 'var(--muted)', fontSize: '14px' }}>
                   Your eSIM QR code(s) have been sent to <strong>{email}</strong>
                 </p>
               </div>

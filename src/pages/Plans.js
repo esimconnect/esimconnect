@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import styles from './Plans.module.css';
+import AffiliateBar from '../components/AffiliateBar';
 
 const WORKER_URL = 'https://claude-proxy.davidlimyk.workers.dev';
 
@@ -67,7 +68,7 @@ export default function Plans() {
           plan_name: plan.title,
           data_gb: (plan.amount / 1024).toFixed(0),
           validity_days: plan.day,
-          price_sgd: (plan.price * 1.35).toFixed(2), // USD to SGD approx
+          price_sgd: (plan.price * 1.35).toFixed(2),
           price_usd: plan.price,
           operator: plan.operator,
           country_code: plan.country_code,
@@ -114,35 +115,38 @@ export default function Plans() {
         ) : plans.length === 0 ? (
           <div className={styles.empty}>No plans found for this destination yet.</div>
         ) : (
-          <div className={styles.grid}>
-            {plans.map(plan => (
-              <div key={plan.id} className={styles.card}>
-                <div className={styles.cardTop}>
-                  <span className={styles.flag}>{countryMeta.flag}</span>
-                  <span className={styles.country}>{countryMeta.name}</span>
+          <>
+            <AffiliateBar context="plans" />
+            <div className={styles.grid}>
+              {plans.map(plan => (
+                <div key={plan.id} className={styles.card}>
+                  <div className={styles.cardTop}>
+                    <span className={styles.flag}>{countryMeta.flag}</span>
+                    <span className={styles.country}>{countryMeta.name}</span>
+                  </div>
+                  <div className={styles.planName}>{plan.title}</div>
+                  <div className={styles.planDetails}>
+                    <span className={styles.data}>
+                      {plan.is_unlimited ? 'Unlimited' : `${(plan.amount / 1024).toFixed(0)}GB`}
+                    </span>
+                    <span className={styles.sep}>·</span>
+                    <span>{plan.day} days</span>
+                  </div>
+                  <div className={styles.operatorLabel}>{plan.operator}</div>
+                  <div className={styles.price}>
+                    <span className={styles.currency}>SGD</span>
+                    <span className={styles.amount}>{(plan.price * 1.35).toFixed(2)}</span>
+                  </div>
+                  <button
+                    className={styles.buyBtn}
+                    onClick={() => handleBuy(plan)}
+                  >
+                    Buy Now →
+                  </button>
                 </div>
-                <div className={styles.planName}>{plan.title}</div>
-                <div className={styles.planDetails}>
-                  <span className={styles.data}>
-                    {plan.is_unlimited ? 'Unlimited' : `${(plan.amount / 1024).toFixed(0)}GB`}
-                  </span>
-                  <span className={styles.sep}>·</span>
-                  <span>{plan.day} days</span>
-                </div>
-                <div className={styles.operatorLabel}>{plan.operator}</div>
-                <div className={styles.price}>
-                  <span className={styles.currency}>SGD</span>
-                  <span className={styles.amount}>{(plan.price * 1.35).toFixed(2)}</span>
-                </div>
-                <button
-                  className={styles.buyBtn}
-                  onClick={() => handleBuy(plan)}
-                >
-                  Buy Now →
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </main>
     </div>
