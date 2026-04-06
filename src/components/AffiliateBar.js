@@ -36,8 +36,8 @@ export default function AffiliateBar({ context = 'itinerary', dark = false, styl
     padding: '14px 18px',
     margin: '0 0 24px',
   } : {
-    background: '#f9fafb',
-    border: '1px solid #e5e7eb',
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.12)',
     borderRadius: '10px',
     display: 'flex',
     alignItems: 'center',
@@ -52,7 +52,7 @@ export default function AffiliateBar({ context = 'itinerary', dark = false, styl
     fontSize: '13px',
     fontWeight: 500,
     whiteSpace: 'nowrap',
-    color: dark ? 'rgba(255,255,255,0.5)' : '#6b7280',
+    color: 'rgba(255,255,255,0.7)',
   };
 
   const btnBase = {
@@ -73,9 +73,9 @@ export default function AffiliateBar({ context = 'itinerary', dark = false, styl
     color: 'rgba(255,255,255,0.85)',
   } : {
     ...btnBase,
-    border: '1px solid #d1d5db',
-    background: '#ffffff',
-    color: '#111827',
+    border: '1px solid rgba(255,255,255,0.25)',
+    background: 'rgba(255,255,255,0.08)',
+    color: 'rgba(255,255,255,0.9)',
   };
 
   const hoverIn = dark
