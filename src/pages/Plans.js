@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar';
 import styles from './Plans.module.css';
 import AffiliateBar from '../components/AffiliateBar';
 
-const WORKER_URL = 'https://claude-proxy.davidlimyk.workers.dev';
+const WORKER_URL = 'https://claude-proxy.kairosventure-io.workers.dev';
 
 const MOCK_COUNTRIES = [
   { code: 'SG', name: 'Singapore', flag: '🇸🇬' },

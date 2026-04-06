@@ -14,7 +14,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-const CLAUDE_API = 'https://claude-proxy.davidlimyk.workers.dev';
+const CLAUDE_API = 'https://claude-proxy.kairosventure-io.workers.dev';
 const MODEL = 'claude-sonnet-4-20250514';
 
 const STANDARD_CATEGORIES = [
@@ -200,7 +200,7 @@ export default function Itinerary() {
         return false;
       }
       localStorage.setItem('esim_iti_count', String(guestCount + 1));
-      fetch('https://claude-proxy.davidlimyk.workers.dev/track-usage', {
+      fetch('https://claude-proxy.kairosventure-io.workers.dev/track-usage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'itinerary_search', type: 'guest' }),
