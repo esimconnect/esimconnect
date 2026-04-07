@@ -694,6 +694,13 @@ Return ONLY valid JSON, no markdown:
               fontWeight: 700, fontSize: '14px', cursor: 'pointer',
             }}>Register Free — Get 5 Searches</button>
           )}
+          {gateReason === 'guest' && (
+            <button onClick={() => { setShowGateModal(false); navigate('/login?redirect=/itinerary'); }} style={{
+              background: 'none', border: 'none', color: 'var(--accent)',
+              fontSize: '13px', cursor: 'pointer', padding: '4px',
+              textDecoration: 'underline',
+            }}>Already have an account? Sign In</button>
+          )}
           <button onClick={() => setShowGateModal(false)} style={{
             background: 'none', border: 'none', color: 'var(--muted)',
             fontSize: '13px', cursor: 'pointer', padding: '8px',
