@@ -244,6 +244,21 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // ── Guest IP Rate Limit Check ────────────────────────────────────────────
+    if (path === '/check-guest' && request.method === 'POST') {
+      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const key = 'guest:' + ip;
+      const record = await env.GUEST_RATE_LIMIT.get(key, { type: 'json' });
+      const now = Date.now();
+      const windowMs = 24 * 60 * 60 * 1000;
+      if (record && record.count >= 2 && (now - record.firstSeen) < windowMs) {
+        return new Response(JSON.stringify({ allowed: false, reason: 'rate_limited' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const newRecord = { count: record && (now - record.firstSeen) < windowMs ? record.count + 1 : 1, firstSeen: record && (now - record.firstSeen) < windowMs ? record.firstSeen : now };
+      await env.GUEST_RATE_LIMIT.put(key, JSON.stringify(newRecord), { expirationTtl: 86400 });
+      return new Response(JSON.stringify({ allowed: true, count: newRecord.count }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     // ── Claude Proxy (existing) ──────────────────────────────────────────────
     if (path === '/' || path === '') {
       if (request.method !== 'POST') {

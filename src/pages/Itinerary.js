@@ -193,6 +193,11 @@ export default function Itinerary() {
     if (IS_DEV) return true;
     if (isPlanBuyer) return true;
     if (!user) {
+      try {
+        const res = await fetch('https://claude-proxy.kairosventure-io.workers.dev/check-guest', { method: 'POST' });
+        const ipData = await res.json();
+        if (ipData.allowed === false) { setGateReason('guest'); setShowGateModal(true); return false; }
+      } catch(e) {}
       const guestCount = parseInt(localStorage.getItem('esim_iti_count') || '0');
       if (guestCount >= 2) {
         setGateReason('guest');
