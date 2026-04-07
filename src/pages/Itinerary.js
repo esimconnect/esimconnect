@@ -758,10 +758,7 @@ Return ONLY valid JSON, no markdown:
                       <input type="number" placeholder="7" min="1" max="21" value={duration} onChange={e => setDuration(e.target.value)} required style={inputStyle} />
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={labelStyle}>Hotel / Starting Point <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 400 }}>(optional — improves route accuracy)</span></label>
-                    <input type='text' placeholder='e.g. Marina Bay Sands, Singapore' value={hotelAddress} onChange={e => setHotelAddress(e.target.value)} style={inputStyle} />
-                  </div>
+
                   <button type="submit" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', color: '#000', border: 'none', borderRadius: '12px', padding: '14px', fontWeight: 800, fontSize: '15px', fontFamily: 'var(--font-head)', cursor: 'pointer' }}>
                     Next: Choose Interests →
                   </button>
