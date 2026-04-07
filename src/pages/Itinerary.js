@@ -194,7 +194,7 @@ export default function Itinerary() {
     if (isPlanBuyer) return true;
     if (!user) {
       try {
-        const res = await fetch('https://claude-proxy.kairosventure-io.workers.dev/check-guest', { method: 'POST' });
+        const res = await fetch('https://claude-proxy.kairosventure-io.workers.dev/check-guest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ increment: true }) });
         const ipData = await res.json();
         if (ipData.allowed === false) { setGateReason('guest'); setShowGateModal(true); return false; }
       } catch(e) {}

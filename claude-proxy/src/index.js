@@ -248,15 +248,26 @@ export default {
     if (path === '/check-guest' && request.method === 'POST') {
       const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
       const key = 'guest:' + ip;
-      const record = await env.GUEST_RATE_LIMIT.get(key, { type: 'json' });
+      const body = await request.json().catch(() => ({}));
+      const increment = body.increment === true;
+      let record = null;
+      try { record = await env.GUEST_RATE_LIMIT.get(key, { type: 'json' }); } catch(e) {}
       const now = Date.now();
       const windowMs = 24 * 60 * 60 * 1000;
-      if (record && record.count >= 2 && (now - record.firstSeen) < windowMs) {
-        return new Response(JSON.stringify({ allowed: false, reason: 'rate_limited' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      const withinWindow = record && (now - record.firstSeen) < windowMs;
+      const count = withinWindow ? record.count : 0;
+
+      if (count >= 2) {
+        return new Response(JSON.stringify({ allowed: false, reason: 'rate_limited', count }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
-      const newRecord = { count: record && (now - record.firstSeen) < windowMs ? record.count + 1 : 1, firstSeen: record && (now - record.firstSeen) < windowMs ? record.firstSeen : now };
-      await env.GUEST_RATE_LIMIT.put(key, JSON.stringify(newRecord), { expirationTtl: 86400 });
-      return new Response(JSON.stringify({ allowed: true, count: newRecord.count }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+      if (increment) {
+        const newRecord = { count: count + 1, firstSeen: withinWindow ? record.firstSeen : now };
+        await env.GUEST_RATE_LIMIT.put(key, JSON.stringify(newRecord), { expirationTtl: 86400 });
+        return new Response(JSON.stringify({ allowed: true, count: newRecord.count }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      return new Response(JSON.stringify({ allowed: true, count }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // ── Claude Proxy (existing) ──────────────────────────────────────────────
