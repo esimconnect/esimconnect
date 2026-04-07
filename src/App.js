@@ -12,6 +12,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
+import LoginSuccess from './pages/LoginSuccess';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="/find-order" element={<FindMyOrder />} />
         <Route path="/saved-itineraries" element={<SavedItineraries />} />
         <Route path="/terms" element={<TermsAndConditions />} />
+        <Route path="/login-success" element={<LoginSuccess />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

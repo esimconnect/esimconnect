@@ -24,7 +24,12 @@ export default function Login() {
       setError(error.message);
       setLoading(false);
     } else {
-      navigate('/dashboard');
+      const fromItinerary = new URLSearchParams(location.search).get('from') === 'itinerary';
+      if (fromItinerary) {
+        navigate('/login-success');
+      } else {
+        navigate('/dashboard');
+      }
     }
   };
 
