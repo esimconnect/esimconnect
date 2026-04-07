@@ -194,7 +194,7 @@ export default function Itinerary() {
     if (isPlanBuyer) return true;
     if (!user) {
       try {
-        const res = await fetch('https://claude-proxy.kairosventure-io.workers.dev/check-guest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ increment: true }) });
+        const res = await fetch('https://claude-proxy.kairosventure-io.workers.dev/check-guest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ increment: false }) });
         const ipData = await res.json();
         if (ipData.allowed === false) { setGateReason('guest'); setShowGateModal(true); return false; }
       } catch(e) {}
@@ -436,6 +436,10 @@ export default function Itinerary() {
     const allowed = await checkGate();
     if (!allowed) return;
     setError('');
+    // Increment IP count after gate passed
+    if (!user) {
+      fetch('https://claude-proxy.kairosventure-io.workers.dev/check-guest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ increment: true }) }).catch(() => {});
+    }
     setGenerating(true);
     setSuggestions(null);
     setSelected({});
