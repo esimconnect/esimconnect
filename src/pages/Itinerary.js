@@ -598,7 +598,19 @@ Return ONLY valid JSON, no markdown:
       const data = await response.json();
       const text = data.content?.map(b => b.text || '').join('');
       const clean = text.replace(/```json|```/g, '').trim();
-      setRoutedPlan(JSON.parse(clean));
+      const parsed = JSON.parse(clean);
+      // Fall back to original basket lat/lng if missing from route response
+      parsed.days = parsed.days.map(day => ({
+        ...day,
+        stops: day.stops.map(stop => {
+          if (!stop.lat || !stop.lng) {
+            const original = basket.find(b => b.name === stop.name);
+            if (original) { stop.lat = original.lat; stop.lng = original.lng; }
+          }
+          return stop;
+        })
+      }));
+      setRoutedPlan(parsed);
       setManualMode(false);
     } catch (err) {
       setError('Failed to build route. Please try again.');
