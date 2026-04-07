@@ -311,6 +311,21 @@ export default function Itinerary() {
 
   useEffect(() => { init(); }, []);
 
+  // Auto-detect login from new tab
+  useEffect(() => {
+    const handleVisibility = async () => {
+      if (document.visibilityState === 'visible') {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          setUser(currentUser);
+          setShowGateModal(false);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
   const init = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     // Guests allowed — no redirect to login
