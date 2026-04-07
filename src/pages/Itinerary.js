@@ -186,7 +186,7 @@ export default function Itinerary() {
   const [itineraryCount, setItineraryCount] = React.useState(0);
 
   // ── Dev bypass — set to false to activate gates in production ──────────
-  const IS_DEV = true;
+  const IS_DEV = false;
 
   // ── Gate check ───────────────────────────────────────────────────────────
   const checkGate = async () => {
