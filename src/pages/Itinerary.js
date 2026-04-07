@@ -710,7 +710,7 @@ Return ONLY valid JSON, no markdown:
             }}>Register Free — Get 5 Searches</button>
           )}
           {gateReason === 'guest' && (
-            <button onClick={() => { window.open('/login', '_blank'); setShowGateModal(false); }} style={{
+            <button onClick={() => { window.open('/login?from=itinerary', '_blank'); setShowGateModal(false); }} style={{
               background: 'none', border: 'none', color: 'var(--accent)',
               fontSize: '13px', cursor: 'pointer', padding: '4px',
               textDecoration: 'underline',
