@@ -26,7 +26,7 @@ export default function Navbar() {
     navigate('/');
   };
 
-  const isActive = (path) => location.pathname === path ? styles.active : '';
+  const isActive = (path) => location.pathname === path ? styles.ctaBtn : '';
 
   const PlansDropdown = () => (
     <div style={{ position: 'relative' }}

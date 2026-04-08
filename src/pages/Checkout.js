@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import styles from './Auth.module.css';
 import AffiliateBar from '../components/AffiliateBar';
+import TrustBadge from '../components/TrustBadge';
 
 const WORKER_URL = 'https://claude-proxy.kairosventure-io.workers.dev';
 
@@ -22,6 +23,7 @@ const STEP_LABELS = ['Details', 'Add-ons', 'Cart', 'Payment', 'Success'];
 
 export default function Checkout() {
   const { state } = useLocation();
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
   const plan = state?.plan;
   const country = state?.country;
@@ -52,6 +54,7 @@ export default function Checkout() {
   // Pre-fill if logged in
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
+      setUser(data?.user || null);
       if (data?.user) {
         setEmail(data.user.email || '');
         setName(data.user.user_metadata?.full_name || '');
@@ -563,9 +566,9 @@ export default function Checkout() {
               <div style={{ textAlign: 'center', marginBottom: '28px' }}>
                 <div style={{ fontSize: '56px', marginBottom: '12px' }}>🎉</div>
                 <h2 style={{ fontWeight: 800, marginBottom: '8px' }}>You're all set!</h2>
+                <TrustBadge dark={false} style={{ marginTop: '24px', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
 
-        {/* ── Affiliate partners ── */}
-        <AffiliateBar context="success" />                <p style={{ color: 'var(--muted)', fontSize: '14px' }}>
+                <p style={{ color: 'var(--muted)', fontSize: '14px' }}>
                   Your eSIM QR code(s) have been sent to <strong>{email}</strong>
                 </p>
               </div>
