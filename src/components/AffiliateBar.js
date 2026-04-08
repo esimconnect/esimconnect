@@ -1,9 +1,9 @@
 import React from 'react';
 
 const AFFILIATES = [
-  { name: 'Trip.com',     category: 'Hotels',           url: 'https://trip.com' },
+  { name: 'Tiqets',       category: 'Activities',       url: 'https://tiqets.tpx.li/SxvCe59l' },
   { name: 'Booking.com',  category: 'Hotels',           url: 'https://booking.com' },
-  { name: 'Klook',        category: 'Activities',       url: 'https://klook.com' },
+  { name: 'Klook',        category: 'Activities',       url: 'https://klook.tpx.li/fcPQnosy' },
   { name: 'Expedia',      category: 'Flights & Hotels', url: 'https://expedia.com' },
 ];
 
