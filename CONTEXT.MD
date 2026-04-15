@@ -1,222 +1,258 @@
-# AxiomAnare — Living Project Context
+# esimconnect — Living Project Context
 Last updated: April 2026
-Latest commit: a82dad4
+Latest commit: [update after each session]
 
 ---
 
 ## Repository
-- Repo: https://github.com/esimconnect/AxiomAnare
-- Live: https://esimconnect.github.io/AxiomAnare
-- Local: E:\Kairos\AxiomAnare\axiomanare\AxiomAnare
+- Repo: https://github.com/esimconnect/esimconnect (update if different)
+- Live: [update with live URL]
+- Local: E:\Kairos\esimconnect
 - Branch: main
 
 ## Supabase
-- URL: https://zjfhxutcvjxootoekade.supabase.co
-- Existing tables: organisations, assets, nvr_records
-- RLS: hardened and tested
-- pgvector: to be enabled (pre-launch)
+- URL: https://caiyjwcvwnquqfwoozjm.supabase.co
+- Existing tables: countries, esim_plans, orders
+- RLS: orders table open policy (permissive for all — review before production)
+- Currency: SGD primary, GST 9% applied at checkout
+
+## Environment Variables (.env)
+```
+REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
+REACT_APP_SUPABASE_URL=https://caiyjwcvwnquqfwoozjm.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=your_anon_key
+REACT_APP_TWILIO_ACCOUNT_SID=          (TBC)
+REACT_APP_TWILIO_AUTH_TOKEN=           (TBC)
+REACT_APP_TWILIO_PHONE_NUMBER=         (TBC)
+```
+
+---
+
+## What esimconnect Does
+A travel tech platform for tourists and business travellers targeting:
+- **eSIM data plans** — browse, buy and activate eSIM plans for 190+ countries
+- **VoIP calling** — in-app calling via Twilio floating dialler widget
+- **MyItinerary** — AI-generated travel plans for destinations
+- **Wallet** — top-up balance via Stripe eWallet for calls and data
+
+### Target Users
+- Tourists / occasional travellers
+- Business travellers (corporate)
+
+---
+
+## Tech Stack
+| Layer       | Technology                          |
+|-------------|-------------------------------------|
+| Frontend    | React (Create React App)            |
+| Routing     | React Router v6                     |
+| Styling     | CSS Modules + global.css            |
+| Auth + DB   | Supabase                            |
+| Payments    | Stripe (Stripe.js + CardElement)    |
+| VoIP        | Twilio                              |
+| Hosting     | GitHub Pages                        |
+| Backend     | Node.js (for Stripe webhooks etc.)  |
+
+---
+
+## Pages & Routes (App.js)
+| Route                | Component           | Status       |
+|----------------------|---------------------|--------------|
+| /                    | Home                | Built        |
+| /plans               | Plans               | Built        |
+| /login               | Login               | Built        |
+| /register            | Register            | Built        |
+| /dashboard           | Dashboard           | Built        |
+| /checkout            | Checkout            | Built        |
+| /order-confirmation  | OrderConfirmation   | Built        |
+| /itinerary           | Itinerary           | Built        |
+| /purchases           | Purchases           | Built        |
+| /find-order          | FindMyOrder         | Built        |
+| /saved-itineraries   | SavedItineraries    | Built        |
+| /terms               | TermsAndConditions  | Built        |
+| /login-success       | LoginSuccess        | Built        |
+
+---
+
+## Supabase Schema (Known Tables)
+
+### countries
+```sql
+id, name, iso_code, flag_emoji
+```
+
+### esim_plans
+```sql
+id, plan_name, country_id (→ countries), data_gb, validity_days,
+price_sgd, is_active
+```
+
+### orders
+```sql
+id, order_number, user_id (→ auth.users), guest_email,
+plan_id, country_id, subtotal_sgd, gst_sgd, total_sgd,
+payment_method, payment_status, status
+```
+
+### New Tables Needed (Tonight's Build)
+```sql
+profiles          -- user profile + wallet_balance, linked to auth.users
+wallet_topups     -- Stripe top-up transaction audit trail
+voip_calls        -- Twilio call log per user (duration, cost, timestamp)
+```
+
+### profiles table (to build)
+```sql
+CREATE TABLE profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name text,
+  phone text,
+  wallet_balance numeric(10,2) DEFAULT 0.00,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+-- RLS: users can only read/write their own row
+```
 
 ---
 
 ## Completed Work
-- [x] Single-channel diagnostic pipeline
-- [x] Multi-channel diagnostic pipeline
-- [x] PDF export
-- [x] Fleet Dashboard (auth, RLS, baseline + batch upload)
-- [x] Fleet detail panel
-- [x] Agnostic file parser (CSV, MAT, XLSX, JSON, TSV)
-- [x] SVG logo integrated into nav (index.html)
-- [x] Nav: Free to Try, Subscribe, Login, Fleet Dashboard buttons
-- [x] Hero subtitle single line
-- [x] Register renamed to Subscribe
-- [x] Nav height and logo sizing finalised
+- [x] React app scaffolded with React Router v6
+- [x] Home page
+- [x] Plans page (country filter, plan cards, Supabase query)
+- [x] Checkout page (Stripe CardElement, GST calc, order insert)
+- [x] Order confirmation page
+- [x] Dashboard page
+- [x] Login / Register pages
+- [x] LoginSuccess page
+- [x] Itinerary page
+- [x] Purchases page
+- [x] FindMyOrder page
+- [x] SavedItineraries page
+- [x] TermsAndConditions page
+- [x] Footer component
+- [x] Navbar component
+- [x] Supabase client (lib/supabase.js)
+- [x] Stripe publishable key wired to env
 
-## In Progress
-- [ ] Supabase schema for new tables
-- [ ] auth.js shared module
-- [ ] Auth + Subscribe modal (index.html)
-- [ ] Stripe + PayPal integration
-- [ ] Tier gating (index.html + fleet.html)
+## In Progress / Tonight's Build
+- [ ] PWA setup (manifest.json + service worker)
+- [ ] Twilio VoIP floating dialler widget
+- [ ] Stripe eWallet top-up flow
+- [ ] Supabase — profiles table with wallet_balance
 
 ## Not Started
-- [ ] Landing page
-- [ ] Digital twin Phase 1
-- [ ] RAG knowledge base pipeline
-- [ ] ML feature extraction (CWRU/NASA)
-- [ ] Case library population
-- [ ] Email notifications
+- [ ] MyItinerary — AI-generated travel plans (Claude API)
+- [ ] Twilio backend (Node.js — generate access tokens, call routing)
+- [ ] Stripe webhook handler (payment confirmation → wallet credit)
+- [ ] Push notifications (PWA)
 - [ ] Admin dashboard
-- [ ] Annual pricing / discount logic
-- [ ] Supabase Storage buckets (ml-raw-signals, knowledge-base)
-- [ ] pgvector enable + knowledge_chunks embedding pipeline
-
----
-
-## Tier Structure
-| Tier          | Price      | Analyses  | Assets | AI Report | Fleet |
-|---------------|------------|-----------|--------|-----------|-------|
-| Free          | $0         | 2         | —      | ✗         | ✗     |
-| Pro           | $49/month  | Unlimited | —      | ✓         | ✗     |
-| Fleet Starter | $99/month  | Unlimited | 10     | ✓         | ✓     |
-| Fleet Pro     | $299/month | Unlimited | 30     | ✓         | ✓     |
-| Asset add-on  | $25/asset  | —         | +1     | ✓         | ✓     |
-
-- No upload caps on any paid tier
-- Annual: 2 months free (pay 10, get 12)
-- AI report is the primary freemium gate
-- Pricing philosophy: below expense claim threshold —
-  engineer pays own card, no PO or finance approval needed
+- [ ] eSIM QR delivery (email via Resend / SendGrid)
+- [ ] Annual plan / discount logic
+- [ ] Guest checkout improvements
+- [ ] Referral / promo code system
 
 ---
 
 ## Payments
-- Stripe: primary (account exists, keys TBC)
-- PayPal: secondary (client ID TBC)
-- Currency: USD primary, local currency via Stripe/PayPal auto
-- Billing: monthly auto-renew, cancel anytime
-- Stripe Price IDs: to be created in Stripe Dashboard
-- Products to create in Stripe:
-    1. AxiomAnare Pro — $49/month recurring
-    2. AxiomAnare Fleet Starter — $99/month recurring
-    3. AxiomAnare Fleet Pro — $299/month recurring
-    4. Asset Add-on — $25/month recurring
+- Stripe: primary (account exists, keys TBC for production)
+- Currency: SGD
+- GST: 9% applied at checkout
+- Wallet top-up: one-off Stripe PaymentIntent (not subscription)
+- Top-up amounts: SGD 10 / 20 / 50 / 100 (or custom)
+- Wallet credits VoIP calls + data top-ups
 
 ---
 
-## Planned Supabase Schema
-
-### New Tables Needed
-```sql
-profiles              -- tier, org_id, linked to auth.users
-asset_twins           -- digital twin state per asset
-case_library          -- confirmed fault cases for ML training
-knowledge_chunks      -- RAG text chunks + pgvector embeddings
-usage_log             -- anonymised analysis events for ML
-subscription_events   -- Stripe/PayPal webhook audit trail
-```
-
-### Updates To Existing Tables
-```sql
--- nvr_records: add these columns
-feature_vector    jsonb     -- full computed signal features
-user_confirmed    boolean   -- engineer confirmed diagnosis?
-confirmed_fault   text      -- actual fault if corrected
-twin_deviation    float     -- delta from digital twin expected
-```
+## VoIP / Twilio Plan
+- Floating dialler widget (fixed bottom-right, all pages)
+- Twilio Voice SDK (browser-based calling)
+- Backend: Node.js generates Twilio access tokens
+- Calls deducted from wallet_balance in real time
+- Call log stored in voip_calls table
+- Rates: TBC (Twilio per-minute rates)
 
 ---
 
-## ML + Knowledge Base Strategy
+## MyItinerary Plan
+- User inputs destination + travel dates + interests
+- Claude API generates day-by-day itinerary
+- Itinerary saved to Supabase (saved_itineraries table — TBC)
+- Linked to user's eSIM plan destination where possible
+- Route: /itinerary (page exists, AI integration TBC)
 
-### Data Sources
-| Source               | Type     | Fault Coverage         | Status   |
-|----------------------|----------|------------------------|----------|
-| CWRU dataset         | MAT      | BPFO, BPFI, BSF, FTF   | Have it  |
-| NASA IMS dataset     | MAT      | RUL / run-to-failure   | Have it  |
-| K394-11 field report | PDF      | Imbalance (confirmed)  | Uploaded |
-| ISO 10816 CMVA guide | PDF      | Zone thresholds        | Uploaded |
-| CAT 1 manual         | PDF      | All fault types        | Pending  |
-| More field reports   | PDF      | Mixed                  | Pending  |
+---
 
-### ML Pipeline (planned)
-1. Enable pgvector in Supabase
-2. Create Supabase Storage buckets
-3. Bulk upload CWRU/NASA MAT files via script
-4. Feature extraction script → ml_features table
-5. Label features by fault type
-6. Train classifier (target: 12 months post-launch)
-7. PDF chunking + embedding → knowledge_chunks table
-8. RAG query injected into Claude prompt at analysis time
-
-### Supabase Storage Structure (planned)
-```
-ml-raw-signals/          (private bucket)
-├── cwru/
-│   ├── normal/
-│   ├── bpfo/
-│   ├── bpfi/
-│   └── bsf/
-└── nasa/
-    ├── bearing1/
-    ├── bearing2/
-    └── bearing3/
-
-knowledge-base/          (private bucket)
-├── manuals/
-├── reports/
-└── standards/
-```
-
-### RAG Flow (planned)
-```
-PDF uploaded → chunk text → embed via Anthropic API
-→ store in knowledge_chunks (pgvector)
-→ at analysis time: query top-3 relevant chunks
-→ inject into Claude system prompt
-→ Claude narrative grounded in domain knowledge
-```
+## PWA Plan
+- manifest.json: app name, icons, theme colour, display: standalone
+- Service worker: cache shell + offline fallback
+- Goal: installable on iOS/Android home screen
+- Push notifications: post-launch
 
 ---
 
 ## Key Decisions Log
-| Date     | Decision                                        | Rationale                            |
-|----------|-------------------------------------------------|--------------------------------------|
-| Apr 2026 | Stripe primary, PayPal secondary                | Existing account, best docs          |
-| Apr 2026 | No upload caps on paid tiers                    | Reduce friction, gate on assets only |
-| Apr 2026 | $49/$99/$299 pricing                            | Below expense claim threshold        |
-| Apr 2026 | pgvector in Supabase (not separate vector DB)   | Single platform, already running     |
-| Apr 2026 | Claude Project + Supabase RAG (both)            | Dev workflow vs runtime production   |
-| Apr 2026 | CONTEXT.md as cross-chat bridge                 | Projects don't share chat history    |
-| Apr 2026 | Digital twin Phase 1 for Fleet on launch        | Justifies Fleet price point          |
-| Apr 2026 | ML pipeline: collect now, train at 12 months    | Need labelled data volume first      |
-| Apr 2026 | Site visit still required (not replaced)        | AI drafts report, engineer signs off |
-| Apr 2026 | Launch full product (not phased feature launch) | Architecture ready, all layers in    |
+| Date     | Decision                                          | Rationale                                 |
+|----------|---------------------------------------------------|-------------------------------------------|
+| Apr 2026 | React CRA (not Next.js) + GitHub Pages            | Already scaffolded, keep momentum         |
+| Apr 2026 | Stripe eWallet (one-off top-up, not subscription) | Simpler UX for travel use case            |
+| Apr 2026 | Twilio Voice SDK (browser VoIP, not PSTN SIP)     | No hardware, works on mobile PWA          |
+| Apr 2026 | Claude API for MyItinerary                        | Best AI travel plan quality               |
+| Apr 2026 | SGD primary currency, GST 9%                      | Singapore-based, legally required         |
+| Apr 2026 | Shared wallet for VoIP + data top-ups             | Single balance, simpler UX                |
+| Apr 2026 | CONTEXT.md as cross-chat bridge                   | Projects don't share chat history         |
 
 ---
 
 ## Build Sequence
 ```
-PHASE 1 — Foundation (build now)
-├── Supabase schema (all new tables + nvr_records updates)
-├── auth.js shared module (login, signup, getTier)
-├── Auth + Subscribe modal on index.html
-├── Stripe + PayPal integration
-├── Tier gating (index.html + fleet.html)
-└── Landing page
+PHASE 1 — Core Product (now)
+├── profiles table + wallet_balance (Supabase)
+├── PWA manifest + service worker
+├── Stripe eWallet top-up flow
+├── Twilio VoIP floating dialler widget
+└── Twilio Node.js backend (access tokens)
 
 PHASE 2 — Intelligence (pre-launch)
-├── Digital twin Phase 1 (Fleet — baseline + deviation)
-├── Supabase Storage buckets setup
-├── PDF chunking + RAG pipeline
-└── CWRU/NASA feature extraction
+├── MyItinerary — Claude API integration
+├── eSIM QR email delivery (Resend)
+├── Stripe webhook → wallet credit
+└── Push notifications (PWA)
 
-PHASE 3 — Growth (post-launch, 1-6 months)
-├── Confirmed diagnosis feedback loop
-├── Email notifications (anomaly alerts, readings due)
-├── Statistical anomaly detection across dataset
-└── Fleet Pro tier unlock
+PHASE 3 — Growth (post-launch)
+├── Admin dashboard
+├── Referral / promo codes
+├── Guest checkout improvements
+└── Multi-currency support
 
-PHASE 4 — ML (12-24 months)
-├── ML classifier (enough labelled data by now)
-├── Full digital twin with degradation curve
-├── API access for Fleet Pro
-└── White-label option
+PHASE 4 — Expansion
+├── Physical SIM option
+├── Corporate / bulk plans
+├── White-label API
+└── Roaming top-up in-app
 ```
 
 ---
 
 ## Files In This Project
-| File                       | Purpose                                     |
-|----------------------------|---------------------------------------------|
-| CONTEXT.md                 | This file — update after every chat         |
-| index.html                 | Main diagnostic app                         |
-| app.js                     | Diagnostic engine, Freemium object          |
-| fleet.html                 | Fleet dashboard                             |
-| agnosticParser2.js         | Agnostic file parser                        |
-| multiChannel.js            | Multi-channel analysis                      |
-| agnosticParser.css         | Parser styles                               |
-| ISO_10816_Chart_colour.pdf | ISO zone reference + CMVA interpretation    |
-| Balancing_Report_K394.pdf  | Confirmed imbalance case study (K394-11)    |
+| File                        | Purpose                                      |
+|-----------------------------|----------------------------------------------|
+| CONTEXT.md                  | This file — update after every chat          |
+| src/App.js                  | Route definitions                            |
+| src/index.js                | React root entry                             |
+| src/lib/supabase.js         | Supabase client                              |
+| src/pages/Home.js           | Landing / home page                          |
+| src/pages/Plans.js          | eSIM plan browser                            |
+| src/pages/Checkout.js       | Stripe checkout + order insert               |
+| src/pages/OrderConfirmation | Post-purchase confirmation                   |
+| src/pages/Dashboard.js      | User dashboard                               |
+| src/pages/Itinerary.js      | MyItinerary (AI TBC)                         |
+| src/pages/Purchases.js      | Order history                                |
+| src/pages/FindMyOrder.js    | Guest order lookup                           |
+| src/pages/SavedItineraries  | Saved AI itineraries                         |
+| src/components/Navbar.js    | Top navigation                               |
+| src/components/Footer.js    | Footer                                       |
+| src/styles/global.css       | Global styles                                |
 
 ---
 
@@ -230,14 +266,13 @@ PHASE 4 — ML (12-24 months)
 5. Commit CONTEXT.md to repo after each session
 
 ### Chat Naming Convention
-- "Schema — profiles + twins + case_library"
-- "Auth — shared auth.js module"
-- "Payments — Stripe + PayPal integration"
-- "Gating — tier logic index + fleet"
-- "Landing — landing page build"
-- "ML — feature extraction CWRU/NASA"
-- "RAG — knowledge base pipeline"
-- "Twin — digital twin Phase 1"
+- "PWA — manifest + service worker"
+- "VoIP — Twilio dialler widget"
+- "Wallet — Stripe top-up flow"
+- "Schema — profiles + wallet + voip_calls"
+- "Itinerary — Claude AI integration"
+- "Auth — login/register improvements"
+- "Email — eSIM QR delivery"
 - "UI — [specific component name]"
 
 ### Session Handoff Template
