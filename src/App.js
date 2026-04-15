@@ -14,6 +14,7 @@ import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
 import LoginSuccess from './pages/LoginSuccess';
 import Footer from './components/Footer';
+import Wallet from './pages/Wallet';
 
 function App() {
   return (
@@ -28,10 +29,11 @@ function App() {
         <Route path="/order-confirmation" element={<OrderConfirmation />} />
         <Route path="/itinerary" element={<Itinerary />} />
         <Route path="/purchases" element={<Purchases />} />
-          <Route path="/find-order" element={<FindMyOrder />} />
+        <Route path="/find-order" element={<FindMyOrder />} />
         <Route path="/saved-itineraries" element={<SavedItineraries />} />
         <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="/login-success" element={<LoginSuccess />} />
+        <Route path="/wallet" element={<Wallet />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Footer />

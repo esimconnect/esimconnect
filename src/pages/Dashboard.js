@@ -33,8 +33,8 @@ export default function Dashboard() {
 
   const fetchProfile = async (userId) => {
     const { data } = await supabase
-      .from('users')
-      .select('full_name, ewallet_balance, loyalty_points')
+      .from('profiles')
+      .select('full_name, wallet_balance')
       .eq('id', userId)
       .single();
     if (data) setProfile(data);
@@ -118,18 +118,18 @@ export default function Dashboard() {
             <div className={styles.cardSub}>{esims.length} total purchased</div>
           </div>
           <div className={styles.card}>
-            <div className={styles.cardIcon}>🎯</div>
-            <div className={styles.cardTitle}>Loyalty Points</div>
-            <div className={styles.cardValue}>{profile?.loyalty_points ?? 0}</div>
-            <div className={styles.cardSub}>Redeemable on next purchase</div>
-          </div>
-          <div className={styles.card}>
             <div className={styles.cardIcon}>💰</div>
             <div className={styles.cardTitle}>eWallet</div>
             <div className={styles.cardValue}>
-              SGD {parseFloat(profile?.ewallet_balance ?? 0).toFixed(2)}
+              SGD {parseFloat(profile?.wallet_balance ?? 0).toFixed(2)}
             </div>
             <div className={styles.cardSub}>Available balance</div>
+            <button
+              className={styles.topUpBtn}
+              onClick={() => navigate('/wallet')}
+            >
+              + Top Up
+            </button>
           </div>
         </div>
 
@@ -217,7 +217,7 @@ export default function Dashboard() {
           </div>
         ) : null}
 
-        {/* Empty State — only if no esims and no orders */}
+        {/* Empty State */}
         {esims.length === 0 && orders.length === 0 && (
           <div className={styles.emptyState}>
             <div className={styles.emptyIcon}>🌍</div>

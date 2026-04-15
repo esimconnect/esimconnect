@@ -155,3 +155,22 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+.topUpBtn {
+  margin-top: 14px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #000;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 18px;
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all .2s;
+  width: 100%;
+}
+
+.topUpBtn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(0,200,255,.3);
+}
