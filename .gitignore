@@ -3,3 +3,6 @@ build/
 build/
 patch-*.js
 esimconnect-master
+.env
+Server/.env
+server/.env
