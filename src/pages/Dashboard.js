@@ -201,15 +201,17 @@ export default function Dashboard() {
                 }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: '14px' }}>
-                      Order #{order.order_number}
+                      Order #{order.order_code || order.order_number || '—'}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
                       {new Date(order.created_at).toLocaleDateString()}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ fontWeight: 700 }}>SGD {parseFloat(order.total_sgd).toFixed(2)}</div>
-                    {statusBadge(order.payment_status)}
+                    <div style={{ fontWeight: 700 }}>
+                      SGD {parseFloat(order.price_sgd || order.total_sgd || 0).toFixed(2)}
+                    </div>
+                    {statusBadge(order.status || order.payment_status || 'pending')}
                   </div>
                 </div>
               ))}

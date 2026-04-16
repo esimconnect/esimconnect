@@ -69,6 +69,9 @@ export default function Navbar() {
           {user ? (
             <>
               <PlansDropdown />
+              <Link to="/dashboard" className={isActive('/dashboard')} onClick={() => setMenuOpen(false)}>
+                Dashboard
+              </Link>
               <Link to="/purchases" className={isActive('/purchases')} onClick={() => setMenuOpen(false)}>
                 My Purchases
               </Link>
