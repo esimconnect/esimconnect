@@ -51,13 +51,24 @@ export default function Checkout() {
   const [cardCvc, setCardCvc] = useState('');
   const [cardName, setCardName] = useState('');
 
-  // Pre-fill if logged in
+  // eWallet
+  const [walletBalance, setWalletBalance] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('card'); // 'card' | 'wallet'
+
+  // Pre-fill if logged in + fetch wallet balance
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data?.user || null);
-      if (data?.user) {
-        setEmail(data.user.email || '');
-        setName(data.user.user_metadata?.full_name || '');
+    supabase.auth.getUser().then(async ({ data }) => {
+      const u = data?.user || null;
+      setUser(u);
+      if (u) {
+        setEmail(u.email || '');
+        setName(u.user_metadata?.full_name || '');
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', u.id)
+          .single();
+        if (profile) setWalletBalance(parseFloat(profile.wallet_balance) || 0);
       }
     });
   }, []);
@@ -155,16 +166,32 @@ export default function Checkout() {
       return;
     }
     setError(null);
-    handleConfirmOrder();
+    handleConfirmOrder('card');
   };
 
-  const handleConfirmOrder = async () => {
+  const handleWalletPay = () => {
+    if (walletBalance === null || walletBalance < cartTotal) return;
+    handleConfirmOrder('wallet');
+  };
+
+  const handleConfirmOrder = async (method = 'card') => {
     setLoading(true);
     setError(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const sessionId = 'EC-' + Date.now();
       const results = [];
+
+      // Deduct from wallet if paying with eWallet
+      if (method === 'wallet') {
+        const newBalance = parseFloat((walletBalance - cartTotal).toFixed(2));
+        const { error: walletErr } = await supabase
+          .from('profiles')
+          .update({ wallet_balance: newBalance })
+          .eq('id', user.id);
+        if (walletErr) throw new Error('Wallet deduction failed: ' + walletErr.message);
+        setWalletBalance(newBalance);
+      }
 
       for (const item of cart) {
         if (item.isVirtual) {
@@ -208,6 +235,7 @@ export default function Checkout() {
           customer_name: name,
           session_id: sessionId,
           status: 'completed',
+          payment_method: method,
         });
 
         results.push({ ...o, plan_name: item.plan_name, country: item.country });
@@ -508,55 +536,175 @@ export default function Checkout() {
                 }}>{error}</div>
               )}
 
-              <form onSubmit={handlePaymentSubmit} className={styles.form}>
-                <div className={styles.field}>
-                  <label>Name on Card</label>
-                  <input type="text" placeholder="John Smith" value={cardName}
-                    onChange={e => setCardName(e.target.value)} required />
-                </div>
-                <div className={styles.field}>
-                  <label>Card Number</label>
-                  <input type="text" placeholder="1234 5678 9012 3456"
-                    value={cardNumber}
-                    onChange={e => setCardNumber(formatCard(e.target.value))}
-                    maxLength={19} required />
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <div className={styles.field} style={{ flex: 1 }}>
-                    <label>Expiry</label>
-                    <input type="text" placeholder="MM/YY"
-                      value={cardExpiry}
-                      onChange={e => setCardExpiry(formatExpiry(e.target.value))}
-                      maxLength={5} required />
+              {/* ── eWallet Option (logged-in users only) ── */}
+              {user && walletBalance !== null && (
+                <div style={{ marginBottom: '20px' }}>
+                  {walletBalance >= cartTotal ? (
+                    /* Sufficient balance — show wallet pay option */
+                    <div
+                      onClick={() => setPaymentMethod('wallet')}
+                      style={{
+                        background: paymentMethod === 'wallet'
+                          ? 'rgba(0,200,255,0.12)'
+                          : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${paymentMethod === 'wallet' ? 'var(--accent)' : 'rgba(255,255,255,0.12)'}`,
+                        borderRadius: '14px', padding: '16px', cursor: 'pointer',
+                        marginBottom: '10px', transition: 'all 0.2s',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '22px' }}>💳</span>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '14px' }}>Pay with eWallet</div>
+                            <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                              Balance: SGD {walletBalance.toFixed(2)}
+                              {' '}→ SGD {(walletBalance - cartTotal).toFixed(2)} after
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{
+                          width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
+                          background: paymentMethod === 'wallet' ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+                          border: '2px solid ' + (paymentMethod === 'wallet' ? 'var(--accent)' : 'rgba(255,255,255,0.25)'),
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '11px', color: '#000', fontWeight: 700,
+                        }}>
+                          {paymentMethod === 'wallet' ? '✓' : ''}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Insufficient balance — show nudge */
+                    <div style={{
+                      background: 'rgba(255,180,0,0.07)', border: '1px solid rgba(255,180,0,0.25)',
+                      borderRadius: '14px', padding: '14px 16px', marginBottom: '10px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '13px', color: '#ffb400' }}>💳 eWallet: SGD {walletBalance.toFixed(2)}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
+                          Insufficient funds — need SGD {(cartTotal - walletBalance).toFixed(2)} more
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => window.open('/wallet', '_blank')}
+                        style={{
+                          background: 'rgba(255,180,0,0.15)', border: '1px solid rgba(255,180,0,0.3)',
+                          borderRadius: '8px', padding: '7px 12px', color: '#ffb400',
+                          fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Top Up →
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Card option toggle */}
+                  <div
+                    onClick={() => setPaymentMethod('card')}
+                    style={{
+                      background: paymentMethod === 'card'
+                        ? 'rgba(0,200,255,0.12)'
+                        : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${paymentMethod === 'card' ? 'var(--accent)' : 'rgba(255,255,255,0.12)'}`,
+                      borderRadius: '14px', padding: '14px 16px', cursor: 'pointer',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '22px' }}>🏦</span>
+                      <div style={{ fontWeight: 700, fontSize: '14px' }}>Pay by Card</div>
+                    </div>
+                    <div style={{
+                      width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
+                      background: paymentMethod === 'card' ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+                      border: '2px solid ' + (paymentMethod === 'card' ? 'var(--accent)' : 'rgba(255,255,255,0.25)'),
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '11px', color: '#000', fontWeight: 700,
+                    }}>
+                      {paymentMethod === 'card' ? '✓' : ''}
+                    </div>
                   </div>
-                  <div className={styles.field} style={{ flex: 1 }}>
-                    <label>CVC</label>
-                    <input type="text" placeholder="123"
-                      value={cardCvc}
-                      onChange={e => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                      maxLength={3} required />
+                </div>
+              )}
+
+              {/* ── Card Form (guests always see this; logged-in users see it when card selected) ── */}
+              {(!user || paymentMethod === 'card') && (
+                <form onSubmit={handlePaymentSubmit} className={styles.form}>
+                  <div className={styles.field}>
+                    <label>Name on Card</label>
+                    <input type="text" placeholder="John Smith" value={cardName}
+                      onChange={e => setCardName(e.target.value)} required />
                   </div>
-                </div>
-                <div style={{
-                  background: 'rgba(76,217,100,0.07)', border: '1px solid rgba(76,217,100,0.2)',
-                  borderRadius: '10px', padding: '10px 14px', fontSize: '12px',
-                  color: '#4cd964', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px',
-                }}>
-                  🔒 Payments are encrypted and secure
-                </div>
+                  <div className={styles.field}>
+                    <label>Card Number</label>
+                    <input type="text" placeholder="1234 5678 9012 3456"
+                      value={cardNumber}
+                      onChange={e => setCardNumber(formatCard(e.target.value))}
+                      maxLength={19} required />
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div className={styles.field} style={{ flex: 1 }}>
+                      <label>Expiry</label>
+                      <input type="text" placeholder="MM/YY"
+                        value={cardExpiry}
+                        onChange={e => setCardExpiry(formatExpiry(e.target.value))}
+                        maxLength={5} required />
+                    </div>
+                    <div className={styles.field} style={{ flex: 1 }}>
+                      <label>CVC</label>
+                      <input type="text" placeholder="123"
+                        value={cardCvc}
+                        onChange={e => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                        maxLength={3} required />
+                    </div>
+                  </div>
+                  <div style={{
+                    background: 'rgba(76,217,100,0.07)', border: '1px solid rgba(76,217,100,0.2)',
+                    borderRadius: '10px', padding: '10px 14px', fontSize: '12px',
+                    color: '#4cd964', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px',
+                  }}>
+                    🔒 Payments are encrypted and secure
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                    <button type="button" onClick={() => setStep(2)} style={{
+                      flex: 1, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '12px', padding: '14px', color: 'inherit', fontWeight: 600,
+                      fontSize: '14px', cursor: 'pointer',
+                    }}>← Back</button>
+                    <button type="submit" className={styles.submitBtn} style={{ flex: 2 }} disabled={loading}>
+                      {loading
+                        ? <span className={styles.spinner}></span>
+                        : `Get My eSIM · SGD ${cartTotal.toFixed(2)} →`}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* ── Wallet Pay Button (logged-in + wallet selected) ── */}
+              {user && paymentMethod === 'wallet' && walletBalance >= cartTotal && (
                 <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
                   <button type="button" onClick={() => setStep(2)} style={{
                     flex: 1, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
                     borderRadius: '12px', padding: '14px', color: 'inherit', fontWeight: 600,
                     fontSize: '14px', cursor: 'pointer',
                   }}>← Back</button>
-                  <button type="submit" className={styles.submitBtn} style={{ flex: 2 }} disabled={loading}>
+                  <button
+                    type="button"
+                    onClick={handleWalletPay}
+                    className={styles.submitBtn}
+                    style={{ flex: 2 }}
+                    disabled={loading}
+                  >
                     {loading
                       ? <span className={styles.spinner}></span>
-                      : `Get My eSIM · SGD ${cartTotal.toFixed(2)} →`}
+                      : `Pay SGD ${cartTotal.toFixed(2)} with Wallet →`}
                   </button>
                 </div>
-              </form>
+              )}
             </>
           )}
 
