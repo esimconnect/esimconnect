@@ -98,16 +98,23 @@ export default function Navbar() {
                 .nb_arc1 { animation: nb_pulseArc 2.5s ease-in-out 0s infinite; }
                 .nb_arc2 { animation: nb_pulseArc 2.5s ease-in-out 0.8s infinite; }
                 .nb_arc3 { animation: nb_pulseArc 2.5s ease-in-out 1.6s infinite; }
-                .nb_sim1 { transform-origin: 340px 215px; animation: nb_orbitH 12s linear infinite; }
-                .nb_sim2 { transform-origin: 340px 215px; animation: nb_orbitV 7s linear infinite; }
                 @keyframes nb_orbitH {
-                  from { transform: rotate(0deg) translateX(178px) rotate(0deg); }
-                  to   { transform: rotate(360deg) translateX(178px) rotate(-360deg); }
+                  0%   { transform: translate(518px, 215px); }
+                  25%  { transform: translate(340px, 393px); }
+                  50%  { transform: translate(162px, 215px); }
+                  75%  { transform: translate(340px, 37px); }
+                  100% { transform: translate(518px, 215px); }
                 }
                 @keyframes nb_orbitV {
-                  from { transform: rotate(90deg) translateY(178px) rotate(-90deg); }
-                  to   { transform: rotate(450deg) translateY(178px) rotate(-450deg); }
-                }</style>
+                  0%   { transform: translate(340px, 393px); }
+                  25%  { transform: translate(394px, 215px); }
+                  50%  { transform: translate(340px, 37px); }
+                  75%  { transform: translate(286px, 215px); }
+                  100% { transform: translate(340px, 393px); }
+                }
+                .nb_sim1 { animation: nb_orbitH 12s linear infinite; }
+                .nb_sim2 { animation: nb_orbitV 7s linear infinite; }
+              `}</style>
             </defs>
 
             <circle cx="340" cy="215" r="168" fill="url(#nb_haloG)"/>
@@ -127,30 +134,24 @@ export default function Navbar() {
             <text x="340" y="228" fontFamily="Arial, Helvetica, sans-serif" fontSize="10"
               fill="#60b0ff" textAnchor="middle" letterSpacing="3.5">150+ COUNTRIES</text>
 
-            <g className="nb_sim1">
-              <rect x="322" y="192" width="36" height="44" rx="5" fill="url(#nb_cG1)" stroke="#5ab8ff" strokeWidth="1.6"/>
-              <polygon points="340,192 358,192 358,204 340,204" fill="#0a1e44"/>
-              <line x1="340" y1="192" x2="358" y2="204" stroke="#5ab8ff" strokeWidth="1.4"/>
-              <rect x="327" y="208" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="342" y="208" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="327" y="219" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="342" y="219" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <path d="M362,207 A28,28 0 0 1 362,181" fill="none" stroke="#5ab8ff" strokeWidth="1.4" strokeLinecap="round" className="nb_arc1"/>
-              <path d="M370,212 A38,38 0 0 1 370,174" fill="none" stroke="#5ab8ff" strokeWidth="1.4" strokeLinecap="round" className="nb_arc2"/>
-              <path d="M378,216 A48,48 0 0 1 378,168" fill="none" stroke="#5ab8ff" strokeWidth="1.4" strokeLinecap="round" className="nb_arc3"/>
+            <g className="nb_sim1" style={{transformBox: 'fill-box'}}>
+              <rect x="-18" y="-22" width="36" height="44" rx="5" fill="url(#nb_cG1)" stroke="#5ab8ff" strokeWidth="1.6"/>
+              <polygon points="0,-22 18,-22 18,-10 0,-10" fill="#0a1e44"/>
+              <line x1="0" y1="-22" x2="18" y2="-10" stroke="#5ab8ff" strokeWidth="1.4"/>
+              <rect x="-13" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="2" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="-13" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="2" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
             </g>
 
-            <g className="nb_sim2">
-              <rect x="322" y="192" width="36" height="44" rx="5" fill="url(#nb_cG2)" stroke="#5ab8ff" strokeWidth="1.6"/>
-              <polygon points="340,192 358,192 358,204 340,204" fill="#0a1e44"/>
-              <line x1="340" y1="192" x2="358" y2="204" stroke="#5ab8ff" strokeWidth="1.4"/>
-              <rect x="327" y="208" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="342" y="208" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="327" y="219" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="342" y="219" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <path d="M362,207 A28,28 0 0 1 362,181" fill="none" stroke="#40ccff" strokeWidth="1.4" strokeLinecap="round" className="nb_arc1"/>
-              <path d="M370,212 A38,38 0 0 1 370,174" fill="none" stroke="#40ccff" strokeWidth="1.4" strokeLinecap="round" className="nb_arc2"/>
-              <path d="M378,216 A48,48 0 0 1 378,168" fill="none" stroke="#40ccff" strokeWidth="1.4" strokeLinecap="round" className="nb_arc3"/>
+            <g className="nb_sim2" style={{transformBox: 'fill-box'}}>
+              <rect x="-18" y="-22" width="36" height="44" rx="5" fill="url(#nb_cG2)" stroke="#5ab8ff" strokeWidth="1.6"/>
+              <polygon points="0,-22 18,-22 18,-10 0,-10" fill="#0a1e44"/>
+              <line x1="0" y1="-22" x2="18" y2="-10" stroke="#5ab8ff" strokeWidth="1.4"/>
+              <rect x="-13" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="2" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="-13" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="2" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
             </g>
           </svg>
         </Link>
