@@ -62,7 +62,7 @@ export default function Navbar() {
       <div className={styles.inner}>
         <Link to="/" className={styles.logo} onClick={() => setMenuOpen(false)}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 460" role="img"
-            style={{ height: '48px', width: 'auto', display: 'block' }}>
+            style={{ height: '72px', width: 'auto', display: 'block' }}>
             <defs>
               <radialGradient id="nb_gG" cx="38%" cy="32%" r="62%">
                 <stop offset="0%" stopColor="#1a4a8a"/>
