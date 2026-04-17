@@ -510,3 +510,25 @@ Supabase migration:
 
 Commits: 13c69436, de6b75c1
 Next session should: Twilio VoIP floating dialler widget + Node.js access token backend
+
+### April 17, 2026 — Session 4 (Logo + UI)
+Completed:
+- Replaced text navbar logo with inline animated SVG globe
+- Increased navbar height to 96px with logo overlapping below navbar border
+- Logo positioned with blue glow drop-shadow effect
+- Increased font size of eSimconnect text in logo to 33px
+- Updated PWA icons (icon-192.png + icon-512.png) with new globe logo
+- Added --navbar-height CSS variable to global.css for consistent page padding
+- Orbiting SIM chip animation attempted but parked (CSS transform-origin unreliable for SVG in React)
+- Globe logo looks great as-is without orbiting chips
+
+Files changed:
+- src/components/Navbar.js
+- src/components/Navbar.module.css
+- src/styles/global.css
+- public/esimconnect-logo.svg (new)
+- public/icons/icon-192.png (updated)
+- public/icons/icon-512.png (updated)
+
+Commits: bad54e6e, bdf0ccdb, 08b206b6, 2d23db69, 5e42af03, ab0d8c52, ceca44e5, 7d6a7da3, 60a2eccb, 49fc6ae1
+Next session should: Language toggle EN/中文 dropdown in Navbar, full site translation
