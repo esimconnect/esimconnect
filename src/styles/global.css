@@ -12,7 +12,7 @@
   --muted2: rgba(255,255,255,.25);
   --border: rgba(255,255,255,.08);
   --border2: rgba(255,255,255,.15);
-  --radius: 16px;
+  --navbar-height: 96px;
   --radius-sm: 10px;
   --font-head: 'Nunito', sans-serif;
   --font-body: 'Plus Jakarta Sans', sans-serif;
@@ -61,6 +61,11 @@ input, select, textarea { font-family: var(--font-body); }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Push page content below fixed navbar */
+#root > div {
+  padding-top: var(--navbar-height);
 }
 
 .fade-up { animation: fadeUp .5s ease forwards; }
