@@ -60,9 +60,9 @@ export default function Navbar() {
   return (
     <nav className={styles.nav}>
       <div className={styles.inner}>
-        <Link to="/" className={styles.logo} onClick={() => setMenuOpen(false)}>
+        <Link to="/" className={styles.logo} onClick={() => setMenuOpen(false)} style={{ overflow: 'visible' }}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="140 80 400 280" role="img"
-            style={{ height: '97px', width: 'auto', display: 'block' }}>
+            style={{ height: '140px', width: 'auto', display: 'block', position: 'relative', top: '24px', filter: 'drop-shadow(0 8px 24px rgba(26,106,255,0.5))' }}>
             <defs>
               <radialGradient id="nb_gG" cx="38%" cy="32%" r="62%">
                 <stop offset="0%" stopColor="#1a4a8a"/>
