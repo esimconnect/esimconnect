@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="460" viewBox="0 0 680 460" role="img">
+  <title>eSimconnect Logo</title>
+  <desc>Glowing neon blue globe with eSimconnect text centred inside, two SIM chips orbiting, pulsing signal arcs</desc>
+
+  <defs>
+    <radialGradient id="gG" cx="38%" cy="32%" r="62%">
+      <stop offset="0%"   stop-color="#1a4a8a"/>
+      <stop offset="45%"  stop-color="#0a2255"/>
+      <stop offset="100%" stop-color="#040e28"/>
+    </radialGradient>
+    <radialGradient id="haloG" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#1a6aff" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#1a6aff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cG1" cx="30%" cy="28%" r="70%">
+      <stop offset="0%"   stop-color="#c8e8ff"/>
+      <stop offset="40%"  stop-color="#5aaeff"/>
+      <stop offset="100%" stop-color="#1a4aaa"/>
+    </radialGradient>
+    <radialGradient id="cG2" cx="30%" cy="28%" r="70%">
+      <stop offset="0%"   stop-color="#d0f0ff"/>
+      <stop offset="40%"  stop-color="#40ccff"/>
+      <stop offset="100%" stop-color="#0a3888"/>
+    </radialGradient>
+    <linearGradient id="wG" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#ffffff"/>
+      <stop offset="50%"  stop-color="#a8d8ff"/>
+      <stop offset="100%" stop-color="#5aaeff"/>
+    </linearGradient>
+    <clipPath id="gc">
+      <circle cx="340" cy="215" r="135"/>
+    </clipPath>
+    <style>
+      @keyframes pulseArc {
+        0%   { opacity:0; } 30% { opacity:1; } 80% { opacity:0.3; } 100% { opacity:0; }
+      }
+    </style>
+  </defs>
+
+  <circle cx="340" cy="215" r="168" fill="url(#haloG)"/>
+  <circle cx="340" cy="215" r="135" fill="url(#gG)" stroke="#3a8aff" stroke-width="2"/>
+
+  <g clip-path="url(#gc)">
+    <ellipse cx="340" cy="215" rx="135" ry="135" fill="none" stroke="#1a6aff" stroke-width="0.6" stroke-opacity="0.45"/>
+    <ellipse cx="340" cy="215" rx="95"  ry="135" fill="none" stroke="#1a6aff" stroke-width="0.6" stroke-opacity="0.4"/>
+    <ellipse cx="340" cy="215" rx="50"  ry="135" fill="none" stroke="#1a6aff" stroke-width="0.6" stroke-opacity="0.4"/>
+    <ellipse cx="340" cy="215" rx="12"  ry="135" fill="none" stroke="#1a6aff" stroke-width="0.5" stroke-opacity="0.28"/>
+    <ellipse cx="340" cy="215" rx="135" ry="5"   fill="none" stroke="#1a6aff" stroke-width="0.7" stroke-opacity="0.55"/>
+    <ellipse cx="340" cy="177" rx="122" ry="5"   fill="none" stroke="#1a6aff" stroke-width="0.6" stroke-opacity="0.45"/>
+    <ellipse cx="340" cy="253" rx="122" ry="5"   fill="none" stroke="#1a6aff" stroke-width="0.6" stroke-opacity="0.45"/>
+    <ellipse cx="340" cy="140" rx="82"  ry="4"   fill="none" stroke="#1a6aff" stroke-width="0.6" stroke-opacity="0.35"/>
+    <ellipse cx="340" cy="290" rx="82"  ry="4"   fill="none" stroke="#1a6aff" stroke-width="0.6" stroke-opacity="0.35"/>
+    <ellipse cx="340" cy="108" rx="40"  ry="3"   fill="none" stroke="#1a6aff" stroke-width="0.5" stroke-opacity="0.25"/>
+    <ellipse cx="340" cy="322" rx="40"  ry="3"   fill="none" stroke="#1a6aff" stroke-width="0.5" stroke-opacity="0.25"/>
+    <ellipse cx="298" cy="168" rx="42" ry="26" fill="#4aa0ff" fill-opacity="0.09" transform="rotate(-30,298,168)"/>
+  </g>
+
+  <circle cx="340" cy="215" r="138" fill="none" stroke="#1a6aff" stroke-width="1" stroke-opacity="0.3"/>
+
+  <ellipse cx="340" cy="215" rx="178" ry="54"
+    fill="none" stroke="#1a6aff" stroke-width="0.8" stroke-opacity="0.28" stroke-dasharray="6 5"/>
+  <ellipse cx="340" cy="215" rx="54" ry="178"
+    fill="none" stroke="#40ccff" stroke-width="0.8" stroke-opacity="0.28" stroke-dasharray="6 5"/>
+
+  <text x="340" y="205" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700"
+    fill="url(#wG)" text-anchor="middle" letter-spacing="-0.5">
+    <tspan font-weight="300">e</tspan>Sim<tspan font-weight="300">connect</tspan>
+  </text>
+  <text x="340" y="228" font-family="Arial, Helvetica, sans-serif" font-size="10"
+    fill="#60b0ff" text-anchor="middle" letter-spacing="3.5">150+ COUNTRIES</text>
+
+  <g id="sim1"></g>
+  <g id="sim2"></g>
+
+  <script>
+  (function() {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const cx = 340, cy = 215;
+
+    function makeChip(gradId, arcColor) {
+      const g = document.createElementNS(svgNS, 'g');
+
+      const body = document.createElementNS(svgNS, 'rect');
+      body.setAttribute('x', '-18'); body.setAttribute('y', '-23');
+      body.setAttribute('width', '36'); body.setAttribute('height', '44');
+      body.setAttribute('rx', '5');
+      body.setAttribute('fill', 'url(#' + gradId + ')');
+      body.setAttribute('stroke', '#5ab8ff');
+      body.setAttribute('stroke-width', '1.6');
+      g.appendChild(body);
+
+      const notchMask = document.createElementNS(svgNS, 'polygon');
+      notchMask.setAttribute('points', '3,-23 18,-23 18,-11 3,-11');
+      notchMask.setAttribute('fill', '#0a1e44');
+      g.appendChild(notchMask);
+
+      const notchLine = document.createElementNS(svgNS, 'line');
+      notchLine.setAttribute('x1','3'); notchLine.setAttribute('y1','-23');
+      notchLine.setAttribute('x2','18'); notchLine.setAttribute('y2','-11');
+      notchLine.setAttribute('stroke','#5ab8ff'); notchLine.setAttribute('stroke-width','1.4');
+      g.appendChild(notchLine);
+
+      [[-13,-7],[2,-7],[-13,4],[2,4]].forEach(([x,y]) => {
+        const r = document.createElementNS(svgNS, 'rect');
+        r.setAttribute('x', x); r.setAttribute('y', y);
+        r.setAttribute('width', '10'); r.setAttribute('height', '8'); r.setAttribute('rx', '2');
+        r.setAttribute('fill', '#0d2a6a'); r.setAttribute('stroke', '#5ab8ff');
+        r.setAttribute('stroke-width', '0.8');
+        g.appendChild(r);
+      });
+
+      [{d:'M22,7 A28,28 0 0 1 22,-23', delay:0},
+       {d:'M30,12 A38,38 0 0 1 30,-30', delay:0.8},
+       {d:'M38,16 A48,48 0 0 1 38,-38', delay:1.6}].forEach(({d,delay}) => {
+        const path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', arcColor);
+        path.setAttribute('stroke-width', '1.4');
+        path.setAttribute('stroke-linecap', 'round');
+        path.style.animation = 'pulseArc 2.5s ease-in-out ' + delay + 's infinite';
+        g.appendChild(path);
+      });
+
+      return g;
+    }
+
+    document.getElementById('sim1').appendChild(makeChip('cG1', '#5ab8ff'));
+    document.getElementById('sim2').appendChild(makeChip('cG2', '#40ccff'));
+
+    let a1 = 0, a2 = Math.PI / 2;
+
+    function tick() {
+      a1 += 0.009; a2 += 0.009;
+
+      const x1 = cx + 178 * Math.cos(a1);
+      const y1 = cy + 54  * Math.sin(a1);
+      const s1 = document.getElementById('sim1');
+      s1.setAttribute('transform', 'translate(' + x1 + ',' + y1 + ')');
+      s1.setAttribute('opacity', Math.sin(a1) < 0 ? '0.15' : '1');
+
+      const x2 = cx + 54  * Math.cos(a2);
+      const y2 = cy + 178 * Math.sin(a2);
+      const s2 = document.getElementById('sim2');
+      s2.setAttribute('transform', 'translate(' + x2 + ',' + y2 + ')');
+      s2.setAttribute('opacity', Math.cos(a2) > 0 ? '0.15' : '1');
+
+      requestAnimationFrame(tick);
+    }
+    tick();
+  })();
+  </script>
+</svg>

@@ -61,8 +61,11 @@ export default function Navbar() {
     <nav className={styles.nav}>
       <div className={styles.inner}>
         <Link to="/" className={styles.logo} onClick={() => setMenuOpen(false)}>
-          eSIM<span>Connect</span>
-          <span className={styles.dot}></span>
+          <img
+            src="/esimconnect-logo.svg"
+            alt="eSIMConnect"
+            style={{ height: '44px', width: 'auto', display: 'block' }}
+          />
         </Link>
 
         <div className={`${styles.links} ${menuOpen ? styles.open : ''}`}>
