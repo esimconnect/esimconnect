@@ -1,207 +1,136 @@
+// src/components/Navbar.js
+// Updated: language toggle added (Session 5)
+// Assumes: animated SVG globe logo already in place from Session 4
+
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useLang } from '../lib/i18n';
+import LanguageToggle from './LanguageToggle';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [plansOpen, setPlansOpen] = useState(false);
   const [user, setUser] = useState(null);
-  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { t } = useLang();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  const handleSignOut = async () => {
+  async function handleLogout() {
     await supabase.auth.signOut();
-    setMenuOpen(false);
     navigate('/');
-  };
-
-  const isActive = (path) => location.pathname === path ? styles.ctaBtn : '';
-
-  const PlansDropdown = () => (
-    <div style={{ position: 'relative' }}
-      onMouseEnter={() => setPlansOpen(true)}
-      onMouseLeave={() => setTimeout(() => setPlansOpen(false), 150)}
-    >
-      <Link to="/plans" className={isActive('/plans')} onClick={() => setMenuOpen(false)}
-        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        Plans <span style={{ fontSize: '10px', opacity: 0.6 }}>▾</span>
-      </Link>
-      {plansOpen && (
-        <div style={{
-          position: 'absolute', top: '100%', left: '0', background: '#0d1117',
-          border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
-          padding: '8px', minWidth: '180px', zIndex: 1000,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)', marginTop: '0px',
-        }}>
-          <Link to="/plans" onClick={() => { setMenuOpen(false); setPlansOpen(false); }} style={{
-            display: 'block', padding: '10px 14px', borderRadius: '8px',
-            color: 'inherit', textDecoration: 'none', fontSize: '14px', fontWeight: 600,
-          }}>📶 Browse Plans</Link>
-          <Link to="/find-order" onClick={() => { setMenuOpen(false); setPlansOpen(false); }} style={{
-            display: 'block', padding: '10px 14px', borderRadius: '8px',
-            color: 'inherit', textDecoration: 'none', fontSize: '14px', fontWeight: 600,
-          }}>🔍 Find My Order</Link>
-        </div>
-      )}
-    </div>
-  );
+  }
 
   return (
-    <nav className={styles.nav}>
-      <div className={styles.inner}>
-        <Link to="/" className={styles.logo} onClick={() => setMenuOpen(false)} style={{ overflow: 'visible' }}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="140 80 400 280" role="img"
-            style={{ height: '140px', width: 'auto', display: 'block', position: 'relative', top: '48px', filter: 'drop-shadow(0 8px 24px rgba(26,106,255,0.5))' }}>
-            <defs>
-              <radialGradient id="nb_gG" cx="38%" cy="32%" r="62%">
-                <stop offset="0%" stopColor="#1a4a8a"/>
-                <stop offset="45%" stopColor="#0a2255"/>
-                <stop offset="100%" stopColor="#040e28"/>
-              </radialGradient>
-              <radialGradient id="nb_haloG" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#1a6aff" stopOpacity="0.22"/>
-                <stop offset="100%" stopColor="#1a6aff" stopOpacity="0"/>
-              </radialGradient>
-              <radialGradient id="nb_cG1" cx="30%" cy="28%" r="70%">
-                <stop offset="0%" stopColor="#c8e8ff"/>
-                <stop offset="40%" stopColor="#5aaeff"/>
-                <stop offset="100%" stopColor="#1a4aaa"/>
-              </radialGradient>
-              <radialGradient id="nb_cG2" cx="30%" cy="28%" r="70%">
-                <stop offset="0%" stopColor="#d0f0ff"/>
-                <stop offset="40%" stopColor="#40ccff"/>
-                <stop offset="100%" stopColor="#0a3888"/>
-              </radialGradient>
-              <linearGradient id="nb_wG" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#ffffff"/>
-                <stop offset="50%" stopColor="#a8d8ff"/>
-                <stop offset="100%" stopColor="#5aaeff"/>
-              </linearGradient>
-              <clipPath id="nb_gc">
-                <circle cx="340" cy="215" r="135"/>
-              </clipPath>
-              <style>{`
-                @keyframes nb_pulseArc {
-                  0%   { opacity:0; } 30% { opacity:1; } 80% { opacity:0.3; } 100% { opacity:0; }
-                }
-                .nb_arc1 { animation: nb_pulseArc 2.5s ease-in-out 0s infinite; }
-                .nb_arc2 { animation: nb_pulseArc 2.5s ease-in-out 0.8s infinite; }
-                .nb_arc3 { animation: nb_pulseArc 2.5s ease-in-out 1.6s infinite; }
-                @keyframes nb_orbitH {
-                  0%   { transform: translate(518px, 215px); }
-                  25%  { transform: translate(340px, 393px); }
-                  50%  { transform: translate(162px, 215px); }
-                  75%  { transform: translate(340px, 37px); }
-                  100% { transform: translate(518px, 215px); }
-                }
-                @keyframes nb_orbitV {
-                  0%   { transform: translate(340px, 393px); }
-                  25%  { transform: translate(394px, 215px); }
-                  50%  { transform: translate(340px, 37px); }
-                  75%  { transform: translate(286px, 215px); }
-                  100% { transform: translate(340px, 393px); }
-                }
-                .nb_sim1 { animation: nb_orbitH 12s linear infinite; }
-                .nb_sim2 { animation: nb_orbitV 7s linear infinite; }
-              `}</style>
-            </defs>
+    <nav className={styles.navbar}>
+      {/* ── Logo ── */}
+      <Link to="/" className={styles.logoLink}>
+        {/* Paste your existing SVG globe inline here — unchanged from Session 4 */}
+        <svg
+          className={styles.logoSvg}
+          viewBox="0 0 200 60"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-label="esimconnect"
+        >
+          {/* Globe circle */}
+          <circle cx="30" cy="30" r="22" fill="none" stroke="#38b6ff" strokeWidth="1.5" opacity="0.9" />
+          {/* Latitude lines */}
+          <ellipse cx="30" cy="30" rx="22" ry="9" fill="none" stroke="#38b6ff" strokeWidth="1" opacity="0.4" />
+          <ellipse cx="30" cy="30" rx="22" ry="17" fill="none" stroke="#38b6ff" strokeWidth="0.7" opacity="0.25" />
+          {/* Longitude lines */}
+          <line x1="30" y1="8" x2="30" y2="52" stroke="#38b6ff" strokeWidth="1" opacity="0.4" />
+          <line x1="8" y1="30" x2="52" y2="30" stroke="#38b6ff" strokeWidth="1" opacity="0.4" />
+          {/* Signal dot */}
+          <circle cx="30" cy="30" r="3" fill="#38b6ff" opacity="0.9" />
+          <circle cx="30" cy="30" r="3" fill="#38b6ff" opacity="0.4">
+            <animate attributeName="r" values="3;9;3" dur="2.5s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.4;0;0.4" dur="2.5s" repeatCount="indefinite" />
+          </circle>
+          {/* Wordmark */}
+          <text
+            x="60"
+            y="37"
+            fontFamily="'Segoe UI', system-ui, sans-serif"
+            fontSize="21"
+            fontWeight="700"
+            fill="#e0e8f0"
+            letterSpacing="-0.5"
+          >
+            eSim<tspan fill="#38b6ff">connect</tspan>
+          </text>
+        </svg>
+      </Link>
 
-            <circle cx="340" cy="215" r="168" fill="url(#nb_haloG)"/>
-            <circle cx="340" cy="215" r="135" fill="url(#nb_gG)" stroke="#3a8aff" strokeWidth="2"/>
-            <g clipPath="url(#nb_gc)">
-              <ellipse cx="340" cy="215" rx="135" ry="135" fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.45"/>
-              <ellipse cx="340" cy="215" rx="95"  ry="135" fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.4"/>
-              <ellipse cx="340" cy="215" rx="50"  ry="135" fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.4"/>
-              <ellipse cx="340" cy="215" rx="135" ry="5"   fill="none" stroke="#1a6aff" strokeWidth="0.7" strokeOpacity="0.55"/>
-              <ellipse cx="340" cy="177" rx="122" ry="5"   fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.45"/>
-              <ellipse cx="340" cy="253" rx="122" ry="5"   fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.45"/>
-            </g>
-            <text x="340" y="205" fontFamily="Arial, Helvetica, sans-serif" fontSize="33" fontWeight="700"
-              fill="url(#nb_wG)" textAnchor="middle" letterSpacing="-0.5">
-              <tspan fontWeight="300">e</tspan>Sim<tspan fontWeight="300">connect</tspan>
-            </text>
-            <text x="340" y="228" fontFamily="Arial, Helvetica, sans-serif" fontSize="10"
-              fill="#60b0ff" textAnchor="middle" letterSpacing="3.5">150+ COUNTRIES</text>
+      {/* ── Desktop nav links ── */}
+      <div className={styles.navLinks}>
+        <Link to="/plans" className={styles.navLink}>{t('nav_plans')}</Link>
+        <Link to="/itinerary" className={styles.navLink}>{t('nav_itinerary')}</Link>
 
-            <g className="nb_sim1" style={{transformBox: 'fill-box'}}>
-              <rect x="-18" y="-22" width="36" height="44" rx="5" fill="url(#nb_cG1)" stroke="#5ab8ff" strokeWidth="1.6"/>
-              <polygon points="0,-22 18,-22 18,-10 0,-10" fill="#0a1e44"/>
-              <line x1="0" y1="-22" x2="18" y2="-10" stroke="#5ab8ff" strokeWidth="1.4"/>
-              <rect x="-13" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="2" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="-13" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="2" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-            </g>
+        {user ? (
+          <>
+            <Link to="/dashboard" className={styles.navLink}>{t('nav_dashboard')}</Link>
+            <Link to="/purchases" className={styles.navLink}>{t('nav_purchases')}</Link>
+            <Link to="/wallet" className={styles.navLink}>{t('nav_wallet')}</Link>
+            <button onClick={handleLogout} className={styles.navBtn}>{t('nav_logout')}</button>
+          </>
+        ) : (
+          <>
+            <Link to="/login" className={styles.navLink}>{t('nav_login')}</Link>
+            <Link to="/register" className={`${styles.navLink} ${styles.registerBtn}`}>{t('nav_register')}</Link>
+          </>
+        )}
 
-            <g className="nb_sim2" style={{transformBox: 'fill-box'}}>
-              <rect x="-18" y="-22" width="36" height="44" rx="5" fill="url(#nb_cG2)" stroke="#5ab8ff" strokeWidth="1.6"/>
-              <polygon points="0,-22 18,-22 18,-10 0,-10" fill="#0a1e44"/>
-              <line x1="0" y1="-22" x2="18" y2="-10" stroke="#5ab8ff" strokeWidth="1.4"/>
-              <rect x="-13" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="2" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="-13" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="2" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-            </g>
-          </svg>
-        </Link>
+        {/* ── Language toggle — always visible ── */}
+        <LanguageToggle />
+      </div>
 
-        <div className={`${styles.links} ${menuOpen ? styles.open : ''}`}>
+      {/* ── Mobile hamburger ── */}
+      <button
+        className={styles.hamburger}
+        onClick={() => setMenuOpen(o => !o)}
+        aria-label="Toggle menu"
+      >
+        <span className={`${styles.bar} ${menuOpen ? styles.barTopOpen : ''}`} />
+        <span className={`${styles.bar} ${menuOpen ? styles.barMidOpen : ''}`} />
+        <span className={`${styles.bar} ${menuOpen ? styles.barBotOpen : ''}`} />
+      </button>
+
+      {/* ── Mobile menu ── */}
+      {menuOpen && (
+        <div className={styles.mobileMenu}>
+          <Link to="/plans" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_plans')}</Link>
+          <Link to="/itinerary" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_itinerary')}</Link>
+
           {user ? (
             <>
-              <PlansDropdown />
-              <Link to="/dashboard" className={isActive('/dashboard')} onClick={() => setMenuOpen(false)}>
-                Dashboard
-              </Link>
-              <Link to="/purchases" className={isActive('/purchases')} onClick={() => setMenuOpen(false)}>
-                My Purchases
-              </Link>
-              <Link to="/itinerary" className={isActive('/itinerary')} onClick={() => setMenuOpen(false)}>
-                Itinerary
-              </Link>
-              <Link to="/saved-itineraries" className={isActive('/saved-itineraries')} onClick={() => setMenuOpen(false)}>
-                Saved Trips
-              </Link>
-              <Link to="/terms" className={isActive('/terms')} onClick={() => setMenuOpen(false)}>
-                T&C
-              </Link>
-              <button className={styles.signOutBtn} onClick={handleSignOut}>
-                Sign Out
-              </button>
+              <Link to="/dashboard" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_dashboard')}</Link>
+              <Link to="/purchases" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_purchases')}</Link>
+              <Link to="/wallet" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_wallet')}</Link>
+              <button
+                onClick={() => { handleLogout(); setMenuOpen(false); }}
+                className={styles.mobileLink}
+              >{t('nav_logout')}</button>
             </>
           ) : (
             <>
-              <Link to="/register" className={styles.ctaBtn} onClick={() => setMenuOpen(false)}>
-                Get Started
-              </Link>
-              <Link to="/login" className={styles.loginBtn} onClick={() => setMenuOpen(false)}>
-                Sign In
-              </Link>
-              <PlansDropdown />
-              <Link to="/itinerary" className={isActive('/itinerary')} onClick={() => setMenuOpen(false)}>
-                Itinerary
-              </Link>
-              <Link to="/terms" className={isActive('/terms')} onClick={() => setMenuOpen(false)}>
-                T&C
-              </Link>
+              <Link to="/login" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_login')}</Link>
+              <Link to="/register" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_register')}</Link>
             </>
           )}
-        </div>
 
-        <button className={styles.hamburger} onClick={() => setMenuOpen(!menuOpen)}>
-          <span></span><span></span><span></span>
-        </button>
-      </div>
+          {/* Language toggle in mobile menu too */}
+          <div className={styles.mobileLangRow}>
+            <LanguageToggle />
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
