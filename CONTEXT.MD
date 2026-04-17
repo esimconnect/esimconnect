@@ -1,13 +1,13 @@
 # esimconnect — Living Project Context
 Last updated: April 17, 2026
-Latest commit: de6b75c1
+Latest commit: 022cae36
 
 ---
 
 ## Repository
 - Repo: https://github.com/esimconnect/esimconnect
 - Live: https://esimconnect.world
-- Local: D:\Kairos\esimconnect
+- Local: E:\Kairos\esimconnect
 - Branch: main
 
 ## Supabase
@@ -44,7 +44,7 @@ Latest commit: de6b75c1
 
 ## Environment Variables
 
-### Frontend: D:\Kairos\esimconnect\.env
+### Frontend: E:\Kairos\esimconnect\.env
 REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_[esimconnect sandbox key]
 REACT_APP_SUPABASE_URL=https://emsovpcmdnuxrhbyvnvb.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=sb_publishable_yDr3YTcsErOPthkWXjjRRw_R4AaB3zA
@@ -53,7 +53,7 @@ REACT_APP_TWILIO_ACCOUNT_SID=          (TBC)
 REACT_APP_TWILIO_AUTH_TOKEN=           (TBC)
 REACT_APP_TWILIO_PHONE_NUMBER=         (TBC)
 
-### Backend: D:\Kairos\esimconnect\Server\.env
+### Backend: E:\Kairos\esimconnect\Server\.env
 STRIPE_SECRET_KEY=sk_test_[esimconnect sandbox key]
 STRIPE_WEBHOOK_SECRET=whsec_[esimconnect webhook signing secret]
 SUPABASE_URL=https://emsovpcmdnuxrhbyvnvb.supabase.co
@@ -183,6 +183,41 @@ RLS: own rows select policy
 
 ---
 
+## i18n System (added Session 5)
+
+### Languages supported
+EN (English) | 中文 (Chinese) | 日本語 (Japanese) | 한국어 (Korean)
+
+### Key files
+- src/lib/i18n.js — LanguageProvider, useLang() hook, all translations
+- src/components/LanguageToggle.js — dropdown UI component
+- src/components/LanguageToggle.module.css — styles
+
+### Usage in any page
+```js
+import { useLang } from '../lib/i18n';
+const { t } = useLang();
+// then use t('key') instead of hardcoded strings
+```
+
+### Translation keys (full list in src/lib/i18n.js)
+Navbar: nav_plans, nav_itinerary, nav_purchases, nav_dashboard, nav_wallet, nav_login, nav_register, nav_logout
+Plans: plans_title, plans_search, plans_data, plans_validity, plans_days, plans_buy, plans_no_results
+Checkout: checkout_title, checkout_summary, checkout_gst, checkout_total, checkout_wallet, checkout_card, checkout_balance, checkout_pay, checkout_topup, checkout_insufficient
+Dashboard: dash_title, dash_welcome, dash_balance, dash_topup, dash_recent, dash_no_orders, dash_view_all
+Wallet: wallet_title, wallet_balance, wallet_topup, wallet_amount, wallet_custom, wallet_pay, wallet_success, wallet_history
+Itinerary: itin_title, itin_destination, itin_dates, itin_interests, itin_generate, itin_saved, itin_no_saved
+Purchases: purchases_title, purchases_empty, purchases_order, purchases_status, purchases_date
+Find Order: find_title, find_email, find_code, find_search, find_not_found
+Order Confirmation: confirm_title, confirm_sub, confirm_order, confirm_iccid, confirm_qr
+Auth: auth_email, auth_password, auth_name, auth_login, auth_register, auth_no_account, auth_have_account, auth_forgot
+General: loading, error, save, cancel, close, back, days, gb, sgd, status_completed, status_pending, status_failed
+
+### Language persistence
+Saved to localStorage key: esimconnect_lang
+
+---
+
 ## Completed Work
 - [x] React app scaffolded with React Router v6
 - [x] Home page
@@ -198,153 +233,19 @@ RLS: own rows select policy
 - [x] SavedItineraries page
 - [x] TermsAndConditions page
 - [x] Footer component
-- [x] Navbar component
-- [x] Supabase client (lib/supabase.js)
-- [x] Stripe publishable key wired to env
-- [x] PWA — manifest.json + sw.js + icons
-- [x] Supabase — profiles + wallet_topups + voip_calls tables
-- [x] Wallet page — Stripe top-up flow (tested + working)
-- [x] Node.js backend — Server/server.js (Express + Stripe PaymentIntent)
-- [x] Deployed to Cloudflare Pages (auto-deploy on push)
-- [x] Backend deployed to Render
-- [x] esimconnect.world live with SSL
-- [x] eWallet wired into Checkout page (wallet + card payment options)
-- [x] Dashboard nav link added to Navbar
-- [x] Dashboard Recent Orders field names fixed (price_sgd, order_code, status)
-- [x] Stripe webhook handler (payment_intent.succeeded -> wallet credit)
-- [x] wallet_topups INSERT RLS policy added
-- [x] CORS fixed on backend (open to all origins)
-- [x] Stripe publishable key corrected to esimconnect sandbox in Cloudflare
-
-## In Progress / Next Session
-- [ ] Twilio VoIP floating dialler widget <- START HERE
+- [x] AffiliateBar component
+- [x] TrustBadge component
+- [x] Navbar with animated SVG globe logo + orbiting SIM chips (Session 4)
+- [x] PWA manifest + service worker
+- [x] Stripe eWallet top-up flow
+- [x] Cloudflare Pages deployment (auto-deploy)
+- [x] Render backend deployment
+- [x] eWallet payment option in Checkout page
+- [x] Stripe webhook -> wallet credit
+- [x] Language toggle EN/中文/日本語/한국어 (Session 5)
+- [ ] Wire t() into individual pages (Plans, Checkout, Dashboard, Wallet, etc.)
+- [ ] Twilio VoIP floating dialler widget  <- NEXT
 - [ ] Twilio Node.js backend (access tokens)
-
-## Not Started
-- [ ] MyItinerary — AI-generated travel plans (Claude API)
-- [ ] Push notifications (PWA)
-- [ ] Admin dashboard (use Supabase Studio until post-launch)
-- [ ] eSIM QR delivery (email via Resend / SendGrid)
-- [ ] Annual plan / discount logic
-- [ ] Guest checkout improvements
-- [ ] Referral / promo code system
-
----
-
-## eWallet — Intended Use Cases
-The wallet balance (profiles.wallet_balance) is usable for ALL purchases:
-
-1. eSIM data plan purchases (DONE) — logged-in users with sufficient balance see "Pay with eWallet" at checkout.
-   - If wallet selected: deduct from profiles.wallet_balance (no Stripe call)
-   - Order created with payment_method = 'wallet', status = 'completed'
-   - If insufficient balance: show top-up prompt linking to /wallet
-
-2. VoIP calls — deduct per minute from wallet_balance in real time
-   - Call log stored in voip_calls table with cost_sgd
-
-3. Future: virtual number monthly fee — deduct from wallet on renewal
-
----
-
-## Running the App Locally
-Always need TWO terminals running simultaneously:
-
-Terminal 1 — Backend (port 4000):
-  cd /d/Kairos/esimconnect/Server
-  node server.js
-
-Terminal 2 — Frontend (port 3000):
-  cd /d/Kairos/esimconnect
-  npm start
-
-If port already in use:
-  npx kill-port 4000
-  npx kill-port 3000
-
----
-
-## Payments
-- Stripe: primary (esimconnect sandbox for dev, live keys ready for prod)
-- Currency: SGD
-- GST: 9% applied at checkout
-- Wallet top-up: one-off Stripe PaymentIntent (not subscription)
-- Top-up amounts: SGD 10 / 20 / 50 / 100 / Other (custom)
-- Wallet credits: VoIP calls + data plan purchases + future virtual number fees
-- Backend URL: https://esimconnect-backend.onrender.com (production)
-- Backend URL: http://localhost:4000 (local dev)
-- Webhook: payment_intent.succeeded -> credits profiles.wallet_balance via service role key
-
----
-
-## VoIP / Twilio Plan
-- Floating dialler widget (fixed bottom-right, all pages)
-- Twilio Voice SDK (browser-based calling)
-- Backend: Node.js generates Twilio access tokens
-- Calls deducted from wallet_balance in real time
-- Call log stored in voip_calls table
-- Rates: TBC (Twilio per-minute rates)
-
----
-
-## MyItinerary Plan
-- User inputs destination + travel dates + interests
-- Claude API generates day-by-day itinerary
-- Itinerary saved to Supabase (saved_itineraries table — exists)
-- Linked to user's eSIM plan destination where possible
-- Route: /itinerary (page exists, AI integration TBC)
-
----
-
-## Admin Panel Plan
-- Not building until post-launch
-- Use Supabase Studio (supabase.co -> Table Editor) for all admin tasks in the interim
-- Future: custom /admin route in React, service role key, bypasses RLS
-- Covers: user management, order management, plan CRUD, wallet adjustments
-
----
-
-## PWA Plan (Done)
-- manifest.json: app name, icons, theme colour #0a0f1a, display: standalone
-- Service worker: network first, cache fallback
-- Icons: public/icons/icon-192.png + icon-512.png
-- Registered in src/index.js
-- Push notifications: post-launch
-
----
-
-## Key Decisions Log
-| Date     | Decision                                          | Rationale                                 |
-|----------|---------------------------------------------------|-------------------------------------------|
-| Apr 2026 | React CRA (not Next.js)                           | Already scaffolded, keep momentum         |
-| Apr 2026 | Stripe eWallet (one-off top-up, not subscription) | Simpler UX for travel use case            |
-| Apr 2026 | Twilio Voice SDK (browser VoIP, not PSTN SIP)     | No hardware, works on mobile PWA          |
-| Apr 2026 | Claude API for MyItinerary                        | Best AI travel plan quality               |
-| Apr 2026 | SGD primary currency, GST 9%                      | Singapore-based, legally required         |
-| Apr 2026 | Shared wallet for VoIP + data top-ups             | Single balance, simpler UX                |
-| Apr 2026 | CONTEXT.md as cross-chat bridge                   | Projects don't share chat history         |
-| Apr 2026 | Supabase URL corrected to emsovpcmdnuxrhbyvnvb    | Previous URL in CONTEXT.md was wrong      |
-| Apr 2026 | Stripe keys must come from esimconnect sandbox    | pk/sk must match — different sandboxes broke PaymentIntent |
-| Apr 2026 | eWallet usable for data plan checkout             | Wallet should be universal, not VoIP-only |
-| Apr 2026 | Switched from GitHub Pages to Cloudflare Pages    | Better React Router support, global CDN, auto-deploy |
-| Apr 2026 | Backend hosted on Render (free tier)              | Simple Node.js hosting, Singapore region  |
-| Apr 2026 | Admin panel deferred to post-launch               | Supabase Studio covers interim needs      |
-| Apr 2026 | CORS opened to all origins on backend             | Restricted origins caused fetch failures  |
-| Apr 2026 | Webhook credits wallet via service role key       | Bypasses RLS, reliable server-side credit |
-
----
-
-## Build Sequence
-
-PHASE 1 — Core Product (in progress)
-  [x] profiles table + wallet_balance (Supabase)
-  [x] PWA manifest + service worker
-  [x] Stripe eWallet top-up flow
-  [x] Cloudflare Pages deployment (auto-deploy)
-  [x] Render backend deployment
-  [x] eWallet payment option in Checkout page
-  [x] Stripe webhook -> wallet credit
-  [ ] Twilio VoIP floating dialler widget  <- NEXT
-  [ ] Twilio Node.js backend (access tokens)
 
 PHASE 2 — Intelligence (pre-launch)
   [ ] MyItinerary — Claude API integration
@@ -366,34 +267,40 @@ PHASE 4 — Expansion
 ---
 
 ## Files In This Project
-| File                              | Purpose                                      |
-|-----------------------------------|----------------------------------------------|
-| CONTEXT.md                        | This file — update after every chat          |
-| src/App.js                        | Route definitions                            |
-| src/index.js                      | React root entry + SW registration           |
-| src/lib/supabase.js               | Supabase client                              |
-| src/pages/Home.js                 | Landing / home page                          |
-| src/pages/Plans.js                | eSIM plan browser                            |
-| src/pages/Checkout.js             | Checkout — card + eWallet payment            |
-| src/pages/OrderConfirmation.js    | Post-purchase confirmation                   |
-| src/pages/Dashboard.js            | User dashboard (reads from profiles)         |
-| src/pages/Dashboard.module.css    | Dashboard styles (+ topUpBtn)                |
-| src/pages/Wallet.js               | eWallet top-up page (Stripe + webhook)       |
-| src/pages/Wallet.module.css       | Wallet styles                                |
-| src/pages/Itinerary.js            | MyItinerary (AI TBC)                         |
-| src/pages/Purchases.js            | Order history                                |
-| src/pages/FindMyOrder.js          | Guest order lookup                           |
-| src/pages/SavedItineraries.js     | Saved AI itineraries                         |
-| src/components/Navbar.js          | Top navigation (+ Dashboard link)            |
-| src/components/Footer.js          | Footer                                       |
-| src/styles/global.css             | Global styles                                |
-| public/manifest.json              | PWA manifest                                 |
-| public/sw.js                      | Service worker                               |
-| public/icons/icon-192.png         | PWA icon 192x192                             |
-| public/icons/icon-512.png         | PWA icon 512x512                             |
-| Server/server.js                  | Node.js backend (Stripe PaymentIntent + webhook) |
-| Server/package.json               | Backend dependencies                         |
-| Server/.env                       | Backend env vars (Stripe + Supabase keys)    |
+| File                                    | Purpose                                              |
+|-----------------------------------------|------------------------------------------------------|
+| CONTEXT.md                              | This file — update after every chat                  |
+| src/App.js                              | Route definitions                                    |
+| src/index.js                            | React root entry + SW registration + LanguageProvider|
+| src/lib/supabase.js                     | Supabase client                                      |
+| src/lib/i18n.js                         | i18n context, useLang hook, all translations         |
+| src/pages/Home.js                       | Landing / home page                                  |
+| src/pages/Plans.js                      | eSIM plan browser                                    |
+| src/pages/Checkout.js                   | Checkout — card + eWallet payment                    |
+| src/pages/OrderConfirmation.js          | Post-purchase confirmation                           |
+| src/pages/Dashboard.js                  | User dashboard (reads from profiles)                 |
+| src/pages/Dashboard.module.css          | Dashboard styles                                     |
+| src/pages/Wallet.js                     | eWallet top-up page (Stripe + webhook)               |
+| src/pages/Wallet.module.css             | Wallet styles                                        |
+| src/pages/Itinerary.js                  | MyItinerary (AI TBC)                                 |
+| src/pages/Purchases.js                  | Order history                                        |
+| src/pages/FindMyOrder.js                | Guest order lookup                                   |
+| src/pages/SavedItineraries.js           | Saved AI itineraries                                 |
+| src/components/Navbar.js               | Top navigation (globe logo + language toggle)        |
+| src/components/Navbar.module.css        | Navbar styles                                        |
+| src/components/LanguageToggle.js        | Language dropdown component                          |
+| src/components/LanguageToggle.module.css| Language toggle styles                               |
+| src/components/Footer.js               | Footer                                               |
+| src/components/AffiliateBar.js         | Affiliate bar                                        |
+| src/components/TrustBadge.js           | Trust badge                                          |
+| src/styles/global.css                   | Global styles                                        |
+| public/manifest.json                    | PWA manifest                                         |
+| public/sw.js                            | Service worker                                       |
+| public/icons/icon-192.png               | PWA icon 192x192                                     |
+| public/icons/icon-512.png               | PWA icon 512x512                                     |
+| Server/server.js                        | Node.js backend (Stripe PaymentIntent + webhook)     |
+| Server/package.json                     | Backend dependencies                                 |
+| Server/.env                             | Backend env vars (Stripe + Supabase keys)            |
 
 ---
 
@@ -509,7 +416,6 @@ Supabase migration:
 - CREATE POLICY "wallet_topups: insert own rows" ON wallet_topups FOR INSERT TO public WITH CHECK (auth.uid() = user_id);
 
 Commits: 13c69436, de6b75c1
-Next session should: Twilio VoIP floating dialler widget + Node.js access token backend
 
 ### April 17, 2026 — Session 4 (Logo + UI)
 Completed:
@@ -519,8 +425,8 @@ Completed:
 - Increased font size of eSimconnect text in logo to 33px
 - Updated PWA icons (icon-192.png + icon-512.png) with new globe logo
 - Added --navbar-height CSS variable to global.css for consistent page padding
-- Orbiting SIM chip animation attempted but parked (CSS transform-origin unreliable for SVG in React)
-- Globe logo looks great as-is without orbiting chips
+- Orbiting SIM chip animation: nb_sim1 (horizontal, 12s) + nb_sim2 (vertical, 7s)
+- Globe logo confirmed working on live site
 
 Files changed:
 - src/components/Navbar.js
@@ -531,4 +437,24 @@ Files changed:
 - public/icons/icon-512.png (updated)
 
 Commits: bad54e6e, bdf0ccdb, 08b206b6, 2d23db69, 5e42af03, ab0d8c52, ceca44e5, 7d6a7da3, 60a2eccb, 49fc6ae1
-Next session should: Language toggle EN/中文 dropdown in Navbar, full site translation
+
+### April 17, 2026 — Session 5 (Language Toggle)
+Completed:
+- Built full i18n system: LanguageProvider, useLang hook, all translations (EN/中文/日本語/한국어)
+- Built LanguageToggle dropdown component (flag + native script labels, dark theme, blue glow)
+- Integrated toggle into Navbar desktop nav — sits at right end of links row
+- Wrapped App in LanguageProvider via index.js
+- Language persists to localStorage (esimconnect_lang)
+- Fixed class name mismatch (styles.navbar → styles.nav, styles.navLinks → styles.links etc.)
+- Confirmed working live: globe logo intact, nav links translate, toggle visible top-right
+
+Files changed:
+- src/lib/i18n.js (new)
+- src/components/LanguageToggle.js (new)
+- src/components/LanguageToggle.module.css (new)
+- src/index.js (LanguageProvider wrap added)
+- src/components/Navbar.js (useLang + LanguageToggle added, SVG globe preserved)
+- src/components/Navbar.module.css (mobileLangRow added)
+
+Commits: 82d04c09, 022cae36
+Next session should: Wire t() into individual pages (Plans, Checkout, Dashboard, Wallet, Itinerary, Purchases, Login, Register) OR Twilio VoIP floating dialler
