@@ -107,8 +107,7 @@ export default function Navbar() {
                 @keyframes nb_orbitV {
                   from { transform: rotate(90deg) translateY(178px) rotate(-90deg); }
                   to   { transform: rotate(450deg) translateY(178px) rotate(-450deg); }
-                }
-              `}</style>
+                }</style>
             </defs>
 
             <circle cx="340" cy="215" r="168" fill="url(#nb_haloG)"/>
@@ -121,7 +120,7 @@ export default function Navbar() {
               <ellipse cx="340" cy="177" rx="122" ry="5"   fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.45"/>
               <ellipse cx="340" cy="253" rx="122" ry="5"   fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.45"/>
             </g>
-            <text x="340" y="205" fontFamily="Arial, Helvetica, sans-serif" fontSize="30" fontWeight="700"
+            <text x="340" y="205" fontFamily="Arial, Helvetica, sans-serif" fontSize="33" fontWeight="700"
               fill="url(#nb_wG)" textAnchor="middle" letterSpacing="-0.5">
               <tspan fontWeight="300">e</tspan>Sim<tspan fontWeight="300">connect</tspan>
             </text>
