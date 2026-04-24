@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import styles from './Auth.module.css';
+import { useLang } from '../lib/i18n';
 
 export default function Register() {
+  const { t } = useLang();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,11 +31,9 @@ export default function Register() {
       setError(error.message);
       setLoading(false);
     } else if (data?.user?.identities?.length === 0) {
-      // Email already registered but unconfirmed — Supabase returns empty identities
       setError('An account with this email already exists. Please sign in or check your inbox.');
       setLoading(false);
     } else {
-      // Success — show confirmation message
       setConfirmed(true);
       setLoading(false);
     }
@@ -58,7 +58,7 @@ export default function Register() {
               style={{ marginTop: '24px' }}
               onClick={() => navigate('/login')}
             >
-              Go to Sign In →
+              {t('auth_login')} →
             </button>
             <p className={styles.switchText} style={{ marginTop: '16px' }}>
               Didn't receive it? Check your spam folder or{' '}
@@ -81,13 +81,13 @@ export default function Register() {
       <main className={styles.main}>
         <div className={styles.card}>
           <div className={styles.cardHead}>
-            <h1 className={styles.title}>Create account</h1>
+            <h1 className={styles.title}>{t('auth_register')}</h1>
             <p className={styles.sub}>Join eSIM Connect — travel smarter</p>
           </div>
           {error && <div className={styles.error}>{error}</div>}
           <form onSubmit={handleRegister} className={styles.form}>
             <div className={styles.field}>
-              <label>Full Name</label>
+              <label>{t('auth_name')}</label>
               <input
                 type="text"
                 placeholder="David Lim"
@@ -97,7 +97,7 @@ export default function Register() {
               />
             </div>
             <div className={styles.field}>
-              <label>Email</label>
+              <label>{t('auth_email')}</label>
               <input
                 type="email"
                 placeholder="your@email.com"
@@ -107,7 +107,7 @@ export default function Register() {
               />
             </div>
             <div className={styles.field}>
-              <label>Password</label>
+              <label>{t('auth_password')}</label>
               <input
                 type="password"
                 placeholder="Min. 8 characters"
@@ -124,11 +124,11 @@ export default function Register() {
               </label>
             </div>
             <button type="submit" className={styles.submitBtn} disabled={loading || !agreedToTerms} style={{ opacity: agreedToTerms ? 1 : 0.5 }}>
-              {loading ? <span className={styles.spinner}></span> : 'Create Account →'}
+              {loading ? <span className={styles.spinner}></span> : `${t('auth_register')} →`}
             </button>
           </form>
           <p className={styles.switchText}>
-            Already have an account? <Link to="/login">Sign in</Link>
+            {t('auth_have_account')} <Link to="/login">{t('auth_login')}</Link>
           </p>
         </div>
       </main>

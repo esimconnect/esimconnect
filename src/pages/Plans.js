@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import styles from './Plans.module.css';
 import AffiliateBar from '../components/AffiliateBar';
+import { useLang } from '../lib/i18n';
 
 const WORKER_URL = 'https://claude-proxy.kairosventure-io.workers.dev';
 
@@ -18,6 +19,7 @@ const MOCK_COUNTRIES = [
 ];
 
 export default function Plans() {
+  const { t } = useLang();
   const [plans, setPlans] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState('SG');
   const [countryMeta, setCountryMeta] = useState(MOCK_COUNTRIES[0]);
@@ -47,7 +49,7 @@ export default function Plans() {
         setPlans([]);
       }
     } catch (err) {
-      setError('Failed to load plans. Please try again.');
+      setError(t('error'));
       setPlans([]);
     }
     setLoading(false);
@@ -88,8 +90,8 @@ export default function Plans() {
       <Navbar />
       <main className={styles.main}>
         <div className={styles.header}>
-          <h1 className={styles.title}>eSIM Plans</h1>
-          <p className={styles.sub}>Affordable data plans for your destination</p>
+          <h1 className={styles.title}>{t('plans_title')}</h1>
+          <p className={styles.sub}>{t('home_hero_sub')}</p>
         </div>
 
         <div className={styles.filters}>
@@ -113,7 +115,7 @@ export default function Plans() {
         ) : error ? (
           <div className={styles.empty}>{error}</div>
         ) : plans.length === 0 ? (
-          <div className={styles.empty}>No plans found for this destination yet.</div>
+          <div className={styles.empty}>{t('plans_no_results')}</div>
         ) : (
           <>
             <AffiliateBar context="plans" />
@@ -127,21 +129,21 @@ export default function Plans() {
                   <div className={styles.planName}>{plan.title}</div>
                   <div className={styles.planDetails}>
                     <span className={styles.data}>
-                      {plan.is_unlimited ? 'Unlimited' : `${(plan.amount / 1024).toFixed(0)}GB`}
+                      {plan.is_unlimited ? 'Unlimited' : `${(plan.amount / 1024).toFixed(0)}${t('gb')}`}
                     </span>
                     <span className={styles.sep}>·</span>
-                    <span>{plan.day} days</span>
+                    <span>{plan.day} {t('plans_days')}</span>
                   </div>
                   <div className={styles.operatorLabel}>{plan.operator}</div>
                   <div className={styles.price}>
-                    <span className={styles.currency}>SGD</span>
+                    <span className={styles.currency}>{t('sgd')}</span>
                     <span className={styles.amount}>{(plan.price * 1.35).toFixed(2)}</span>
                   </div>
                   <button
                     className={styles.buyBtn}
                     onClick={() => handleBuy(plan)}
                   >
-                    Buy Now →
+                    {t('plans_buy')} →
                   </button>
                 </div>
               ))}

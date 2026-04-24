@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import styles from './Dashboard.module.css';
+import { useLang } from '../lib/i18n';
 
 export default function Dashboard() {
+  const { t } = useLang();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -74,13 +76,17 @@ export default function Dashboard() {
       paid: { color: '#4cd964', bg: 'rgba(76,217,100,0.1)' },
     };
     const s = map[status] || map['pending'];
+    const label = status === 'completed' ? t('status_completed')
+      : status === 'pending' ? t('status_pending')
+      : status === 'failed' ? t('status_failed')
+      : status;
     return (
       <span style={{
         background: s.bg, color: s.color,
         padding: '2px 10px', borderRadius: '20px',
         fontSize: '11px', fontWeight: 700, textTransform: 'uppercase'
       }}>
-        {status}
+        {label}
       </span>
     );
   };
@@ -103,10 +109,10 @@ export default function Dashboard() {
         {/* Header */}
         <div className={styles.header}>
           <div>
-            <h1 className={styles.title}>Welcome back, {firstName} 👋</h1>
+            <h1 className={styles.title}>{t('dash_welcome')}, {firstName} 👋</h1>
             <p className={styles.email}>{user?.email}</p>
           </div>
-          <button className={styles.signOutBtn} onClick={handleSignOut}>Sign Out</button>
+          <button className={styles.signOutBtn} onClick={handleSignOut}>{t('nav_logout')}</button>
         </div>
 
         {/* Stats Grid */}
@@ -119,16 +125,16 @@ export default function Dashboard() {
           </div>
           <div className={styles.card}>
             <div className={styles.cardIcon}>💰</div>
-            <div className={styles.cardTitle}>eWallet</div>
+            <div className={styles.cardTitle}>{t('wallet_title')}</div>
             <div className={styles.cardValue}>
-              SGD {parseFloat(profile?.wallet_balance ?? 0).toFixed(2)}
+              {t('sgd')} {parseFloat(profile?.wallet_balance ?? 0).toFixed(2)}
             </div>
-            <div className={styles.cardSub}>Available balance</div>
+            <div className={styles.cardSub}>{t('dash_balance')}</div>
             <button
               className={styles.topUpBtn}
               onClick={() => navigate('/wallet')}
             >
-              + Top Up
+              + {t('dash_topup')}
             </button>
           </div>
         </div>
@@ -161,9 +167,9 @@ export default function Dashboard() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '2px' }}>Data</div>
+                      <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '2px' }}>{t('plans_data')}</div>
                       <div style={{ fontWeight: 700 }}>
-                        {esim.is_unlimited ? '∞' : `${esim.data_remaining_gb ?? esim.data_total_gb}GB`}
+                        {esim.is_unlimited ? '∞' : `${esim.data_remaining_gb ?? esim.data_total_gb}${t('gb')}`}
                       </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
@@ -184,7 +190,7 @@ export default function Dashboard() {
         {orders.length > 0 ? (
           <div style={{ marginBottom: '32px' }}>
             <h2 style={{ fontFamily: 'var(--font-head)', fontSize: '18px', fontWeight: 800, marginBottom: '16px' }}>
-              Recent Orders
+              {t('dash_recent')}
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {orders.map(order => (
@@ -201,7 +207,7 @@ export default function Dashboard() {
                 }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: '14px' }}>
-                      Order #{order.order_code || order.order_number || '—'}
+                      {t('purchases_order')} #{order.order_code || '—'}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
                       {new Date(order.created_at).toLocaleDateString()}
@@ -209,9 +215,9 @@ export default function Dashboard() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={{ fontWeight: 700 }}>
-                      SGD {parseFloat(order.price_sgd || order.total_sgd || 0).toFixed(2)}
+                      {t('sgd')} {parseFloat(order.price_sgd || 0).toFixed(2)}
                     </div>
-                    {statusBadge(order.status || order.payment_status || 'pending')}
+                    {statusBadge(order.status || 'pending')}
                   </div>
                 </div>
               ))}
@@ -224,9 +230,9 @@ export default function Dashboard() {
           <div className={styles.emptyState}>
             <div className={styles.emptyIcon}>🌍</div>
             <h3>Ready to travel?</h3>
-            <p>Browse our eSIM plans and get connected in 60 seconds.</p>
+            <p>{t('dash_no_orders')}</p>
             <button className={styles.browsePlansBtn} onClick={() => navigate('/plans')}>
-              Browse Plans →
+              {t('home_cta_browse')} →
             </button>
           </div>
         )}

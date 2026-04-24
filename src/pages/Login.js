@@ -3,11 +3,12 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import styles from './Auth.module.css';
+import { useLang } from '../lib/i18n';
 
 export default function Login() {
+  const { t } = useLang();
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectTo = new URLSearchParams(location.search).get('redirect') || '/';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,7 +48,7 @@ export default function Login() {
 
           <form onSubmit={handleLogin} className={styles.form}>
             <div className={styles.field}>
-              <label>Email</label>
+              <label>{t('auth_email')}</label>
               <input
                 type="email"
                 placeholder="your@email.com"
@@ -58,7 +59,7 @@ export default function Login() {
             </div>
 
             <div className={styles.field}>
-              <label>Password</label>
+              <label>{t('auth_password')}</label>
               <input
                 type="password"
                 placeholder="••••••••"
@@ -69,12 +70,12 @@ export default function Login() {
             </div>
 
             <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? <span className={styles.spinner}></span> : 'Sign In →'}
+              {loading ? <span className={styles.spinner}></span> : `${t('auth_login')} →`}
             </button>
           </form>
 
           <p className={styles.switchText}>
-            Don't have an account? <Link to="/register">Create one</Link>
+            {t('auth_no_account')} <Link to="/register">{t('auth_register')}</Link>
           </p>
         </div>
       </main>

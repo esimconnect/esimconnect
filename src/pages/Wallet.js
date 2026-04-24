@@ -5,12 +5,14 @@ import { CardElement, Elements, useStripe, useElements } from '@stripe/react-str
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import styles from './Wallet.module.css';
+import { useLang } from '../lib/i18n';
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 const TOP_UP_AMOUNTS = [10, 20, 50, 100, 'Other'];
 
 function TopUpForm({ userId, onSuccess }) {
+  const { t } = useLang();
   const stripe = useStripe();
   const elements = useElements();
   const [amount, setAmount] = useState(20);
@@ -96,13 +98,13 @@ function TopUpForm({ userId, onSuccess }) {
               }
             }}
           >
-            {a === 'Other' ? 'Other' : `SGD ${a}`}
+            {a === 'Other' ? t('wallet_custom') : `${t('sgd')} ${a}`}
           </button>
         ))}
       </div>
 
       <div className={styles.customWrap}>
-        <label className={styles.label}>Or enter custom amount (SGD)</label>
+        <label className={styles.label}>{t('wallet_custom')} ({t('sgd')})</label>
         <input
           id="customAmount"
           type="number"
@@ -138,13 +140,14 @@ function TopUpForm({ userId, onSuccess }) {
         disabled={loading || !stripe}
         className={styles.payBtn}
       >
-        {loading ? 'Processing...' : `Top Up SGD ${finalAmount || '—'}`}
+        {loading ? t('loading') : `${t('wallet_topup')} ${t('sgd')} ${finalAmount || '—'}`}
       </button>
     </form>
   );
 }
 
 export default function Wallet() {
+  const { t } = useLang();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [balance, setBalance] = useState(0);
@@ -196,28 +199,28 @@ export default function Wallet() {
       <main className={styles.main}>
 
         <button className={styles.backBtn} onClick={() => navigate('/dashboard')}>
-          ← Back to Dashboard
+          ← {t('back')}
         </button>
 
-        <h1 className={styles.title}>eWallet</h1>
+        <h1 className={styles.title}>{t('wallet_title')}</h1>
 
         {/* Balance Card */}
         <div className={styles.balanceCard}>
-          <div className={styles.balanceLabel}>Current Balance</div>
-          <div className={styles.balanceAmount}>SGD {parseFloat(balance).toFixed(2)}</div>
+          <div className={styles.balanceLabel}>{t('wallet_balance')}</div>
+          <div className={styles.balanceAmount}>{t('sgd')} {parseFloat(balance).toFixed(2)}</div>
           <div className={styles.balanceSub}>Used for VoIP calls and data top-ups</div>
         </div>
 
         {/* Success Banner */}
         {success && (
           <div className={styles.successBanner}>
-            ✅ SGD {success.toFixed(2)} added to your wallet successfully!
+            ✅ {t('sgd')} {success.toFixed(2)} — {t('wallet_success')}
           </div>
         )}
 
         {/* Top Up Form */}
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>Top Up Balance</h2>
+          <h2 className={styles.sectionTitle}>{t('wallet_topup')}</h2>
           <Elements stripe={stripePromise}>
             <TopUpForm userId={user?.id} onSuccess={handleSuccess} />
           </Elements>
@@ -226,16 +229,16 @@ export default function Wallet() {
         {/* Top-up History */}
         {topups.length > 0 && (
           <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>Top-up History</h2>
+            <h2 className={styles.sectionTitle}>{t('wallet_history')}</h2>
             <div className={styles.historyList}>
-              {topups.map(t => (
-                <div key={t.id} className={styles.historyRow}>
+              {topups.map(tp => (
+                <div key={tp.id} className={styles.historyRow}>
                   <div>
-                    <div className={styles.historyAmount}>+ SGD {parseFloat(t.amount_sgd).toFixed(2)}</div>
-                    <div className={styles.historyDate}>{new Date(t.created_at).toLocaleDateString()}</div>
+                    <div className={styles.historyAmount}>+ {t('sgd')} {parseFloat(tp.amount_sgd).toFixed(2)}</div>
+                    <div className={styles.historyDate}>{new Date(tp.created_at).toLocaleDateString()}</div>
                   </div>
-                  <span className={`${styles.badge} ${t.status === 'succeeded' ? styles.badgeGreen : styles.badgeGrey}`}>
-                    {t.status}
+                  <span className={`${styles.badge} ${tp.status === 'succeeded' ? styles.badgeGreen : styles.badgeGrey}`}>
+                    {tp.status === 'succeeded' ? t('status_completed') : tp.status === 'failed' ? t('status_failed') : t('status_pending')}
                   </span>
                 </div>
               ))}

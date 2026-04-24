@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import styles from './Dashboard.module.css';
+import { useLang } from '../lib/i18n';
 
 export default function Purchases() {
+  const { t } = useLang();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [esims, setEsims] = useState([]);
@@ -23,13 +25,11 @@ export default function Purchases() {
   };
 
   const fetchEsims = async (userId) => {
-    // Read from orders table and map to eSIM display format
     const { data, error } = await supabase
       .from('orders')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    console.log('fetchEsims data:', data, 'error:', error);
     if (data) setEsims(data.map(o => ({
       id: o.id,
       country_flag: null,
@@ -47,6 +47,7 @@ export default function Purchases() {
       iccid: o.iccid,
     })));
   };
+
   const fetchOrders = async (userId) => {
     const { data } = await supabase
       .from('orders')
@@ -63,15 +64,20 @@ export default function Purchases() {
       pending: { color: '#f5a623', bg: 'rgba(245,166,35,0.1)' },
       paid: { color: '#4cd964', bg: 'rgba(76,217,100,0.1)' },
       failed: { color: '#ff6b6b', bg: 'rgba(255,80,80,0.1)' },
+      completed: { color: '#4cd964', bg: 'rgba(76,217,100,0.1)' },
     };
     return map[status] || map['pending'];
   };
 
   const StatusBadge = ({ status }) => {
     const s = statusColor(status);
+    const label = status === 'completed' ? t('status_completed')
+      : status === 'pending' ? t('status_pending')
+      : status === 'failed' ? t('status_failed')
+      : status;
     return (
       <span style={{ background: s.bg, color: s.color, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
-        {status}
+        {label}
       </span>
     );
   };
@@ -84,8 +90,8 @@ export default function Purchases() {
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>
-          <span>{(used || 0).toFixed(1)}GB used</span>
-          <span>{total}GB total</span>
+          <span>{(used || 0).toFixed(1)}{t('gb')} used</span>
+          <span>{total}{t('gb')} total</span>
         </div>
         <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
           <div style={{ height: '100%', width: pct + '%', background: color, borderRadius: '3px', transition: 'width 0.3s' }}></div>
@@ -102,14 +108,14 @@ export default function Purchases() {
       <main className={styles.main}>
         <div className={styles.header}>
           <div>
-            <h1 className={styles.title}>My Purchases</h1>
+            <h1 className={styles.title}>{t('purchases_title')}</h1>
             <p style={{ fontSize: '14px', color: 'var(--muted)' }}>Your eSIMs and order history</p>
           </div>
           <button onClick={() => navigate('/plans')} style={{
             background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
             color: '#000', border: 'none', borderRadius: '12px', padding: '10px 22px',
             fontWeight: 800, fontSize: '14px', fontFamily: 'var(--font-head)', cursor: 'pointer'
-          }}>+ Buy eSIM</button>
+          }}>+ {t('plans_buy')}</button>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '28px' }}>
@@ -120,7 +126,7 @@ export default function Purchases() {
               color: activeTab === tab ? 'var(--accent)' : 'var(--muted)',
               borderRadius: '10px', padding: '8px 20px', fontWeight: 700, fontSize: '14px', cursor: 'pointer'
             }}>
-              {tab === 'esims' ? "My eSIMs (" + esims.length + ")" : "Orders (" + orders.length + ")"}
+              {tab === 'esims' ? `My eSIMs (${esims.length})` : `${t('purchases_order')}s (${orders.length})`}
             </button>
           ))}
         </div>
@@ -130,8 +136,8 @@ export default function Purchases() {
             <div className={styles.emptyState}>
               <div className={styles.emptyIcon}>📱</div>
               <h3>No eSIMs yet</h3>
-              <p>Purchase an eSIM plan to get started.</p>
-              <button className={styles.browsePlansBtn} onClick={() => navigate('/plans')}>Browse Plans →</button>
+              <p>{t('purchases_empty')}</p>
+              <button className={styles.browsePlansBtn} onClick={() => navigate('/plans')}>{t('home_cta_browse')} →</button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -153,10 +159,10 @@ export default function Purchases() {
                   <DataBar used={esim.data_used_gb} total={esim.data_total_gb} unlimited={esim.is_unlimited} />
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
                     {[
-                      { label: 'Validity', value: esim.validity_days + ' days' },
+                      { label: t('plans_validity'), value: esim.validity_days + ' ' + t('days') },
                       { label: 'Activated', value: esim.activated_at ? new Date(esim.activated_at).toLocaleDateString() : '—' },
                       { label: 'Expires', value: esim.expires_at ? new Date(esim.expires_at).toLocaleDateString() : '—' },
-                      { label: 'Data Left', value: esim.is_unlimited ? '∞' : (esim.data_remaining_gb || 0).toFixed(1) + 'GB' },
+                      { label: 'Data Left', value: esim.is_unlimited ? '∞' : (esim.data_remaining_gb || 0).toFixed(1) + t('gb') },
                     ].map(item => (
                       <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '10px', padding: '10px 14px' }}>
                         <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.label}</div>
@@ -184,11 +190,6 @@ export default function Purchases() {
                       </div>
                     </div>
                   )}
-                  {esim.late_arrival_extended && (
-                    <div style={{ background: 'rgba(76,217,100,0.08)', border: '1px solid rgba(76,217,100,0.2)', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', color: '#4cd964' }}>
-                      Late Arrival Protection applied - {esim.late_arrival_hours_added}hr added
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -200,8 +201,8 @@ export default function Purchases() {
             <div className={styles.emptyState}>
               <div className={styles.emptyIcon}>🧾</div>
               <h3>No orders yet</h3>
-              <p>Your purchase history will appear here.</p>
-              <button className={styles.browsePlansBtn} onClick={() => navigate('/plans')}>Browse Plans →</button>
+              <p>{t('purchases_empty')}</p>
+              <button className={styles.browsePlansBtn} onClick={() => navigate('/plans')}>{t('home_cta_browse')} →</button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -212,17 +213,16 @@ export default function Purchases() {
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'
                 }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '15px' }}>Order {order.order_code || "—"}</div>
+                    <div style={{ fontWeight: 700, fontSize: '15px' }}>{t('purchases_order')} {order.order_code || '—'}</div>
                     <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
                       {new Date(order.created_at).toLocaleDateString()} · {order.payment_method || 'Card'}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 800, fontSize: '16px' }}>SGD {parseFloat(order.price_sgd || 0).toFixed(2)}</div>
-                      
+                      <div style={{ fontWeight: 800, fontSize: '16px' }}>{t('sgd')} {parseFloat(order.price_sgd || 0).toFixed(2)}</div>
                     </div>
-                    <StatusBadge status={order.status || "completed"} />
+                    <StatusBadge status={order.status || 'completed'} />
                   </div>
                 </div>
               ))}
