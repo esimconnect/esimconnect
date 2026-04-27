@@ -164,6 +164,26 @@ function AddPlaceSearch({ activeTrip, onAdd }) {
 }
 
 // ─── Destination Chatbot ────────────────────────────────────────────────────
+// Simple markdown renderer — handles **bold**, *italic*, and newlines
+function renderMarkdown(text) {
+  const lines = text.split('
+');
+  return lines.map((line, li) => {
+    // Parse inline bold (**text**) and italic (*text*)
+    const parts = [];
+    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+    let last = 0, m;
+    while ((m = regex.exec(line)) !== null) {
+      if (m.index > last) parts.push(line.slice(last, m.index));
+      if (m[0].startsWith('**')) parts.push(<strong key={m.index}>{m[2]}</strong>);
+      else parts.push(<em key={m.index}>{m[3]}</em>);
+      last = m.index + m[0].length;
+    }
+    if (last < line.length) parts.push(line.slice(last));
+    return <span key={li}>{parts}{li < lines.length - 1 && <br />}</span>;
+  });
+}
+
 function DestinationChatbot({ onSelectDestination }) {
   const { t } = useLang();
   const [messages, setMessages] = React.useState([
@@ -212,7 +232,8 @@ function DestinationChatbot({ onSelectDestination }) {
 
 When suggesting destinations:
 - Suggest 2-4 specific destinations per response, not vague regions
-- For each destination give: country flag emoji, city/country name, a 1-sentence hook, and the best time to visit
+- For each destination give: flag emoji then city/country name on the same line (e.g. "🇸🇬 Singapore"), a 1-sentence hook, and the best time to visit
+- NEVER prefix destination names with country codes like "sg" or "jp" — only use flag emojis
 - Keep responses concise and conversational — no long essays
 - If the user seems ready to plan a trip to a specific destination, include a line at the very end in this exact format (and nothing after it):
   PLAN_DESTINATION: [City, Country]
@@ -296,7 +317,7 @@ When suggesting destinations:
                   color: 'var(--text)',
                   whiteSpace: 'pre-wrap',
                 }}>
-                  {msg.text}
+                  {renderMarkdown(msg.text)}
                 </div>
                 {msg.planDestination && (
                   <button
