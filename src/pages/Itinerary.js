@@ -172,10 +172,17 @@ function DestinationChatbot({ onSelectDestination }) {
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const bottomRef = React.useRef(null);
+  const inputRef = React.useRef(null);
 
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-focus input on mount so cursor is ready immediately
+  React.useEffect(() => {
+    const timer = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const send = async () => {
     const text = input.trim();
@@ -280,6 +287,7 @@ When suggesting destinations:
       {/* Input */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '12px 16px', display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
         <textarea
+          ref={inputRef}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}

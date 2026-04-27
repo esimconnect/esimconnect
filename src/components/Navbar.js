@@ -64,10 +64,10 @@ export default function Navbar() {
     <nav className={styles.nav}>
       <div className={styles.inner}>
 
-        {/* ── Logo: globe fits within 96px navbar, single orbiting 4G/5G icon ── */}
+        {/* Logo: ~30% larger, eSimconnect on one line, unboxed 5G orbiting */}
         <Link to="/" className={styles.logo} onClick={() => setMenuOpen(false)} style={{ overflow: 'visible' }}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 96" role="img"
-            style={{ height: '72px', width: 'auto', display: 'block', filter: 'drop-shadow(0 4px 14px rgba(26,106,255,0.5))' }}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 96" role="img"
+            style={{ height: '88px', width: 'auto', display: 'block', filter: 'drop-shadow(0 4px 14px rgba(26,106,255,0.5))' }}>
             <defs>
               <radialGradient id="nb_gG" cx="38%" cy="32%" r="62%">
                 <stop offset="0%" stopColor="#1a4a8a"/>
@@ -84,12 +84,12 @@ export default function Navbar() {
                 <stop offset="100%" stopColor="#5aaeff"/>
               </linearGradient>
               <clipPath id="nb_gc">
-                <circle cx="48" cy="48" r="36"/>
+                <circle cx="48" cy="48" r="38"/>
               </clipPath>
               <style>{`
                 @keyframes nb_orbit5G {
-                  from { transform: rotate(0deg) translateX(36px) rotate(0deg); }
-                  to   { transform: rotate(360deg) translateX(36px) rotate(-360deg); }
+                  from { transform: rotate(0deg) translateX(44px) rotate(0deg); }
+                  to   { transform: rotate(360deg) translateX(44px) rotate(-360deg); }
                 }
                 .nb_5g_icon {
                   animation: nb_orbit5G 6s linear infinite;
@@ -99,43 +99,41 @@ export default function Navbar() {
               `}</style>
             </defs>
 
-            {/* Globe */}
-            <circle cx="48" cy="48" r="44" fill="url(#nb_haloG)"/>
-            <circle cx="48" cy="48" r="36" fill="url(#nb_gG)" stroke="#3a8aff" strokeWidth="1.5"/>
+            {/* Globe halo + body */}
+            <circle cx="48" cy="48" r="46" fill="url(#nb_haloG)"/>
+            <circle cx="48" cy="48" r="38" fill="url(#nb_gG)" stroke="#3a8aff" strokeWidth="1.5"/>
             <g clipPath="url(#nb_gc)">
-              <ellipse cx="48" cy="48" rx="36" ry="36" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.45"/>
-              <ellipse cx="48" cy="48" rx="22"  ry="36" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
-              <ellipse cx="48" cy="48" rx="10"  ry="36" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
-              <ellipse cx="48" cy="48" rx="36" ry="4"   fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.55"/>
-              <ellipse cx="48" cy="38" rx="32" ry="3.5" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
-              <ellipse cx="48" cy="58" rx="32" ry="3.5" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
+              <ellipse cx="48" cy="48" rx="38" ry="38" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.45"/>
+              <ellipse cx="48" cy="48" rx="23" ry="38" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
+              <ellipse cx="48" cy="48" rx="10" ry="38" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
+              <ellipse cx="48" cy="48" rx="38" ry="4"  fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.55"/>
+              <ellipse cx="48" cy="37" rx="34" ry="3.5" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
+              <ellipse cx="48" cy="59" rx="34" ry="3.5" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
             </g>
 
             {/* Globe text */}
-            <text x="48" y="45" fontFamily="Arial, Helvetica, sans-serif" fontSize="11" fontWeight="700"
+            <text x="48" y="46" fontFamily="Arial, Helvetica, sans-serif" fontSize="12" fontWeight="700"
               fill="url(#nb_wG)" textAnchor="middle" letterSpacing="-0.3">
               <tspan fontWeight="300">e</tspan>Sim<tspan fontWeight="300">connect</tspan>
             </text>
-            <text x="48" y="55" fontFamily="Arial, Helvetica, sans-serif" fontSize="4"
+            <text x="48" y="57" fontFamily="Arial, Helvetica, sans-serif" fontSize="4.5"
               fill="#60b0ff" textAnchor="middle" letterSpacing="1.5">150+ COUNTRIES</text>
 
-            {/* Orbit track (faint circle) */}
-            <circle cx="48" cy="48" r="36" fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.25" strokeDasharray="3 4"/>
+            {/* Orbit track */}
+            <circle cx="48" cy="48" r="44" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.2" strokeDasharray="3 4"/>
 
-            {/* Single orbiting 4G/5G badge */}
+            {/* Single unboxed 5G text orbiting clockwise */}
             <g className="nb_5g_icon">
-              <rect x="39" y="44" width="18" height="10" rx="3" fill="#0a1e44" stroke="#00c8ff" strokeWidth="1"/>
-              <text x="48" y="52" fontFamily="Arial, Helvetica, sans-serif" fontSize="6" fontWeight="900"
-                fill="#00c8ff" textAnchor="middle" letterSpacing="0.3">5G</text>
+              <text x="48" y="51" fontFamily="Arial, Helvetica, sans-serif" fontSize="9" fontWeight="900"
+                fill="#00c8ff" textAnchor="middle" letterSpacing="0.5"
+                style={{ textShadow: '0 0 6px rgba(0,200,255,0.8)' }}>5G</text>
             </g>
 
-            {/* Brand name next to globe */}
-            <text x="100" y="42" fontFamily="Arial, Helvetica, sans-serif" fontSize="20" fontWeight="700"
+            {/* Brand name: eSIMconnect on one line */}
+            <text x="104" y="55" fontFamily="Arial, Helvetica, sans-serif" fontSize="24" fontWeight="700"
               fill="#ffffff" letterSpacing="-0.5">
-              <tspan fontWeight="300">e</tspan>SIM
+              <tspan fontWeight="300" fill="#00c8ff">e</tspan>SIM<tspan fontWeight="300" fill="#00c8ff">connect</tspan>
             </text>
-            <text x="100" y="62" fontFamily="Arial, Helvetica, sans-serif" fontSize="14" fontWeight="300"
-              fill="#00c8ff" letterSpacing="2">connect</text>
 
           </svg>
         </Link>
