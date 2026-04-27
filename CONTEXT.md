@@ -1,6 +1,6 @@
 # esimconnect — Living Project Context
 Last updated: April 27, 2026
-Latest commit: dcca7189
+Latest commit: 529a0ff2
 
 ---
 
@@ -472,7 +472,9 @@ Completed:
 - Chatbot empty state text changed to "Ask me here…"
 - Two-column chat: both columns scroll-sync on new messages so questions and answers stay aligned
 - Noted future design intent: typing directly in left column (deferred)
+- Markdown rendering in chatbot (**bold**, *italic*, line breaks)
+- Fixed flag/country code bug (Claude was prefixing "sg" before destination names)
 
 Files changed: src/components/Navbar.js, src/pages/Itinerary.js
-Commits: 109eaa9d, ed309108, bbe10d99, 48946bd7, b19e7574, dcca7189
+Commits: 109eaa9d, ed309108, bbe10d99, 48946bd7, b19e7574, dcca7189, 529a0ff2
 Next session should: Audit Cloudflare Worker (claude-proxy), eSIM QR email delivery (Resend)
