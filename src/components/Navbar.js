@@ -45,7 +45,7 @@ export default function Navbar() {
           position: 'absolute', top: '100%', left: '0', background: '#0d1117',
           border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
           padding: '8px', minWidth: '180px', zIndex: 1000,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)', marginTop: '0px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
         }}>
           <Link to="/plans" onClick={() => { setMenuOpen(false); setPlansOpen(false); }} style={{
             display: 'block', padding: '10px 14px', borderRadius: '8px',
@@ -64,10 +64,10 @@ export default function Navbar() {
     <nav className={styles.nav}>
       <div className={styles.inner}>
 
-        {/* Logo - restored from Session 4, unchanged */}
+        {/* ── Logo: globe fits within 96px navbar, single orbiting 4G/5G icon ── */}
         <Link to="/" className={styles.logo} onClick={() => setMenuOpen(false)} style={{ overflow: 'visible' }}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="140 80 400 280" role="img"
-            style={{ height: '140px', width: 'auto', display: 'block', position: 'relative', top: '48px', filter: 'drop-shadow(0 8px 24px rgba(26,106,255,0.5))' }}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 96" role="img"
+            style={{ height: '72px', width: 'auto', display: 'block', filter: 'drop-shadow(0 4px 14px rgba(26,106,255,0.5))' }}>
             <defs>
               <radialGradient id="nb_gG" cx="38%" cy="32%" r="62%">
                 <stop offset="0%" stopColor="#1a4a8a"/>
@@ -78,90 +78,69 @@ export default function Navbar() {
                 <stop offset="0%" stopColor="#1a6aff" stopOpacity="0.22"/>
                 <stop offset="100%" stopColor="#1a6aff" stopOpacity="0"/>
               </radialGradient>
-              <radialGradient id="nb_cG1" cx="30%" cy="28%" r="70%">
-                <stop offset="0%" stopColor="#c8e8ff"/>
-                <stop offset="40%" stopColor="#5aaeff"/>
-                <stop offset="100%" stopColor="#1a4aaa"/>
-              </radialGradient>
-              <radialGradient id="nb_cG2" cx="30%" cy="28%" r="70%">
-                <stop offset="0%" stopColor="#d0f0ff"/>
-                <stop offset="40%" stopColor="#40ccff"/>
-                <stop offset="100%" stopColor="#0a3888"/>
-              </radialGradient>
               <linearGradient id="nb_wG" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor="#ffffff"/>
                 <stop offset="50%" stopColor="#a8d8ff"/>
                 <stop offset="100%" stopColor="#5aaeff"/>
               </linearGradient>
               <clipPath id="nb_gc">
-                <circle cx="340" cy="215" r="135"/>
+                <circle cx="48" cy="48" r="36"/>
               </clipPath>
               <style>{`
-                @keyframes nb_pulseArc {
-                  0%   { opacity:0; } 30% { opacity:1; } 80% { opacity:0.3; } 100% { opacity:0; }
+                @keyframes nb_orbit5G {
+                  from { transform: rotate(0deg) translateX(36px) rotate(0deg); }
+                  to   { transform: rotate(360deg) translateX(36px) rotate(-360deg); }
                 }
-                .nb_arc1 { animation: nb_pulseArc 2.5s ease-in-out 0s infinite; }
-                .nb_arc2 { animation: nb_pulseArc 2.5s ease-in-out 0.8s infinite; }
-                .nb_arc3 { animation: nb_pulseArc 2.5s ease-in-out 1.6s infinite; }
-                @keyframes nb_orbitH {
-                  0%   { transform: translate(518px, 215px); }
-                  25%  { transform: translate(340px, 393px); }
-                  50%  { transform: translate(162px, 215px); }
-                  75%  { transform: translate(340px, 37px); }
-                  100% { transform: translate(518px, 215px); }
+                .nb_5g_icon {
+                  animation: nb_orbit5G 6s linear infinite;
+                  transform-origin: 48px 48px;
+                  transform-box: view-box;
                 }
-                @keyframes nb_orbitV {
-                  0%   { transform: translate(340px, 393px); }
-                  25%  { transform: translate(394px, 215px); }
-                  50%  { transform: translate(340px, 37px); }
-                  75%  { transform: translate(286px, 215px); }
-                  100% { transform: translate(340px, 393px); }
-                }
-                .nb_sim1 { animation: nb_orbitH 12s linear infinite; }
-                .nb_sim2 { animation: nb_orbitV 7s linear infinite; }
               `}</style>
             </defs>
 
-            <circle cx="340" cy="215" r="168" fill="url(#nb_haloG)"/>
-            <circle cx="340" cy="215" r="135" fill="url(#nb_gG)" stroke="#3a8aff" strokeWidth="2"/>
+            {/* Globe */}
+            <circle cx="48" cy="48" r="44" fill="url(#nb_haloG)"/>
+            <circle cx="48" cy="48" r="36" fill="url(#nb_gG)" stroke="#3a8aff" strokeWidth="1.5"/>
             <g clipPath="url(#nb_gc)">
-              <ellipse cx="340" cy="215" rx="135" ry="135" fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.45"/>
-              <ellipse cx="340" cy="215" rx="95"  ry="135" fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.4"/>
-              <ellipse cx="340" cy="215" rx="50"  ry="135" fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.4"/>
-              <ellipse cx="340" cy="215" rx="135" ry="5"   fill="none" stroke="#1a6aff" strokeWidth="0.7" strokeOpacity="0.55"/>
-              <ellipse cx="340" cy="177" rx="122" ry="5"   fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.45"/>
-              <ellipse cx="340" cy="253" rx="122" ry="5"   fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.45"/>
+              <ellipse cx="48" cy="48" rx="36" ry="36" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.45"/>
+              <ellipse cx="48" cy="48" rx="22"  ry="36" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
+              <ellipse cx="48" cy="48" rx="10"  ry="36" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
+              <ellipse cx="48" cy="48" rx="36" ry="4"   fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.55"/>
+              <ellipse cx="48" cy="38" rx="32" ry="3.5" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
+              <ellipse cx="48" cy="58" rx="32" ry="3.5" fill="none" stroke="#1a6aff" strokeWidth="0.5" strokeOpacity="0.4"/>
             </g>
-            <text x="340" y="205" fontFamily="Arial, Helvetica, sans-serif" fontSize="33" fontWeight="700"
-              fill="url(#nb_wG)" textAnchor="middle" letterSpacing="-0.5">
+
+            {/* Globe text */}
+            <text x="48" y="45" fontFamily="Arial, Helvetica, sans-serif" fontSize="11" fontWeight="700"
+              fill="url(#nb_wG)" textAnchor="middle" letterSpacing="-0.3">
               <tspan fontWeight="300">e</tspan>Sim<tspan fontWeight="300">connect</tspan>
             </text>
-            <text x="340" y="228" fontFamily="Arial, Helvetica, sans-serif" fontSize="10"
-              fill="#60b0ff" textAnchor="middle" letterSpacing="3.5">150+ COUNTRIES</text>
+            <text x="48" y="55" fontFamily="Arial, Helvetica, sans-serif" fontSize="4"
+              fill="#60b0ff" textAnchor="middle" letterSpacing="1.5">150+ COUNTRIES</text>
 
-            <g className="nb_sim1" style={{transformBox: 'fill-box'}}>
-              <rect x="-18" y="-22" width="36" height="44" rx="5" fill="url(#nb_cG1)" stroke="#5ab8ff" strokeWidth="1.6"/>
-              <polygon points="0,-22 18,-22 18,-10 0,-10" fill="#0a1e44"/>
-              <line x1="0" y1="-22" x2="18" y2="-10" stroke="#5ab8ff" strokeWidth="1.4"/>
-              <rect x="-13" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="2" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="-13" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="2" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+            {/* Orbit track (faint circle) */}
+            <circle cx="48" cy="48" r="36" fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.25" strokeDasharray="3 4"/>
+
+            {/* Single orbiting 4G/5G badge */}
+            <g className="nb_5g_icon">
+              <rect x="39" y="44" width="18" height="10" rx="3" fill="#0a1e44" stroke="#00c8ff" strokeWidth="1"/>
+              <text x="48" y="52" fontFamily="Arial, Helvetica, sans-serif" fontSize="6" fontWeight="900"
+                fill="#00c8ff" textAnchor="middle" letterSpacing="0.3">5G</text>
             </g>
 
-            <g className="nb_sim2" style={{transformBox: 'fill-box'}}>
-              <rect x="-18" y="-22" width="36" height="44" rx="5" fill="url(#nb_cG2)" stroke="#5ab8ff" strokeWidth="1.6"/>
-              <polygon points="0,-22 18,-22 18,-10 0,-10" fill="#0a1e44"/>
-              <line x1="0" y1="-22" x2="18" y2="-10" stroke="#5ab8ff" strokeWidth="1.4"/>
-              <rect x="-13" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="2" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="-13" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-              <rect x="2" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
-            </g>
+            {/* Brand name next to globe */}
+            <text x="100" y="42" fontFamily="Arial, Helvetica, sans-serif" fontSize="20" fontWeight="700"
+              fill="#ffffff" letterSpacing="-0.5">
+              <tspan fontWeight="300">e</tspan>SIM
+            </text>
+            <text x="100" y="62" fontFamily="Arial, Helvetica, sans-serif" fontSize="14" fontWeight="300"
+              fill="#00c8ff" letterSpacing="2">connect</text>
+
           </svg>
         </Link>
 
-        {/* Nav links - MyItinerary first for both logged-in and logged-out */}
+        {/* Nav links - MyItinerary first */}
         <div className={`${styles.links} ${menuOpen ? styles.open : ''}`}>
           {user ? (
             <>
