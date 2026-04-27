@@ -1,13 +1,13 @@
 # esimconnect — Living Project Context
-Last updated: April 24, 2026
-Latest commit: 6842462d
+Last updated: April 27, 2026
+Latest commit: dcca7189
 
 ---
 
 ## Repository
 - Repo: https://github.com/esimconnect/esimconnect
 - Live: https://esimconnect.world
-- Local: E:\Kairos\esimconnect
+- Local: D:\Kairos\esimconnect
 - Branch: main
 
 ## Supabase
@@ -45,7 +45,7 @@ Latest commit: 6842462d
 
 ## Environment Variables
 
-### Frontend: E:\Kairos\esimconnect\.env
+### Frontend: D:\Kairos\esimconnect\.env
 REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_[esimconnect sandbox key]
 REACT_APP_SUPABASE_URL=https://emsovpcmdnuxrhbyvnvb.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=sb_publishable_yDr3YTcsErOPthkWXjjRRw_R4AaB3zA
@@ -54,7 +54,7 @@ REACT_APP_TWILIO_ACCOUNT_SID=          (TBC)
 REACT_APP_TWILIO_AUTH_TOKEN=           (TBC)
 REACT_APP_TWILIO_PHONE_NUMBER=         (TBC)
 
-### Backend: E:\Kairos\esimconnect\Server\.env
+### Backend: D:\Kairos\esimconnect\Server\.env
 STRIPE_SECRET_KEY=sk_test_[esimconnect sandbox key]
 STRIPE_WEBHOOK_SECRET=whsec_[esimconnect webhook signing secret]
 SUPABASE_URL=https://emsovpcmdnuxrhbyvnvb.supabase.co
@@ -79,7 +79,7 @@ PORT=4000
 ## What esimconnect Does
 A travel tech platform for tourists and business travellers targeting:
 - eSIM data plans — browse, buy and activate eSIM plans for 190+ countries
-- VoIP calling — in-app calling via Twilio floating dialler widget
+- VoIP calling — in-app calling via Twilio floating dialler widget (post-launch)
 - MyItinerary — AI-generated travel plans for destinations
 - Wallet — top-up balance via Stripe eWallet for calls and data
 
@@ -97,10 +97,12 @@ A travel tech platform for tourists and business travellers targeting:
 | Styling     | CSS Modules + global.css            |
 | Auth + DB   | Supabase                            |
 | Payments    | Stripe (Stripe.js + CardElement)    |
-| VoIP        | Twilio (TBC)                        |
+| VoIP        | Twilio (TBC — post-launch)          |
 | Hosting     | Cloudflare Pages                    |
 | Backend     | Node.js (Express) on Render         |
 | AI          | Claude API via Cloudflare Worker    |
+| Maps        | react-leaflet + OpenStreetMap       |
+| Geocoding   | Nominatim                           |
 
 ---
 
@@ -163,7 +165,7 @@ amount_sgd numeric(10,2) NOT NULL,
 stripe_payment_intent_id text UNIQUE,
 status text DEFAULT 'pending',  -- pending | succeeded | failed
 created_at timestamptz DEFAULT now()
-RLS: own rows SELECT policy + own rows INSERT policy (added Apr 17)
+RLS: own rows SELECT policy + own rows INSERT policy
 
 ### voip_calls
 id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -187,7 +189,7 @@ user_id, destination, trip_data (jsonb), stage, selected_places (jsonb), created
 
 ---
 
-## i18n System (Session 5 + 6)
+## i18n System
 
 ### Languages supported
 EN (English) | 中文 (Chinese) | 日本語 (Japanese) | 한국어 (Korean)
@@ -207,7 +209,7 @@ const { t } = useLang();
 ### Status
 - i18n system: COMPLETE
 - Language toggle in Navbar: COMPLETE
-- t() wired into all pages: COMPLETE (Session 6)
+- t() wired into all pages: COMPLETE
 
 ### Translation keys (full list in src/lib/i18n.js)
 Navbar: nav_plans, nav_itinerary, nav_purchases, nav_dashboard, nav_wallet, nav_login, nav_register, nav_logout
@@ -228,21 +230,37 @@ Saved to localStorage key: esimconnect_lang
 
 ---
 
-## MyItinerary — Claude AI Integration (current architecture)
+## MyItinerary — Claude AI Integration
 
-### How it works (as built in Itinerary.js)
-1. User selects destination + dates + duration
-2. Claude API called via Cloudflare Worker to generate destination-specific categories
+### How it works (Itinerary.js)
+Two entry modes via tab switcher:
+
+**Tab 1 — 💬 Explore Destinations (DestinationChatbot)**
+- Two-column chat layout: "You" (left, cyan-tinted cards) | "Travel Assistant" (right, neutral cards)
+- Input auto-focuses on mount so cursor is ready immediately
+- Claude suggests 2-4 destinations per message based on user preferences
+- When user is ready to plan, Claude injects PLAN_DESTINATION signal → "🗺️ Plan X →" button appears
+- Button auto-fills destination field and switches to Plan a Trip tab
+
+**Tab 2 — 🗺️ Plan a Trip**
+1. User selects destination + dates + duration (or detected from eSIM/order)
+2. Claude API call 1 → destination-specific extra categories
 3. User selects interests from standard + AI-generated categories
-4. Claude API called to generate flat list of verified places (suggestions)
-5. User picks places from the list (pre-selected all)
-6. Claude API called to cluster places geographically and build day-by-day optimised route
+4. Claude API call 2 → flat list of verified places (suggestions)
+5. User picks places, optionally adds via Nominatim search
+6. Claude API call 3 → geographic clustering + day-by-day optimised route
 7. Route displayed with Leaflet map, day filters, Google Maps links per stop
 
 ### API endpoint
 - Worker URL: https://claude-proxy.kairosventure-io.workers.dev
 - Model: claude-sonnet-4-20250514
 - Worker also handles: /airalo/packages, /airalo/orders, /check-guest, /track-usage
+
+### Food recommendations (widened Apr 27)
+Prompt now explicitly includes: Michelin-starred, Bib Gourmand, national/regional tourism board picks,
+TripAdvisor top-rated, Google 4.5+ stars, street food/hawker centres, local hidden gems.
+trustSource values: "Michelin Star", "Bib Gourmand", "Tourism Board Recommended",
+"TripAdvisor Top-Rated", "Local Favourite", "UNESCO"
 
 ### Gate system
 - Guests: 2 free searches (tracked via localStorage + IP via worker /check-guest)
@@ -264,6 +282,21 @@ Saved to localStorage key: esimconnect_lang
 
 ---
 
+## Navbar
+
+### Link order (both logged-in and logged-out)
+Logged out: My Itinerary → Plans (dropdown) → T&C → Register → Login → Language Toggle
+Logged in:  My Itinerary → Plans (dropdown) → Dashboard → Purchases → Saved Trips → T&C → Logout → Language Toggle
+
+### Logo (as of Apr 27)
+- SVG globe, height: 88px, fits within 96px navbar (no overflow)
+- Single 5G text (unboxed, cyan glow) orbiting clockwise every 6s
+- Brand name "eSIMconnect" on one line (e + connect in cyan, SIM in white), fontSize: 24
+- Drop shadow: rgba(26,106,255,0.5)
+- CSS animations: nb_orbit5G (6s linear infinite)
+
+---
+
 ## Completed Work
 - [x] React app scaffolded with React Router v6
 - [x] Home page
@@ -273,36 +306,38 @@ Saved to localStorage key: esimconnect_lang
 - [x] Dashboard page (reads from profiles table)
 - [x] Login / Register pages
 - [x] LoginSuccess page
-- [x] Itinerary page (Claude AI — suggestions + routing + Leaflet map)
+- [x] Itinerary page (Claude AI — chatbot + suggestions + routing + Leaflet map)
 - [x] Purchases page
 - [x] FindMyOrder page
 - [x] SavedItineraries page
 - [x] TermsAndConditions page
-- [x] Footer component
-- [x] AffiliateBar component
-- [x] TrustBadge component
-- [x] Navbar with animated SVG globe logo + orbiting SIM chips
+- [x] Footer, AffiliateBar, TrustBadge components
+- [x] Navbar — animated SVG globe logo, single orbiting 5G icon, fits in navbar
 - [x] PWA manifest + service worker
-- [x] Stripe eWallet top-up flow
-- [x] Cloudflare Pages deployment (auto-deploy)
-- [x] Render backend deployment
-- [x] eWallet payment option in Checkout page
-- [x] Stripe webhook -> wallet credit
+- [x] Stripe eWallet top-up flow + webhook
+- [x] Cloudflare Pages deployment (auto-deploy on push to main)
+- [x] Render backend deployment (Singapore, Free)
+- [x] eWallet payment option in Checkout
 - [x] Language toggle EN/中文/日本語/한국어
-- [x] t() wired into all pages (Plans, Checkout, Dashboard, Wallet, Itinerary, Purchases, Login, Register, OrderConfirmation, FindMyOrder)
+- [x] t() wired into all pages
+- [x] MyItinerary first in navbar
+- [x] DestinationChatbot — two-column layout, auto-focus, PLAN_DESTINATION signal
+- [x] Widened food recommendations beyond Michelin
+
+---
 
 ## Remaining Work
 
 PHASE 1 — Pre-launch
-  [ ] Twilio VoIP floating dialler widget (post-launch, deprioritised)
+  [ ] Twilio VoIP floating dialler widget (deprioritised to post-launch)
 
 PHASE 2 — Intelligence (pre-launch) ← CURRENT PRIORITY
-  [ ] MyItinerary — review & improve Claude API integration (worker code audit)
+  [ ] Audit Cloudflare Worker (claude-proxy) — review all routes
   [ ] eSIM QR email delivery (Resend)
   [ ] Push notifications (PWA)
 
 PHASE 3 — Growth (post-launch)
-  [ ] Admin dashboard (custom /admin route)
+  [ ] Admin dashboard (/admin route)
   [ ] Referral / promo codes
   [ ] Guest checkout improvements
   [ ] Multi-currency support
@@ -318,40 +353,40 @@ PHASE 4 — Expansion
 ---
 
 ## Files In This Project
-| File                                    | Purpose                                              |
-|-----------------------------------------|------------------------------------------------------|
-| CONTEXT.md                              | This file — update after every chat                  |
-| src/App.js                              | Route definitions                                    |
-| src/index.js                            | React root entry + SW registration + LanguageProvider|
-| src/lib/supabase.js                     | Supabase client                                      |
-| src/lib/i18n.js                         | i18n context, useLang hook, all translations         |
-| src/pages/Home.js                       | Landing / home page                                  |
-| src/pages/Plans.js                      | eSIM plan browser (i18n: done)                       |
-| src/pages/Checkout.js                   | Checkout — card + eWallet payment (i18n: done)       |
-| src/pages/OrderConfirmation.js          | Post-purchase confirmation (i18n: done)              |
-| src/pages/Dashboard.js                  | User dashboard (i18n: done)                          |
-| src/pages/Dashboard.module.css          | Dashboard styles                                     |
-| src/pages/Wallet.js                     | eWallet top-up page (i18n: done)                     |
-| src/pages/Wallet.module.css             | Wallet styles                                        |
-| src/pages/Itinerary.js                  | MyItinerary — Claude AI + Leaflet map (i18n: done)   |
-| src/pages/Purchases.js                  | Order history (i18n: done)                           |
-| src/pages/FindMyOrder.js                | Guest order lookup (i18n: done)                      |
-| src/pages/SavedItineraries.js           | Saved AI itineraries                                 |
-| src/components/Navbar.js               | Top navigation (globe logo + language toggle)        |
-| src/components/Navbar.module.css        | Navbar styles                                        |
-| src/components/LanguageToggle.js        | Language dropdown component                          |
-| src/components/LanguageToggle.module.css| Language toggle styles                               |
-| src/components/Footer.js               | Footer                                               |
-| src/components/AffiliateBar.js         | Affiliate bar                                        |
-| src/components/TrustBadge.js           | Trust badge                                          |
-| src/styles/global.css                   | Global styles                                        |
-| public/manifest.json                    | PWA manifest                                         |
-| public/sw.js                            | Service worker                                       |
-| public/icons/icon-192.png               | PWA icon 192x192                                     |
-| public/icons/icon-512.png               | PWA icon 512x512                                     |
-| Server/server.js                        | Node.js backend (Stripe PaymentIntent + webhook)     |
-| Server/package.json                     | Backend dependencies                                 |
-| Server/.env                             | Backend env vars (Stripe + Supabase keys)            |
+| File                                     | Purpose                                               |
+|------------------------------------------|-------------------------------------------------------|
+| CONTEXT.md                               | This file — update after every session                |
+| src/App.js                               | Route definitions                                     |
+| src/index.js                             | React root entry + SW registration + LanguageProvider |
+| src/lib/supabase.js                      | Supabase client                                       |
+| src/lib/i18n.js                          | i18n context, useLang hook, all translations          |
+| src/pages/Home.js                        | Landing / home page                                   |
+| src/pages/Plans.js                       | eSIM plan browser (Airalo API, i18n done)             |
+| src/pages/Checkout.js                    | Checkout — card + eWallet (i18n done)                 |
+| src/pages/OrderConfirmation.js           | Post-purchase confirmation (i18n done)                |
+| src/pages/Dashboard.js                   | User dashboard (i18n done)                            |
+| src/pages/Dashboard.module.css           | Dashboard styles                                      |
+| src/pages/Wallet.js                      | eWallet top-up page (i18n done)                       |
+| src/pages/Wallet.module.css              | Wallet styles                                         |
+| src/pages/Itinerary.js                   | MyItinerary — chatbot + Claude AI + Leaflet map       |
+| src/pages/Purchases.js                   | Order history (i18n done)                             |
+| src/pages/FindMyOrder.js                 | Guest order lookup (i18n done)                        |
+| src/pages/SavedItineraries.js            | Saved AI itineraries                                  |
+| src/components/Navbar.js                 | Top nav — globe logo + 5G orbit + language toggle     |
+| src/components/Navbar.module.css         | Navbar styles                                         |
+| src/components/LanguageToggle.js         | Language dropdown component                           |
+| src/components/LanguageToggle.module.css | Language toggle styles                                |
+| src/components/Footer.js                 | Footer                                                |
+| src/components/AffiliateBar.js           | Affiliate bar                                         |
+| src/components/TrustBadge.js             | Trust badge                                           |
+| src/styles/global.css                    | Global styles (includes --navbar-height var)          |
+| public/manifest.json                     | PWA manifest                                          |
+| public/sw.js                             | Service worker                                        |
+| public/icons/icon-192.png                | PWA icon 192x192                                      |
+| public/icons/icon-512.png                | PWA icon 512x512                                      |
+| Server/server.js                         | Node.js backend (Stripe PaymentIntent + webhook)      |
+| Server/package.json                      | Backend dependencies                                  |
+| Server/.env                              | Backend env vars (Stripe + Supabase keys)             |
 
 ---
 
@@ -359,22 +394,30 @@ PHASE 4 — Expansion
 
 ### Rules
 1. Always read CONTEXT.md first before writing any code
-2. Open a new chat per work stream (see naming below)
-3. Update CONTEXT.md at the end of each chat session
+2. Open a new chat per work stream
+3. Update CONTEXT.md at the end of each session
 4. Re-upload updated CONTEXT.md to Project Knowledge
 5. Commit CONTEXT.md to repo after each session
 
 ### Chat Naming Convention
-- "VoIP — Twilio dialler widget"
 - "Itinerary — Claude AI integration"
+- "VoIP — Twilio dialler widget"
 - "Email — eSIM QR delivery"
 - "Auth — login/register improvements"
 - "UI — [specific component name]"
 
+### Git Bash — common commands
+```bash
+cd /d/Kairos/esimconnect
+git add src/components/Navbar.js src/pages/Itinerary.js
+git commit -m "description"
+git push origin main
+```
+
 ### Session Handoff Template
-At the end of each chat, note:
+At the end of each chat:
   Completed this session: [what was done]
-  Files changed: [list of files]
+  Files changed: [list]
   Latest commit: [hash]
   Next session should: [what comes next]
 
@@ -383,87 +426,53 @@ At the end of each chat, note:
 ## Session Log
 
 ### April 15, 2026
-Completed:
-- Confirmed correct Supabase project URL (emsovpcmdnuxrhbyvnvb)
-- Created profiles, wallet_topups, voip_calls tables with RLS
-- Built PWA (manifest.json, sw.js, icons, index.js updated)
-- Built Wallet page (Stripe top-up, SGD 10/20/50/100/Other)
-- Built Node.js backend (Server/server.js — Stripe PaymentIntent)
-- Fixed dotenv load order bug in server.js
-- Fixed Stripe key mismatch (must use esimconnect sandbox keys)
-- Manually inserted profile row for davidlim@esimconnect.world
-- Tested top-up: SGD 20.00 succeeded
-- Decision: eWallet should be usable at checkout for data plan purchases
-
-Files changed:
-- src/App.js, src/index.js, src/pages/Dashboard.js, src/pages/Dashboard.module.css
-- src/pages/Wallet.js (new), src/pages/Wallet.module.css (new)
-- public/manifest.json, public/sw.js, public/icons/icon-192.png, public/icons/icon-512.png
-- Server/server.js, Server/package.json, Server/.env
+Completed: profiles/wallet_topups/voip_calls tables, PWA, Wallet page, Node.js backend, Stripe top-up tested
+Files: src/App.js, src/index.js, src/pages/Dashboard.js+css, src/pages/Wallet.js+css, public/manifest.json, public/sw.js, public/icons/*, Server/*
 
 ### April 16, 2026 — Session 1
-Completed:
-- Fixed .env / .gitignore
-- Deployed frontend to Cloudflare Pages
-- Connected custom domains esimconnect.world + www.esimconnect.world
-- Deployed backend to Render (Singapore)
-
-Files changed: .gitignore, .env
+Completed: .gitignore fix, Cloudflare Pages deploy, custom domains, Render backend deploy
+Files: .gitignore, .env
 Commit: cfeeb28d
 
 ### April 16, 2026 — Session 2
-Completed:
-- Wired eWallet into Checkout page
-- Added payment_method column to orders table
-- Fixed Navbar Dashboard link + Dashboard NaN bug
-
-Files changed: src/pages/Checkout.js, src/components/Navbar.js, src/pages/Dashboard.js
+Completed: eWallet wired into Checkout, payment_method column added, Navbar Dashboard link, Dashboard NaN fix
+Files: src/pages/Checkout.js, src/components/Navbar.js, src/pages/Dashboard.js
 Commits: a4811890, 84862cc1
 
 ### April 17, 2026 — Session 3 (Stripe Webhook)
-Completed:
-- Built Stripe webhook (payment_intent.succeeded → wallet credit)
-- Fixed CORS, Stripe key mismatch, wallet_topups RLS INSERT policy
-- Tested: SGD 20.00 top-up → webhook → balance updated
-
-Files changed: Server/server.js, src/pages/Wallet.js
+Completed: Stripe webhook (payment_intent.succeeded → wallet credit), CORS fix, RLS INSERT policy, tested SGD 20 top-up
+Files: Server/server.js, src/pages/Wallet.js
 Commits: 13c69436, de6b75c1
 
 ### April 17, 2026 — Session 4 (Logo + UI)
-Completed:
-- Animated SVG globe logo in Navbar (orbiting SIM chips)
-- Navbar height 96px, blue glow, --navbar-height CSS var
-- Updated PWA icons
-
-Files changed: src/components/Navbar.js, Navbar.module.css, global.css, public/esimconnect-logo.svg, icons
+Completed: Animated SVG globe logo in Navbar, orbiting SIM chips, 96px navbar height, --navbar-height CSS var, PWA icons updated
+Files: src/components/Navbar.js+css, src/styles/global.css, public/esimconnect-logo.svg, public/icons/*
 Commits: bad54e6e → 49fc6ae1
 
 ### April 17, 2026 — Session 5 (Language Toggle)
-Completed:
-- Built full i18n system (LanguageProvider, useLang, all translations EN/中文/日本語/한국어)
-- Built LanguageToggle dropdown in Navbar
-- Language persists to localStorage
-
-Files changed: src/lib/i18n.js (new), src/components/LanguageToggle.js (new), LanguageToggle.module.css (new), src/index.js, src/components/Navbar.js, Navbar.module.css
+Completed: Full i18n system (EN/中文/日本語/한국어), LanguageToggle component, persists to localStorage
+Files: src/lib/i18n.js, src/components/LanguageToggle.js+css, src/index.js, src/components/Navbar.js+css
 Commits: 82d04c09, 022cae36
 
 ### April 24, 2026 — Session 6 (i18n Wiring)
-Completed:
-- Wired t() into all 10 page components
-- i18n.js unchanged — all keys were already present and complete
-- Language toggle now works end-to-end across entire app
-
-Files changed:
-- src/pages/Plans.js
-- src/pages/Dashboard.js
-- src/pages/Wallet.js
-- src/pages/Login.js
-- src/pages/Register.js
-- src/pages/Purchases.js
-- src/pages/OrderConfirmation.js
-- src/pages/FindMyOrder.js
-- src/pages/Checkout.js
-- src/pages/Itinerary.js
-
+Completed: t() wired into all 10 page components
+Files: src/pages/Plans.js, Dashboard.js, Wallet.js, Login.js, Register.js, Purchases.js, OrderConfirmation.js, FindMyOrder.js, Checkout.js, Itinerary.js
 Commit: 6842462d
-Next session should: Audit Cloudflare Worker (claude-proxy) + improve MyItinerary Claude AI integration
+
+### April 27, 2026 — Session 7 (MyItinerary improvements)
+Completed:
+- MyItinerary moved to first position in Navbar (logged-in and logged-out)
+- DestinationChatbot added: two-column layout (You | Travel Assistant), auto-focus input, PLAN_DESTINATION signal → plan button
+- Food recommendation prompt widened beyond Michelin to include tourism boards, TripAdvisor, local favourites, street food
+- Navbar logo restored to full original SVG with all gradients
+- Dual orbiting SIM chips replaced with single unboxed 5G text orbiting clockwise (6s)
+- Logo resized to height 88px, fits within 96px navbar (no overflow)
+- eSIMconnect brand name on one line
+- Chatbot z-index fix (was being blocked by navbar SVG overflow)
+- Chatbot empty state text changed to "Ask me here…"
+- Two-column chat: both columns scroll-sync on new messages so questions and answers stay aligned
+- Noted future design intent: typing directly in left column (deferred)
+
+Files changed: src/components/Navbar.js, src/pages/Itinerary.js
+Commits: 109eaa9d, ed309108, bbe10d99, 48946bd7, b19e7574, dcca7189
+Next session should: Audit Cloudflare Worker (claude-proxy), eSIM QR email delivery (Resend)
