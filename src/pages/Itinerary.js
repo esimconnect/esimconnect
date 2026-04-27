@@ -226,7 +226,7 @@ When suggesting destinations:
   };
 
   return (
-    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,200,255,0.2)', borderRadius: '20px', overflow: 'hidden', maxWidth: '680px', display: 'flex', flexDirection: 'column', height: '480px' }}>
+    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,200,255,0.2)', borderRadius: '20px', overflow: 'hidden', maxWidth: '680px', display: 'flex', flexDirection: 'column', height: '480px', position: 'relative', zIndex: 2 }}>
       {/* Header */}
       <div style={{ background: 'rgba(0,200,255,0.08)', borderBottom: '1px solid rgba(0,200,255,0.15)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent), var(--accent2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>✈️</div>

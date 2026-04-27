@@ -1,100 +1,215 @@
-// src/components/Navbar.js
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import styles from './Navbar.module.css';
 import { useLang } from '../lib/i18n';
 import LanguageToggle from './LanguageToggle';
+import styles from './Navbar.module.css';
 
 export default function Navbar() {
-  const { t } = useLang();
-  const navigate = useNavigate();
-  const [user, setUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+  const [plansOpen, setPlansOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { t } = useLang();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
-    return () => listener.subscription.unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const handleLogout = async () => {
+  const handleSignOut = async () => {
     await supabase.auth.signOut();
+    setMenuOpen(false);
     navigate('/');
   };
 
+  const isActive = (path) => location.pathname === path ? styles.ctaBtn : '';
+
+  const PlansDropdown = () => (
+    <div style={{ position: 'relative' }}
+      onMouseEnter={() => setPlansOpen(true)}
+      onMouseLeave={() => setTimeout(() => setPlansOpen(false), 150)}
+    >
+      <Link to="/plans" className={isActive('/plans')} onClick={() => setMenuOpen(false)}
+        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {t('nav_plans')} <span style={{ fontSize: '10px', opacity: 0.6 }}>▾</span>
+      </Link>
+      {plansOpen && (
+        <div style={{
+          position: 'absolute', top: '100%', left: '0', background: '#0d1117',
+          border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+          padding: '8px', minWidth: '180px', zIndex: 1000,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)', marginTop: '0px',
+        }}>
+          <Link to="/plans" onClick={() => { setMenuOpen(false); setPlansOpen(false); }} style={{
+            display: 'block', padding: '10px 14px', borderRadius: '8px',
+            color: 'inherit', textDecoration: 'none', fontSize: '14px', fontWeight: 600,
+          }}>📶 {t('nav_plans')}</Link>
+          <Link to="/find-order" onClick={() => { setMenuOpen(false); setPlansOpen(false); }} style={{
+            display: 'block', padding: '10px 14px', borderRadius: '8px',
+            color: 'inherit', textDecoration: 'none', fontSize: '14px', fontWeight: 600,
+          }}>🔍 {t('find_title')}</Link>
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <nav className={styles.nav} ref={menuRef}>
+    <nav className={styles.nav}>
       <div className={styles.inner}>
-        {/* Logo */}
-        <Link to="/" className={styles.logo}>
-          <svg width="120" height="52" viewBox="0 0 340 110" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 0 10px rgba(0,200,255,0.5))' }}>
-            {/* Globe */}
-            <circle cx="52" cy="55" r="40" fill="none" stroke="#00c8ff" strokeWidth="2.5" />
-            <ellipse cx="52" cy="55" rx="16" ry="40" fill="none" stroke="#00c8ff" strokeWidth="1.5" strokeDasharray="4 3" />
-            <line x1="12" y1="55" x2="92" y2="55" stroke="#00c8ff" strokeWidth="1.5" />
-            <ellipse cx="52" cy="55" rx="40" ry="13" fill="none" stroke="#00c8ff" strokeWidth="1.2" strokeDasharray="3 3" />
-            {/* Orbiting SIM chips */}
-            <g className={styles.nb_sim1}>
-              <rect x="42" y="10" width="20" height="14" rx="3" fill="#00c8ff" opacity="0.9" />
-              <rect x="45" y="13" width="14" height="8" rx="1" fill="#0d1117" />
+
+        {/* Logo - restored from Session 4, unchanged */}
+        <Link to="/" className={styles.logo} onClick={() => setMenuOpen(false)} style={{ overflow: 'visible' }}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="140 80 400 280" role="img"
+            style={{ height: '140px', width: 'auto', display: 'block', position: 'relative', top: '48px', filter: 'drop-shadow(0 8px 24px rgba(26,106,255,0.5))' }}>
+            <defs>
+              <radialGradient id="nb_gG" cx="38%" cy="32%" r="62%">
+                <stop offset="0%" stopColor="#1a4a8a"/>
+                <stop offset="45%" stopColor="#0a2255"/>
+                <stop offset="100%" stopColor="#040e28"/>
+              </radialGradient>
+              <radialGradient id="nb_haloG" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#1a6aff" stopOpacity="0.22"/>
+                <stop offset="100%" stopColor="#1a6aff" stopOpacity="0"/>
+              </radialGradient>
+              <radialGradient id="nb_cG1" cx="30%" cy="28%" r="70%">
+                <stop offset="0%" stopColor="#c8e8ff"/>
+                <stop offset="40%" stopColor="#5aaeff"/>
+                <stop offset="100%" stopColor="#1a4aaa"/>
+              </radialGradient>
+              <radialGradient id="nb_cG2" cx="30%" cy="28%" r="70%">
+                <stop offset="0%" stopColor="#d0f0ff"/>
+                <stop offset="40%" stopColor="#40ccff"/>
+                <stop offset="100%" stopColor="#0a3888"/>
+              </radialGradient>
+              <linearGradient id="nb_wG" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#ffffff"/>
+                <stop offset="50%" stopColor="#a8d8ff"/>
+                <stop offset="100%" stopColor="#5aaeff"/>
+              </linearGradient>
+              <clipPath id="nb_gc">
+                <circle cx="340" cy="215" r="135"/>
+              </clipPath>
+              <style>{`
+                @keyframes nb_pulseArc {
+                  0%   { opacity:0; } 30% { opacity:1; } 80% { opacity:0.3; } 100% { opacity:0; }
+                }
+                .nb_arc1 { animation: nb_pulseArc 2.5s ease-in-out 0s infinite; }
+                .nb_arc2 { animation: nb_pulseArc 2.5s ease-in-out 0.8s infinite; }
+                .nb_arc3 { animation: nb_pulseArc 2.5s ease-in-out 1.6s infinite; }
+                @keyframes nb_orbitH {
+                  0%   { transform: translate(518px, 215px); }
+                  25%  { transform: translate(340px, 393px); }
+                  50%  { transform: translate(162px, 215px); }
+                  75%  { transform: translate(340px, 37px); }
+                  100% { transform: translate(518px, 215px); }
+                }
+                @keyframes nb_orbitV {
+                  0%   { transform: translate(340px, 393px); }
+                  25%  { transform: translate(394px, 215px); }
+                  50%  { transform: translate(340px, 37px); }
+                  75%  { transform: translate(286px, 215px); }
+                  100% { transform: translate(340px, 393px); }
+                }
+                .nb_sim1 { animation: nb_orbitH 12s linear infinite; }
+                .nb_sim2 { animation: nb_orbitV 7s linear infinite; }
+              `}</style>
+            </defs>
+
+            <circle cx="340" cy="215" r="168" fill="url(#nb_haloG)"/>
+            <circle cx="340" cy="215" r="135" fill="url(#nb_gG)" stroke="#3a8aff" strokeWidth="2"/>
+            <g clipPath="url(#nb_gc)">
+              <ellipse cx="340" cy="215" rx="135" ry="135" fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.45"/>
+              <ellipse cx="340" cy="215" rx="95"  ry="135" fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.4"/>
+              <ellipse cx="340" cy="215" rx="50"  ry="135" fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.4"/>
+              <ellipse cx="340" cy="215" rx="135" ry="5"   fill="none" stroke="#1a6aff" strokeWidth="0.7" strokeOpacity="0.55"/>
+              <ellipse cx="340" cy="177" rx="122" ry="5"   fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.45"/>
+              <ellipse cx="340" cy="253" rx="122" ry="5"   fill="none" stroke="#1a6aff" strokeWidth="0.6" strokeOpacity="0.45"/>
             </g>
-            <g className={styles.nb_sim2}>
-              <rect x="84" y="48" width="18" height="13" rx="3" fill="#bf5af2" opacity="0.9" />
-              <rect x="87" y="51" width="12" height="7" rx="1" fill="#0d1117" />
+            <text x="340" y="205" fontFamily="Arial, Helvetica, sans-serif" fontSize="33" fontWeight="700"
+              fill="url(#nb_wG)" textAnchor="middle" letterSpacing="-0.5">
+              <tspan fontWeight="300">e</tspan>Sim<tspan fontWeight="300">connect</tspan>
+            </text>
+            <text x="340" y="228" fontFamily="Arial, Helvetica, sans-serif" fontSize="10"
+              fill="#60b0ff" textAnchor="middle" letterSpacing="3.5">150+ COUNTRIES</text>
+
+            <g className="nb_sim1" style={{transformBox: 'fill-box'}}>
+              <rect x="-18" y="-22" width="36" height="44" rx="5" fill="url(#nb_cG1)" stroke="#5ab8ff" strokeWidth="1.6"/>
+              <polygon points="0,-22 18,-22 18,-10 0,-10" fill="#0a1e44"/>
+              <line x1="0" y1="-22" x2="18" y2="-10" stroke="#5ab8ff" strokeWidth="1.4"/>
+              <rect x="-13" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="2" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="-13" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="2" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
             </g>
-            {/* Brand text */}
-            <text x="108" y="50" fontFamily="'Exo 2', sans-serif" fontWeight="900" fontSize="33" fill="#ffffff" letterSpacing="-0.5">eSIM</text>
-            <text x="108" y="80" fontFamily="'Exo 2', sans-serif" fontWeight="400" fontSize="22" fill="#00c8ff" letterSpacing="2">connect</text>
+
+            <g className="nb_sim2" style={{transformBox: 'fill-box'}}>
+              <rect x="-18" y="-22" width="36" height="44" rx="5" fill="url(#nb_cG2)" stroke="#5ab8ff" strokeWidth="1.6"/>
+              <polygon points="0,-22 18,-22 18,-10 0,-10" fill="#0a1e44"/>
+              <line x1="0" y1="-22" x2="18" y2="-10" stroke="#5ab8ff" strokeWidth="1.4"/>
+              <rect x="-13" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="2" y="-3" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="-13" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+              <rect x="2" y="8" width="10" height="8" rx="2" fill="#0d2a6a" stroke="#5ab8ff" strokeWidth="0.8"/>
+            </g>
           </svg>
         </Link>
 
-        {/* Desktop nav links — MyItinerary first */}
-        <div className={styles.links}>
-          <Link to="/itinerary" className={styles.link}>{t('nav_itinerary')}</Link>
-          <Link to="/plans" className={styles.link}>{t('nav_plans')}</Link>
-          {user && <Link to="/purchases" className={styles.link}>{t('nav_purchases')}</Link>}
-          {user && <Link to="/dashboard" className={styles.link}>{t('nav_dashboard')}</Link>}
-          {user && <Link to="/wallet" className={styles.link}>{t('nav_wallet')}</Link>}
-          {!user && <Link to="/login" className={styles.link}>{t('nav_login')}</Link>}
-          {!user && <Link to="/register" className={styles.link}>{t('nav_register')}</Link>}
-          {user && (
-            <button onClick={handleLogout} className={styles.logoutBtn}>{t('nav_logout')}</button>
+        {/* Nav links - MyItinerary first for both logged-in and logged-out */}
+        <div className={`${styles.links} ${menuOpen ? styles.open : ''}`}>
+          {user ? (
+            <>
+              <Link to="/itinerary" className={isActive('/itinerary')} onClick={() => setMenuOpen(false)}>
+                {t('nav_itinerary')}
+              </Link>
+              <PlansDropdown />
+              <Link to="/dashboard" className={isActive('/dashboard')} onClick={() => setMenuOpen(false)}>
+                {t('nav_dashboard')}
+              </Link>
+              <Link to="/purchases" className={isActive('/purchases')} onClick={() => setMenuOpen(false)}>
+                {t('nav_purchases')}
+              </Link>
+              <Link to="/saved-itineraries" className={isActive('/saved-itineraries')} onClick={() => setMenuOpen(false)}>
+                Saved Trips
+              </Link>
+              <Link to="/terms" className={isActive('/terms')} onClick={() => setMenuOpen(false)}>
+                T&C
+              </Link>
+              <button className={styles.signOutBtn} onClick={handleSignOut}>
+                {t('nav_logout')}
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/itinerary" className={isActive('/itinerary')} onClick={() => setMenuOpen(false)}>
+                {t('nav_itinerary')}
+              </Link>
+              <PlansDropdown />
+              <Link to="/terms" className={isActive('/terms')} onClick={() => setMenuOpen(false)}>
+                T&C
+              </Link>
+              <Link to="/register" className={styles.ctaBtn} onClick={() => setMenuOpen(false)}>
+                {t('nav_register')}
+              </Link>
+              <Link to="/login" className={styles.loginBtn} onClick={() => setMenuOpen(false)}>
+                {t('nav_login')}
+              </Link>
+            </>
           )}
           <LanguageToggle />
         </div>
 
-        {/* Mobile hamburger */}
-        <button className={styles.burger} onClick={() => setMenuOpen(o => !o)} aria-label="Menu">
-          <span /><span /><span />
+        <button className={styles.hamburger} onClick={() => setMenuOpen(!menuOpen)}>
+          <span></span><span></span><span></span>
         </button>
-      </div>
 
-      {/* Mobile menu */}
-      {menuOpen && (
-        <div className={styles.mobileMenu}>
-          <Link to="/itinerary" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_itinerary')}</Link>
-          <Link to="/plans" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_plans')}</Link>
-          {user && <Link to="/purchases" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_purchases')}</Link>}
-          {user && <Link to="/dashboard" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_dashboard')}</Link>}
-          {user && <Link to="/wallet" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_wallet')}</Link>}
-          {!user && <Link to="/login" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_login')}</Link>}
-          {!user && <Link to="/register" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>{t('nav_register')}</Link>}
-          {user && <button onClick={() => { handleLogout(); setMenuOpen(false); }} className={styles.mobileLink} style={{ background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: 'inherit', width: '100%', padding: '12px 20px', fontSize: '15px' }}>{t('nav_logout')}</button>}
-          <div className={styles.mobileLangRow}><LanguageToggle /></div>
-        </div>
-      )}
+      </div>
     </nav>
   );
 }
