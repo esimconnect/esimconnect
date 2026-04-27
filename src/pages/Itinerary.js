@@ -171,11 +171,14 @@ function DestinationChatbot({ onSelectDestination }) {
   ]);
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  const bottomRef = React.useRef(null);
   const inputRef = React.useRef(null);
+  const leftColRef = React.useRef(null);
+  const rightColRef = React.useRef(null);
 
+  // Sync both columns to bottom on every new message so answers stay aligned with questions
   React.useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (leftColRef.current) leftColRef.current.scrollTop = leftColRef.current.scrollHeight;
+    if (rightColRef.current) rightColRef.current.scrollTop = rightColRef.current.scrollHeight;
   }, [messages]);
 
   // Auto-focus input on mount so cursor is ready immediately
@@ -252,7 +255,7 @@ When suggesting destinations:
           <div style={{ padding: '10px 14px 6px', fontSize: '10px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,200,255,0.03)' }}>
             You
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div ref={leftColRef} style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {messages.filter(m => m.role === 'user').map((msg, i) => (
               <div key={i} style={{
                 background: 'linear-gradient(135deg, rgba(0,200,255,0.12), rgba(191,90,242,0.08))',
@@ -280,7 +283,7 @@ When suggesting destinations:
           <div style={{ padding: '10px 14px 6px', fontSize: '10px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,200,255,0.03)' }}>
             Travel Assistant
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }} ref={bottomRef}>
+          <div ref={rightColRef} style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {messages.filter(m => m.role === 'assistant').map((msg, i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{
