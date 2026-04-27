@@ -163,6 +163,143 @@ function AddPlaceSearch({ activeTrip, onAdd }) {
   );
 }
 
+// ─── Destination Chatbot ────────────────────────────────────────────────────
+function DestinationChatbot({ onSelectDestination }) {
+  const { t } = useLang();
+  const [messages, setMessages] = React.useState([
+    { role: 'assistant', text: "Hi! 👋 I'm your travel assistant. Tell me what kind of trip you're looking for — climate, vibe, budget, interests — and I'll suggest destinations to explore." }
+  ]);
+  const [input, setInput] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const bottomRef = React.useRef(null);
+
+  React.useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    const userMsg = { role: 'user', text };
+    const history = [...messages, userMsg];
+    setMessages(history);
+    setInput('');
+    setLoading(true);
+
+    // Build message array for the API (exclude the initial assistant greeting from context window)
+    const apiMessages = history
+      .slice(1) // skip the greeting
+      .map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.text }));
+
+    try {
+      const res = await fetch(CLAUDE_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: 1000,
+          system: `You are a friendly, knowledgeable travel destination advisor for esimconnect, a travel tech platform. Your job is to help users discover destinations they'll love based on their preferences, interests, travel style, budget, and timing. 
+
+When suggesting destinations:
+- Suggest 2-4 specific destinations per response, not vague regions
+- For each destination give: country flag emoji, city/country name, a 1-sentence hook, and the best time to visit
+- Keep responses concise and conversational — no long essays
+- If the user seems ready to plan a trip to a specific destination, include a line at the very end in this exact format (and nothing after it):
+  PLAN_DESTINATION: [City, Country]
+  (Only include this if the user is clearly interested in planning, not just browsing)
+- Do not mention competitor apps or services`,
+          messages: apiMessages,
+        }),
+      });
+      const data = await res.json();
+      const raw = data.content?.map(b => b.text || '').join('') || "Sorry, I couldn't get a response. Try again!";
+
+      // Check for PLAN_DESTINATION signal
+      const planMatch = raw.match(/PLAN_DESTINATION:\s*(.+)/);
+      const cleanText = raw.replace(/PLAN_DESTINATION:\s*.+/, '').trim();
+
+      setMessages(prev => [...prev, { role: 'assistant', text: cleanText, planDestination: planMatch ? planMatch[1].trim() : null }]);
+    } catch (e) {
+      setMessages(prev => [...prev, { role: 'assistant', text: "Sorry, something went wrong. Please try again!" }]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,200,255,0.2)', borderRadius: '20px', overflow: 'hidden', maxWidth: '680px', display: 'flex', flexDirection: 'column', height: '480px' }}>
+      {/* Header */}
+      <div style={{ background: 'rgba(0,200,255,0.08)', borderBottom: '1px solid rgba(0,200,255,0.15)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent), var(--accent2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>✈️</div>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: '14px', fontFamily: 'var(--font-head)' }}>Travel Assistant</div>
+          <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Powered by Claude AI · Ask me anything about destinations</div>
+        </div>
+        <div style={{ marginLeft: 'auto', width: '8px', height: '8px', borderRadius: '50%', background: '#4cd964', boxShadow: '0 0 6px #4cd964' }}></div>
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {messages.map((msg, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: '6px' }}>
+            <div style={{
+              maxWidth: '85%',
+              background: msg.role === 'user' ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 'rgba(255,255,255,0.06)',
+              color: msg.role === 'user' ? '#000' : 'var(--text)',
+              border: msg.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.08)',
+              borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+              padding: '10px 14px',
+              fontSize: '13px',
+              lineHeight: 1.6,
+              whiteSpace: 'pre-wrap',
+              fontWeight: msg.role === 'user' ? 700 : 400,
+            }}>
+              {msg.text}
+            </div>
+            {msg.planDestination && (
+              <button
+                onClick={() => onSelectDestination(msg.planDestination)}
+                style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', border: 'none', borderRadius: '10px', padding: '8px 18px', color: '#000', fontWeight: 800, fontSize: '12px', cursor: 'pointer', fontFamily: 'var(--font-head)' }}
+              >
+                🗺️ Plan {msg.planDestination} →
+              </button>
+            )}
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px 18px 18px 4px', padding: '10px 16px' }}>
+              <span style={{ display: 'inline-flex', gap: '4px' }}>
+                {[0,1,2].map(n => <span key={n} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', display: 'inline-block', animation: `bounce 1.2s ease-in-out ${n * 0.2}s infinite` }}></span>)}
+              </span>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '12px 16px', display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+        <textarea
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+          placeholder="e.g. I want somewhere warm, great food, beaches, not too touristy..."
+          rows={2}
+          style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '12px', padding: '10px 14px', fontSize: '13px', color: 'var(--text)', resize: 'none', outline: 'none', fontFamily: 'inherit', lineHeight: 1.5 }}
+        />
+        <button
+          onClick={send}
+          disabled={!input.trim() || loading}
+          style={{ background: !input.trim() || loading ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, var(--accent), var(--accent2))', border: 'none', borderRadius: '12px', padding: '10px 18px', color: !input.trim() || loading ? 'var(--muted)' : '#000', fontWeight: 800, fontSize: '13px', cursor: !input.trim() || loading ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
+        >
+          Send →
+        </button>
+      </div>
+      <style>{`@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }`}</style>
+    </div>
+  );
+}
+
 export default function Itinerary() {
   const { t } = useLang();
   const navigate = useNavigate();
@@ -185,6 +322,7 @@ export default function Itinerary() {
   const [gateReason, setGateReason] = React.useState('guest');
   const [isPlanBuyer, setIsPlanBuyer] = React.useState(false);
   const [itineraryCount, setItineraryCount] = React.useState(0);
+  const [itinTab, setItinTab] = React.useState('chat'); // 'chat' | 'plan'
 
   const IS_DEV = false;
 
@@ -373,7 +511,7 @@ export default function Itinerary() {
     setRoutedPlan(null);
 
     const start = new Date(activeTrip.startDate);
-    const prompt = `You are an expert travel curator. Generate a rich flat list of suggested places for a ${activeTrip.duration}-day trip to ${activeTrip.destination}. Interests: ${interests.join(', ')}. DO NOT group by day — return a flat list across all categories giving the user maximum choice. ${hotelAddress ? "The traveller is staying at: " + hotelAddress + "." : ""} Rules: 1. Only real verifiable establishments. 2. Prioritise UNESCO Michelin Tourism Board venues. 3. Never invent names or addresses. 4. Accurate lat/lng. 5. Note trust source. 6. Include meal options breakfast lunch dinner plus interest-specific venues. 7. Aim for ${Math.ceil(parseInt(activeTrip.duration) * 6)} suggestions. Return ONLY valid JSON no markdown: {"destination":"${activeTrip.destination}","flag":"🌏","disclaimer":"AI-generated from verified sources","places":[{"id":"p1","name":"Place Name","category":"Food & Dining","subcategory":"Breakfast","address":"Full address","desc":"Short description","duration":"1 hr","trustSource":"Michelin","lat":1.3521,"lng":103.8198}]}`;
+    const prompt = `You are an expert travel curator. Generate a rich flat list of suggested places for a ${activeTrip.duration}-day trip to ${activeTrip.destination}. Interests: ${interests.join(', ')}. DO NOT group by day — return a flat list across all categories giving the user maximum choice. ${hotelAddress ? "The traveller is staying at: " + hotelAddress + "." : ""} Rules: 1. Only real verifiable establishments. 2. For Food & Dining: cast a wide net — include Michelin-starred and Michelin Bib Gourmand restaurants, but ALSO include highly regarded local restaurants recommended by the destination's national or regional tourism board, popular spots featured in local food guides and review sites (e.g. Yelp, TripAdvisor top-rated, Google 4.5+ stars with many reviews), beloved street food stalls or hawker centres, and hidden gems known to locals. Do NOT limit food to fine dining — include a mix of budget-friendly, mid-range, and premium options. 3. For non-food categories, prioritise UNESCO, national tourism board, and trusted review sources. 4. Never invent names or addresses. 5. Accurate lat/lng. 6. Note the trust source for each place (e.g. "Michelin Star", "Bib Gourmand", "Tourism Board Recommended", "TripAdvisor Top-Rated", "Local Favourite", "UNESCO"). 7. Include meal options breakfast lunch dinner plus interest-specific venues. 8. Aim for ${Math.ceil(parseInt(activeTrip.duration) * 6)} suggestions. Return ONLY valid JSON no markdown: {"destination":"${activeTrip.destination}","flag":"🌏","disclaimer":"AI-generated from verified sources — includes Michelin, tourism board, and community recommendations","places":[{"id":"p1","name":"Place Name","category":"Food & Dining","subcategory":"Breakfast","address":"Full address","desc":"Short description","duration":"1 hr","trustSource":"Bib Gourmand","lat":1.3521,"lng":103.8198}]}`;
 
     try {
       const response = await fetch(CLAUDE_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: MODEL, max_tokens: 8000, messages: [{ role: 'user', content: prompt }] }) });
@@ -522,59 +660,79 @@ export default function Itinerary() {
           </div>
         </div>
 
-        {/* STEP 1: Trip Selection */}
+        {/* STEP 1: Trip Selection + Chatbot */}
         {!showInterests && !generating && !suggestions && !routedPlan && (
           <>
-            {detectedTrip && !showManual && (
-              <div style={{ background: 'rgba(0,200,255,0.06)', border: '1px solid rgba(0,200,255,0.2)', borderRadius: '20px', padding: '28px', marginBottom: '20px', maxWidth: '600px' }}>
-                <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 700, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  📍 Trip detected from your {detectedTrip.source}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
-                  <span style={{ fontSize: '40px' }}>{detectedTrip.flag}</span>
-                  <div>
-                    <div style={{ fontWeight: 900, fontSize: '22px', fontFamily: 'var(--font-head)' }}>{detectedTrip.destination}</div>
-                    <div style={{ fontSize: '14px', color: 'var(--muted)' }}>From {new Date(detectedTrip.startDate).toDateString()} · {detectedTrip.duration} {t('days')}</div>
-                  </div>
-                </div>
-                <p style={{ fontSize: '14px', color: 'var(--muted)', marginBottom: '20px' }}>Want me to plan this trip for you?</p>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  <button onClick={() => proceedToInterests(detectedTrip)} style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', color: '#000', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: 800, fontSize: '14px', fontFamily: 'var(--font-head)', cursor: 'pointer' }}>
-                    Yes, plan this trip →
-                  </button>
-                  <button onClick={() => setShowManual(true)} style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--muted)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
-                    Plan a different trip
-                  </button>
-                </div>
-              </div>
+            {/* Tab switcher */}
+            <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '14px', padding: '4px', maxWidth: '360px', marginBottom: '24px' }}>
+              {[{ id: 'chat', label: '💬 Explore Destinations' }, { id: 'plan', label: '🗺️ Plan a Trip' }].map(tab => (
+                <button key={tab.id} onClick={() => setItinTab(tab.id)} style={{ flex: 1, background: itinTab === tab.id ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 'transparent', color: itinTab === tab.id ? '#000' : 'var(--muted)', border: 'none', borderRadius: '10px', padding: '9px 12px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'var(--font-head)' }}>{tab.label}</button>
+              ))}
+            </div>
+
+            {/* Chat tab */}
+            {itinTab === 'chat' && (
+              <DestinationChatbot onSelectDestination={(dest) => {
+                setDestination(dest);
+                setItinTab('plan');
+              }} />
             )}
 
-            {(!detectedTrip || showManual) && (
-              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '20px', padding: '28px', maxWidth: '520px', marginBottom: '20px' }}>
-                <h2 style={{ fontFamily: 'var(--font-head)', fontSize: '18px', fontWeight: 800, marginBottom: '20px' }}>
-                  {showManual ? 'Plan a Different Trip' : 'Plan a Trip'}
-                </h2>
-                <form onSubmit={(e) => { e.preventDefault(); proceedToInterests({ destination, startDate, duration, flag: '🌍', hotelAddress }); }}
-                  style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={labelStyle}>{t('itin_destination')}</label>
-                    <input type="text" placeholder="e.g. Tokyo, Japan" value={destination} onChange={e => setDestination(e.target.value)} required style={inputStyle} />
-                  </div>
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <label style={labelStyle}>{t('itin_dates')}</label>
-                      <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required style={inputStyle} />
+            {/* Plan tab */}
+            {itinTab === 'plan' && (
+              <>
+                {detectedTrip && !showManual && (
+                  <div style={{ background: 'rgba(0,200,255,0.06)', border: '1px solid rgba(0,200,255,0.2)', borderRadius: '20px', padding: '28px', marginBottom: '20px', maxWidth: '600px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 700, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      📍 Trip detected from your {detectedTrip.source}
                     </div>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <label style={labelStyle}>Duration ({t('days')})</label>
-                      <input type="number" placeholder="7" min="1" max="21" value={duration} onChange={e => setDuration(e.target.value)} required style={inputStyle} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+                      <span style={{ fontSize: '40px' }}>{detectedTrip.flag}</span>
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: '22px', fontFamily: 'var(--font-head)' }}>{detectedTrip.destination}</div>
+                        <div style={{ fontSize: '14px', color: 'var(--muted)' }}>From {new Date(detectedTrip.startDate).toDateString()} · {detectedTrip.duration} {t('days')}</div>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '14px', color: 'var(--muted)', marginBottom: '20px' }}>Want me to plan this trip for you?</p>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <button onClick={() => proceedToInterests(detectedTrip)} style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', color: '#000', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: 800, fontSize: '14px', fontFamily: 'var(--font-head)', cursor: 'pointer' }}>
+                        Yes, plan this trip →
+                      </button>
+                      <button onClick={() => setShowManual(true)} style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--muted)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 24px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+                        Plan a different trip
+                      </button>
                     </div>
                   </div>
-                  <button type="submit" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', color: '#000', border: 'none', borderRadius: '12px', padding: '14px', fontWeight: 800, fontSize: '15px', fontFamily: 'var(--font-head)', cursor: 'pointer' }}>
-                    Next: {t('itin_interests')} →
-                  </button>
-                </form>
-              </div>
+                )}
+
+                {(!detectedTrip || showManual) && (
+                  <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '20px', padding: '28px', maxWidth: '520px', marginBottom: '20px' }}>
+                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: '18px', fontWeight: 800, marginBottom: '20px' }}>
+                      {showManual ? 'Plan a Different Trip' : 'Plan a Trip'}
+                    </h2>
+                    <form onSubmit={(e) => { e.preventDefault(); proceedToInterests({ destination, startDate, duration, flag: '🌍', hotelAddress }); }}
+                      style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label style={labelStyle}>{t('itin_destination')}</label>
+                        <input type="text" placeholder="e.g. Tokyo, Japan" value={destination} onChange={e => setDestination(e.target.value)} required style={inputStyle} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <label style={labelStyle}>{t('itin_dates')}</label>
+                          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required style={inputStyle} />
+                        </div>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <label style={labelStyle}>Duration ({t('days')})</label>
+                          <input type="number" placeholder="7" min="1" max="21" value={duration} onChange={e => setDuration(e.target.value)} required style={inputStyle} />
+                        </div>
+                      </div>
+                      <button type="submit" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', color: '#000', border: 'none', borderRadius: '12px', padding: '14px', fontWeight: 800, fontSize: '15px', fontFamily: 'var(--font-head)', cursor: 'pointer' }}>
+                        Next: {t('itin_interests')} →
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
