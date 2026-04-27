@@ -244,44 +244,75 @@ When suggesting destinations:
         <div style={{ marginLeft: 'auto', width: '8px', height: '8px', borderRadius: '50%', background: '#4cd964', boxShadow: '0 0 6px #4cd964' }}></div>
       </div>
 
-      {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {messages.map((msg, i) => (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: '6px' }}>
-            <div style={{
-              maxWidth: '85%',
-              background: msg.role === 'user' ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 'rgba(255,255,255,0.06)',
-              color: msg.role === 'user' ? '#000' : 'var(--text)',
-              border: msg.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.08)',
-              borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-              padding: '10px 14px',
-              fontSize: '13px',
-              lineHeight: 1.6,
-              whiteSpace: 'pre-wrap',
-              fontWeight: msg.role === 'user' ? 700 : 400,
-            }}>
-              {msg.text}
-            </div>
-            {msg.planDestination && (
-              <button
-                onClick={() => onSelectDestination(msg.planDestination)}
-                style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', border: 'none', borderRadius: '10px', padding: '8px 18px', color: '#000', fontWeight: 800, fontSize: '12px', cursor: 'pointer', fontFamily: 'var(--font-head)' }}
-              >
-                🗺️ Plan {msg.planDestination} →
-              </button>
+      {/* Two-column message area: You | Claude */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', minHeight: 0 }}>
+
+        {/* Left col — Your questions */}
+        <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '10px 14px 6px', fontSize: '10px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,200,255,0.03)' }}>
+            You
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {messages.filter(m => m.role === 'user').map((msg, i) => (
+              <div key={i} style={{
+                background: 'linear-gradient(135deg, rgba(0,200,255,0.12), rgba(191,90,242,0.08))',
+                border: '1px solid rgba(0,200,255,0.2)',
+                borderRadius: '12px',
+                padding: '10px 14px',
+                fontSize: '13px',
+                lineHeight: 1.6,
+                color: 'var(--text)',
+                fontWeight: 600,
+              }}>
+                {msg.text}
+              </div>
+            ))}
+            {messages.filter(m => m.role === 'user').length === 0 && (
+              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)', fontStyle: 'italic', marginTop: '8px' }}>
+                Ask me here…
+              </div>
             )}
           </div>
-        ))}
-        {loading && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px 18px 18px 4px', padding: '10px 16px' }}>
-              <span style={{ display: 'inline-flex', gap: '4px' }}>
-                {[0,1,2].map(n => <span key={n} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', display: 'inline-block', animation: `bounce 1.2s ease-in-out ${n * 0.2}s infinite` }}></span>)}
-              </span>
-            </div>
+        </div>
+
+        {/* Right col — Claude answers */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '10px 14px 6px', fontSize: '10px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,200,255,0.03)' }}>
+            Travel Assistant
           </div>
-        )}
-        <div ref={bottomRef} />
+          <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }} ref={bottomRef}>
+            {messages.filter(m => m.role === 'assistant').map((msg, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '12px',
+                  padding: '10px 14px',
+                  fontSize: '13px',
+                  lineHeight: 1.7,
+                  color: 'var(--text)',
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {msg.text}
+                </div>
+                {msg.planDestination && (
+                  <button
+                    onClick={() => onSelectDestination(msg.planDestination)}
+                    style={{ alignSelf: 'flex-start', background: 'linear-gradient(135deg, var(--accent), var(--accent2))', border: 'none', borderRadius: '10px', padding: '8px 18px', color: '#000', fontWeight: 800, fontSize: '12px', cursor: 'pointer', fontFamily: 'var(--font-head)' }}
+                  >
+                    🗺️ Plan {msg.planDestination} →
+                  </button>
+                )}
+              </div>
+            ))}
+            {loading && (
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '12px 16px', display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
+                {[0,1,2].map(n => <span key={n} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', display: 'inline-block', animation: `bounce 1.2s ease-in-out ${n * 0.2}s infinite` }}></span>)}
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
 
       {/* Input */}
