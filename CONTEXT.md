@@ -332,8 +332,8 @@ PHASE 1 — Pre-launch
   [ ] Twilio VoIP floating dialler widget (deprioritised to post-launch)
 
 PHASE 2 — Intelligence (pre-launch) ← CURRENT PRIORITY
-  [ ] Audit Cloudflare Worker (claude-proxy) — review all routes
-  [ ] eSIM QR email delivery (Resend)
+  [x] Cloudflare Worker (claude-proxy) — all routes live and verified
+  [x] eSIM QR email delivery (Resend) — done, RESEND_API_KEY set, esimconnect.world verified
   [ ] Push notifications (PWA)
 
 PHASE 3 — Growth (post-launch)
