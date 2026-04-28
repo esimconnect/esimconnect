@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
+const webpush = require('web-push');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -13,10 +14,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// VAPID config
+webpush.setVapidDetails(
+  'mailto:dlimyk@gmail.com',
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
+
 app.use(cors());
 
 // Raw body required for Stripe webhook signature verification
-// Must be registered BEFORE express.json()
 app.use('/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
@@ -25,8 +32,54 @@ app.get('/', (req, res) => {
   res.json({ status: 'esimconnect backend running' });
 });
 
+// ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
+
+// Save subscription (called from frontend after user grants permission)
+app.post('/push/subscribe', async (req, res) => {
+  const { userId, subscription } = req.body;
+  if (!userId || !subscription) return res.status(400).json({ error: 'Missing userId or subscription' });
+
+  const { error } = await supabase
+    .from('push_subscriptions')
+    .upsert({ user_id: userId, subscription }, { onConflict: 'user_id' });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// Internal helper — send push to a single user
+async function sendPushToUser(userId, payload) {
+  const { data, error } = await supabase
+    .from('push_subscriptions')
+    .select('subscription')
+    .eq('user_id', userId)
+    .single();
+
+  if (error || !data) return; // user has no subscription — silently skip
+
+  try {
+    await webpush.sendNotification(data.subscription, JSON.stringify(payload));
+  } catch (err) {
+    console.error(`Push failed for user ${userId}:`, err.message);
+    // If subscription expired/invalid, remove it
+    if (err.statusCode === 410) {
+      await supabase.from('push_subscriptions').delete().eq('user_id', userId);
+    }
+  }
+}
+
+// Manual send endpoint (for testing or admin use)
+app.post('/push/send', async (req, res) => {
+  const { userId, title, body, url } = req.body;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+
+  await sendPushToUser(userId, { title, body, url });
+  res.json({ ok: true });
+});
+
+// ── STRIPE ────────────────────────────────────────────────────────────────────
+
 // Create PaymentIntent for wallet top-up
-// Now accepts userId and stores it in Stripe metadata
 app.post('/create-payment-intent', async (req, res) => {
   try {
     const { amount, currency = 'sgd', userId } = req.body;
@@ -36,7 +89,7 @@ app.post('/create-payment-intent', async (req, res) => {
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount,        // in cents — e.g. 2000 = SGD 20.00
+      amount,
       currency,
       automatic_payment_methods: { enabled: true },
       metadata: {
@@ -67,7 +120,7 @@ app.post('/webhook', async (req, res) => {
   if (event.type === 'payment_intent.succeeded') {
     const intent = event.data.object;
     const userId = intent.metadata?.user_id;
-    const amountSgd = intent.amount / 100; // convert cents to SGD
+    const amountSgd = intent.amount / 100;
 
     if (!userId) {
       console.warn('Webhook: no user_id in metadata, skipping wallet credit');
@@ -75,7 +128,7 @@ app.post('/webhook', async (req, res) => {
     }
 
     try {
-      // 1. Upsert wallet_topups row (idempotent — unique on stripe_payment_intent_id)
+      // 1. Upsert wallet_topups row
       const { error: topupError } = await supabase
         .from('wallet_topups')
         .upsert({
@@ -115,6 +168,14 @@ app.post('/webhook', async (req, res) => {
       }
 
       console.log(`Wallet credited: user=${userId} amount=SGD${amountSgd} new_balance=SGD${newBalance}`);
+
+      // 3. Push notification — wallet top-up
+      await sendPushToUser(userId, {
+        title: '💳 Wallet Topped Up',
+        body: `SGD ${amountSgd.toFixed(2)} has been added to your eSIMConnect wallet.`,
+        url: '/wallet',
+      });
+
     } catch (err) {
       console.error('Webhook handler error:', err.message);
       return res.status(500).json({ error: err.message });

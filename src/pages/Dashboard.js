@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import styles from './Dashboard.module.css';
 import { useLang } from '../lib/i18n';
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from '../lib/pushNotifications';
 
 export default function Dashboard() {
   const { t } = useLang();
@@ -13,6 +14,8 @@ export default function Dashboard() {
   const [esims, setEsims] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -30,6 +33,9 @@ export default function Dashboard() {
       fetchEsims(user.id),
       fetchOrders(user.id),
     ]);
+    // Check current push subscription state
+    const subscribed = await isPushSubscribed();
+    setPushEnabled(subscribed);
     setLoading(false);
   };
 
@@ -64,6 +70,22 @@ export default function Dashboard() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate('/');
+  };
+
+  const handlePushToggle = async () => {
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush(user.id);
+        setPushEnabled(false);
+      } else {
+        await subscribeToPush(user.id);
+        setPushEnabled(true);
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+    setPushLoading(false);
   };
 
   const activeEsims = esims.filter(e => e.status === 'active');
@@ -135,6 +157,28 @@ export default function Dashboard() {
               onClick={() => navigate('/wallet')}
             >
               + {t('dash_topup')}
+            </button>
+          </div>
+          <div className={styles.card}>
+            <div className={styles.cardIcon}>{pushEnabled ? '🔔' : '🔕'}</div>
+            <div className={styles.cardTitle}>Notifications</div>
+            <div className={styles.cardValue} style={{ fontSize: '16px', marginTop: '8px' }}>
+              {pushEnabled ? 'Enabled' : 'Disabled'}
+            </div>
+            <div className={styles.cardSub}>Order & wallet alerts</div>
+            <button
+              className={styles.topUpBtn}
+              onClick={handlePushToggle}
+              disabled={pushLoading}
+              style={{
+                background: pushEnabled
+                  ? 'rgba(255,80,80,0.15)'
+                  : 'rgba(0,200,255,0.15)',
+                color: pushEnabled ? '#ff5050' : '#00c8ff',
+                borderColor: pushEnabled ? '#ff5050' : '#00c8ff',
+              }}
+            >
+              {pushLoading ? '...' : pushEnabled ? 'Turn Off' : 'Enable'}
             </button>
           </div>
         </div>
