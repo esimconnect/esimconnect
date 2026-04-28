@@ -1,20 +1,20 @@
 # esimconnect — Living Project Context
-Last updated: April 27, 2026
-Latest commit: 529a0ff2
+Last updated: April 28, 2026
+Latest commit: 5a629d33
 
 ---
 
 ## Repository
 - Repo: https://github.com/esimconnect/esimconnect
 - Live: https://esimconnect.world
-- Local: D:\Kairos\esimconnect
+- Local: E:\Kairos\esimconnect
 - Branch: main
 
 ## Supabase
 - URL: https://emsovpcmdnuxrhbyvnvb.supabase.co
 - Account email: dlimyk@gmail.com
-- Existing tables: countries, esim_plans, esims, orders, profiles, saved_itineraries, usage_logs, users, voip_calls, waitlist, wallet_topups
-- RLS: profiles, wallet_topups, voip_calls all have RLS enabled (own-row policies)
+- Existing tables: countries, esim_plans, esims, orders, profiles, push_subscriptions, saved_itineraries, usage_logs, users, voip_calls, waitlist, wallet_topups
+- RLS: profiles, wallet_topups, voip_calls, push_subscriptions all have RLS enabled (own-row policies)
 - Currency: SGD primary, GST 9% applied at checkout
 
 ## Stripe
@@ -45,20 +45,23 @@ Latest commit: 529a0ff2
 
 ## Environment Variables
 
-### Frontend: D:\Kairos\esimconnect\.env
+### Frontend: E:\Kairos\esimconnect\.env
 REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_[esimconnect sandbox key]
 REACT_APP_SUPABASE_URL=https://emsovpcmdnuxrhbyvnvb.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=sb_publishable_yDr3YTcsErOPthkWXjjRRw_R4AaB3zA
 REACT_APP_BACKEND_URL=https://esimconnect-backend.onrender.com
+REACT_APP_VAPID_PUBLIC_KEY=BHWKg9LMTkn1uA9pgQweT2DNyCfNAvMTYqO2QXSN8YJhlxrysfS3Br_iZpGVCbZfslZZ9g_0bfWRnyKncrKHG4k
 REACT_APP_TWILIO_ACCOUNT_SID=          (TBC)
 REACT_APP_TWILIO_AUTH_TOKEN=           (TBC)
 REACT_APP_TWILIO_PHONE_NUMBER=         (TBC)
 
-### Backend: D:\Kairos\esimconnect\Server\.env
+### Backend: E:\Kairos\esimconnect\Server\.env
 STRIPE_SECRET_KEY=sk_test_[esimconnect sandbox key]
 STRIPE_WEBHOOK_SECRET=whsec_[esimconnect webhook signing secret]
 SUPABASE_URL=https://emsovpcmdnuxrhbyvnvb.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=[supabase service role key]
+VAPID_PUBLIC_KEY=BHWKg9LMTkn1uA9pgQweT2DNyCfNAvMTYqO2QXSN8YJhlxrysfS3Br_iZpGVCbZfslZZ9g_0bfWRnyKncrKHG4k
+VAPID_PRIVATE_KEY=Or2S1ilMhCMjwsBuU3-55tuFXonU87lmSgZW5XmPqnU
 PORT=4000
 
 ### Cloudflare Pages Environment Variables
@@ -66,12 +69,15 @@ REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_[esimconnect sandbox key]
 REACT_APP_SUPABASE_URL=https://emsovpcmdnuxrhbyvnvb.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=sb_publishable_yDr3YTcsErOPthkWXjjRRw_R4AaB3zA
 REACT_APP_BACKEND_URL=https://esimconnect-backend.onrender.com
+REACT_APP_VAPID_PUBLIC_KEY=BHWKg9LMTkn1uA9pgQweT2DNyCfNAvMTYqO2QXSN8YJhlxrysfS3Br_iZpGVCbZfslZZ9g_0bfWRnyKncrKHG4k
 
 ### Render Environment Variables
 STRIPE_SECRET_KEY=sk_test_[esimconnect sandbox key]
 STRIPE_WEBHOOK_SECRET=whsec_[esimconnect webhook signing secret]
 SUPABASE_URL=https://emsovpcmdnuxrhbyvnvb.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=[supabase service role key]
+VAPID_PUBLIC_KEY=BHWKg9LMTkn1uA9pgQweT2DNyCfNAvMTYqO2QXSN8YJhlxrysfS3Br_iZpGVCbZfslZZ9g_0bfWRnyKncrKHG4k
+VAPID_PRIVATE_KEY=Or2S1ilMhCMjwsBuU3-55tuFXonU87lmSgZW5XmPqnU
 PORT=4000
 
 ---
@@ -103,6 +109,7 @@ A travel tech platform for tourists and business travellers targeting:
 | AI          | Claude API via Cloudflare Worker    |
 | Maps        | react-leaflet + OpenStreetMap       |
 | Geocoding   | Nominatim                           |
+| Push        | Web Push API + VAPID + web-push npm |
 
 ---
 
@@ -177,6 +184,13 @@ twilio_call_sid text UNIQUE,
 status text DEFAULT 'initiated',  -- initiated | in-progress | completed | failed
 created_at timestamptz DEFAULT now()
 RLS: own rows select policy
+
+### push_subscriptions
+id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+subscription jsonb NOT NULL,
+created_at timestamptz DEFAULT now()
+RLS: own rows policy
 
 ### saved_itineraries
 user_id, destination, trip_data (jsonb), stage, selected_places (jsonb), created_at
@@ -282,6 +296,28 @@ trustSource values: "Michelin Star", "Bib Gourmand", "Tourism Board Recommended"
 
 ---
 
+## Push Notifications (PWA)
+
+### Architecture
+- VAPID keys generated and stored in Render + Cloudflare env vars
+- Frontend: src/lib/pushNotifications.js — subscribe/unsubscribe/isPushSubscribed
+- Service worker: public/sw.js — push event listener + notificationclick handler
+- Backend: Server/server.js — sendPushToUser() helper + /push/subscribe + /push/send endpoints
+- Supabase: push_subscriptions table stores per-user browser subscription objects
+
+### Triggers
+- eSIM order confirmed → fired from Checkout.js after successful order insert (logged-in users only)
+- Wallet top-up succeeded → fired from Server/server.js inside Stripe webhook handler
+
+### User control
+- Dashboard.js — Notifications card with Enable/Disable toggle
+- Unsubscribe removes subscription from Supabase + browser
+
+### iOS note
+- Works on iOS 16.4+ only if user has added esimconnect.world to home screen first
+
+---
+
 ## Navbar
 
 ### Link order (both logged-in and logged-out)
@@ -323,6 +359,9 @@ Logged in:  My Itinerary → Plans (dropdown) → Dashboard → Purchases → Sa
 - [x] MyItinerary first in navbar
 - [x] DestinationChatbot — two-column layout, auto-focus, PLAN_DESTINATION signal
 - [x] Widened food recommendations beyond Michelin
+- [x] Cloudflare Worker (claude-proxy) — all routes live and verified
+- [x] eSIM QR email delivery (Resend) — RESEND_API_KEY set, esimconnect.world verified
+- [x] Push notifications (PWA) — VAPID keys, push_subscriptions table, sw.js handler, Dashboard toggle, order confirmed + wallet top-up triggers
 
 ---
 
@@ -331,12 +370,9 @@ Logged in:  My Itinerary → Plans (dropdown) → Dashboard → Purchases → Sa
 PHASE 1 — Pre-launch
   [ ] Twilio VoIP floating dialler widget (deprioritised to post-launch)
 
-PHASE 2 — Intelligence (pre-launch) ← CURRENT PRIORITY
-  [x] Cloudflare Worker (claude-proxy) — all routes live and verified
-  [x] eSIM QR email delivery (Resend) — done, RESEND_API_KEY set, esimconnect.world verified
-  [ ] Push notifications (PWA)
+PHASE 2 — Intelligence (pre-launch) ← COMPLETE ✅
 
-PHASE 3 — Growth (post-launch)
+PHASE 3 — Growth (post-launch) ← NEXT PRIORITY
   [ ] Admin dashboard (/admin route)
   [ ] Referral / promo codes
   [ ] Guest checkout improvements
@@ -360,11 +396,12 @@ PHASE 4 — Expansion
 | src/index.js                             | React root entry + SW registration + LanguageProvider |
 | src/lib/supabase.js                      | Supabase client                                       |
 | src/lib/i18n.js                          | i18n context, useLang hook, all translations          |
+| src/lib/pushNotifications.js             | Web Push subscribe/unsubscribe/isPushSubscribed       |
 | src/pages/Home.js                        | Landing / home page                                   |
 | src/pages/Plans.js                       | eSIM plan browser (Airalo API, i18n done)             |
-| src/pages/Checkout.js                    | Checkout — card + eWallet (i18n done)                 |
+| src/pages/Checkout.js                    | Checkout — card + eWallet + order push notification   |
 | src/pages/OrderConfirmation.js           | Post-purchase confirmation (i18n done)                |
-| src/pages/Dashboard.js                   | User dashboard (i18n done)                            |
+| src/pages/Dashboard.js                   | User dashboard + notifications toggle                 |
 | src/pages/Dashboard.module.css           | Dashboard styles                                      |
 | src/pages/Wallet.js                      | eWallet top-up page (i18n done)                       |
 | src/pages/Wallet.module.css              | Wallet styles                                         |
@@ -381,12 +418,12 @@ PHASE 4 — Expansion
 | src/components/TrustBadge.js             | Trust badge                                           |
 | src/styles/global.css                    | Global styles (includes --navbar-height var)          |
 | public/manifest.json                     | PWA manifest                                          |
-| public/sw.js                             | Service worker                                        |
+| public/sw.js                             | Service worker + push event handler                   |
 | public/icons/icon-192.png                | PWA icon 192x192                                      |
 | public/icons/icon-512.png                | PWA icon 512x512                                      |
-| Server/server.js                         | Node.js backend (Stripe PaymentIntent + webhook)      |
-| Server/package.json                      | Backend dependencies                                  |
-| Server/.env                              | Backend env vars (Stripe + Supabase keys)             |
+| Server/server.js                         | Node.js backend — Stripe + webhook + push             |
+| Server/package.json                      | Backend dependencies (includes web-push)              |
+| Server/.env                              | Backend env vars                                      |
 
 ---
 
@@ -408,7 +445,7 @@ PHASE 4 — Expansion
 
 ### Git Bash — common commands
 ```bash
-cd /d/Kairos/esimconnect
+cd /e/Kairos/esimconnect
 git add src/components/Navbar.js src/pages/Itinerary.js
 git commit -m "description"
 git push origin main
@@ -461,20 +498,28 @@ Commit: 6842462d
 
 ### April 27, 2026 — Session 7 (MyItinerary improvements)
 Completed:
-- MyItinerary moved to first position in Navbar (logged-in and logged-out)
-- DestinationChatbot added: two-column layout (You | Travel Assistant), auto-focus input, PLAN_DESTINATION signal → plan button
-- Food recommendation prompt widened beyond Michelin to include tourism boards, TripAdvisor, local favourites, street food
-- Navbar logo restored to full original SVG with all gradients
-- Dual orbiting SIM chips replaced with single unboxed 5G text orbiting clockwise (6s)
-- Logo resized to height 88px, fits within 96px navbar (no overflow)
-- eSIMconnect brand name on one line
-- Chatbot z-index fix (was being blocked by navbar SVG overflow)
-- Chatbot empty state text changed to "Ask me here…"
-- Two-column chat: both columns scroll-sync on new messages so questions and answers stay aligned
-- Noted future design intent: typing directly in left column (deferred)
-- Markdown rendering in chatbot (**bold**, *italic*, line breaks)
-- Fixed flag/country code bug (Claude was prefixing "sg" before destination names)
+- MyItinerary moved to first position in Navbar
+- DestinationChatbot: two-column layout, auto-focus, PLAN_DESTINATION signal
+- Food recommendation prompt widened
+- Navbar logo restored + single orbiting 5G text
+- Markdown rendering in chatbot
+- Fixed flag/country code bug
+Files: src/components/Navbar.js, src/pages/Itinerary.js
+Commits: 109eaa9d → 529a0ff2
 
-Files changed: src/components/Navbar.js, src/pages/Itinerary.js
-Commits: 109eaa9d, ed309108, bbe10d99, 48946bd7, b19e7574, dcca7189, 529a0ff2
-Next session should: Audit Cloudflare Worker (claude-proxy), eSIM QR email delivery (Resend)
+### April 28, 2026 — Session 8 (Push Notifications)
+Completed:
+- PWA push notifications fully wired end-to-end
+- VAPID keys generated and set in Render + Cloudflare + local .env
+- push_subscriptions table confirmed in Supabase (with RLS)
+- src/lib/pushNotifications.js — subscribe/unsubscribe/isPushSubscribed (VAPID key now reads from env var)
+- public/sw.js — push event listener + notificationclick handler (already existed)
+- Server/server.js — sendPushToUser() helper, /push/subscribe, /push/send endpoints, wallet top-up push trigger
+- Server/package.json — web-push dependency added
+- Dashboard.js — Notifications card with Enable/Disable toggle (already existed)
+- Checkout.js — push notification fired after each successful order insert (logged-in users)
+- Phase 2 complete ✅
+
+Files changed: src/lib/pushNotifications.js, src/pages/Checkout.js, Server/package.json, Server/package-lock.json
+Commits: 239c9e07, 7006eed9, 5a629d33
+Next session should: Admin dashboard (/admin route) — Phase 3
