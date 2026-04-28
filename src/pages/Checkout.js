@@ -8,6 +8,7 @@ import TrustBadge from '../components/TrustBadge';
 import { useLang } from '../lib/i18n';
 
 const WORKER_URL = 'https://claude-proxy.kairosventure-io.workers.dev';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const MOCK_COUNTRIES = [
   { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
@@ -170,7 +171,22 @@ export default function Checkout() {
           status: 'completed', payment_method: method,
         });
         results.push({ ...o, plan_name: item.plan_name, country: item.country });
+
+        // Push notification — order confirmed (logged-in users only)
+        if (user?.id) {
+          fetch(`${BACKEND_URL}/push/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.id,
+              title: '📱 eSIM Order Confirmed',
+              body: `Your ${item.plan_name} eSIM is ready. Tap to view your QR code.`,
+              url: '/purchases',
+            }),
+          }).catch(() => {}); // fire-and-forget, don't block checkout
+        }
       }
+
       setOrders(results);
       setStep(4);
     } catch (err) { setError(t('error') + ': ' + err.message); }
