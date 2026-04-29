@@ -166,8 +166,7 @@ function AddPlaceSearch({ activeTrip, onAdd }) {
 // ─── Destination Chatbot ────────────────────────────────────────────────────
 // Simple markdown renderer — handles **bold**, *italic*, and newlines
 function renderMarkdown(text) {
-  const lines = text.split('
-');
+  const lines = text.split('\n');
   return lines.map((line, li) => {
     // Parse inline bold (**text**) and italic (*text*)
     const parts = [];
