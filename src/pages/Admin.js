@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import Navbar from '../components/Navbar';
 import styles from './Admin.module.css';
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
@@ -1233,6 +1234,7 @@ export default function Admin() {
 
   return (
     <div className={styles.page}>
+      <Navbar />
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Admin Dashboard</h1>
