@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
@@ -58,6 +58,41 @@ export default function Checkout() {
   const [walletBalance, setWalletBalance] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('card');
 
+  // ── Reseller code ──────────────────────────────────────────────────────────
+  const [resellerCode, setResellerCode]         = useState('');
+  const [resellerDiscount, setResellerDiscount] = useState(null); // { discount_value, discount_type, message }
+  const [codeValidating, setCodeValidating]     = useState(false);
+  const [codeError, setCodeError]               = useState('');
+
+  // ── Validate reseller code against backend ─────────────────────────────────
+  const validateCode = useCallback(async (code, silent = false) => {
+    if (!code?.trim()) {
+      setResellerDiscount(null);
+      setCodeError('');
+      return;
+    }
+    if (!silent) setCodeValidating(true);
+    setCodeError('');
+    try {
+      const res = await fetch(`${BACKEND_URL}/reseller/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim().toUpperCase() }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setResellerDiscount(data);
+      } else {
+        setResellerDiscount(null);
+        if (!silent) setCodeError(data.message || 'Invalid code');
+      }
+    } catch (_) {
+      setResellerDiscount(null);
+    }
+    if (!silent) setCodeValidating(false);
+  }, []);
+
+  // ── Load user + wallet balance ─────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       const u = data?.user || null;
@@ -65,17 +100,88 @@ export default function Checkout() {
       if (u) {
         setEmail(u.email || '');
         setName(u.user_metadata?.full_name || '');
-        const { data: profile } = await supabase.from('profiles').select('wallet_balance').eq('id', u.id).single();
-        if (profile) setWalletBalance(parseFloat(profile.wallet_balance) || 0);
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('wallet_balance, preferred_reseller_code')
+          .eq('id', u.id)
+          .single();
+        if (profile) {
+          setWalletBalance(parseFloat(profile.wallet_balance) || 0);
+          // Auto-load saved reseller code from profile
+          if (profile.preferred_reseller_code) {
+            setResellerCode(profile.preferred_reseller_code);
+            validateCode(profile.preferred_reseller_code, true);
+            return;
+          }
+        }
+      }
+      // Fallback: check localStorage ?ref= capture (30-day window)
+      try {
+        const stored = localStorage.getItem('esimconnect_ref');
+        if (stored) {
+          const { code, expires } = JSON.parse(stored);
+          if (expires > Date.now()) {
+            setResellerCode(code);
+            validateCode(code, true);
+          } else {
+            localStorage.removeItem('esimconnect_ref');
+          }
+        }
+      } catch (_) {
+        localStorage.removeItem('esimconnect_ref');
       }
     });
-  }, []);
+  }, [validateCode]);
 
+  // ── Initialise cart ────────────────────────────────────────────────────────
   useEffect(() => {
     if (plan && country) {
       setCart([{ ...plan, country, cartId: 'main' }]);
     }
-  }, []);
+  }, []); // eslint-disable-line
+
+  // ── Discount calculation ───────────────────────────────────────────────────
+  const calculateDiscount = (priceSgd) => {
+    if (!resellerDiscount || !resellerDiscount.discount_value) return 0;
+    const price = parseFloat(priceSgd);
+    if (resellerDiscount.discount_type === 'percent') {
+      return parseFloat((price * resellerDiscount.discount_value / 100).toFixed(2));
+    }
+    return Math.min(parseFloat(resellerDiscount.discount_value), price);
+  };
+
+  // Cart total (before discount)
+  const cartSubtotal = cart.reduce((sum, item) => {
+    if (item.cartId === 'virtual') return sum + 5.00;
+    return sum + parseFloat(item.price_sgd || 0);
+  }, 0);
+
+  // Total discount across non-virtual items
+  const totalDiscount = cart.reduce((sum, item) => {
+    if (item.cartId === 'virtual' || item.isVirtual) return sum;
+    return sum + calculateDiscount(item.price_sgd);
+  }, 0);
+
+  const cartTotal = parseFloat((cartSubtotal - totalDiscount).toFixed(2));
+
+  // ── Save reseller code to profile after purchase ───────────────────────────
+  const saveResellerToProfile = async (userId, code) => {
+    if (!userId || !code) return;
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('preferred_reseller_code')
+        .eq('id', userId)
+        .single();
+
+      const updates = { reseller_last_purchase_at: new Date().toISOString() };
+      if (!profile?.preferred_reseller_code) {
+        updates.preferred_reseller_code = code;
+        updates.reseller_linked_at = new Date().toISOString();
+      }
+      await supabase.from('profiles').update(updates).eq('id', userId);
+    } catch (_) {}
+  };
 
   if (!plan) {
     return (
@@ -91,11 +197,6 @@ export default function Checkout() {
       </div>
     );
   }
-
-  const cartTotal = cart.reduce((sum, item) => {
-    if (item.cartId === 'virtual') return sum + 5.00;
-    return sum + parseFloat(item.price_sgd || 0);
-  }, 0);
 
   const fetchExtraPlans = async (code) => {
     if (!code) return;
@@ -129,6 +230,7 @@ export default function Checkout() {
   };
 
   const handleDetailsNext = (e) => { e.preventDefault(); if (!name.trim() || !email.trim() || !agreedToTerms) return; setStep(1); };
+
   const handlePaymentSubmit = (e) => {
     e.preventDefault();
     const digits = cardNumber.replace(/\s/g, '');
@@ -136,55 +238,86 @@ export default function Checkout() {
     setError(null);
     handleConfirmOrder('card');
   };
+
   const handleWalletPay = () => { if (walletBalance === null || walletBalance < cartTotal) return; handleConfirmOrder('wallet'); };
 
   const handleConfirmOrder = async (method = 'card') => {
     setLoading(true);
     setError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
       const sessionId = 'EC-' + Date.now();
       const results = [];
 
       if (method === 'wallet') {
         const newBalance = parseFloat((walletBalance - cartTotal).toFixed(2));
-        const { error: walletErr } = await supabase.from('profiles').update({ wallet_balance: newBalance }).eq('id', user.id);
+        const { error: walletErr } = await supabase.from('profiles').update({ wallet_balance: newBalance }).eq('id', currentUser.id);
         if (walletErr) throw new Error('Wallet deduction failed: ' + walletErr.message);
         setWalletBalance(newBalance);
       }
 
       for (const item of cart) {
-        if (item.isVirtual) { results.push({ order_code: 'VN-' + Date.now(), isVirtual: true, plan_name: 'Virtual Number', country: { name: 'Virtual', flag: '📱' } }); continue; }
+        if (item.isVirtual) {
+          results.push({ order_code: 'VN-' + Date.now(), isVirtual: true, plan_name: 'Virtual Number', country: { name: 'Virtual', flag: '📱' } });
+          continue;
+        }
 
-        const res = await fetch(`${WORKER_URL}/airalo/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ package_id: item.id, user_email: email, user_name: name }) });
+        const res = await fetch(`${WORKER_URL}/airalo/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ package_id: item.id, user_email: email, user_name: name }),
+        });
         const json = await res.json();
         if (!json.data) throw new Error('Order failed for ' + item.plan_name);
 
         const o = json.data;
+        const itemDiscount = calculateDiscount(item.price_sgd);
+
         await supabase.from('orders').insert({
-          user_id: user?.id || null, package_id: item.id, package_title: item.plan_name,
-          country_code: item.country_code || item.country?.iso_code || item.country?.code,
-          country_name: item.country?.name, validity_days: item.validity_days,
-          data_amount: item.data_gb + ' GB', price_sgd: item.price_sgd,
-          order_code: o.order_code, iccid: o.iccid, qr_code: o.qr_code, qr_url: o.qr_url,
-          customer_email: email, customer_name: name, session_id: sessionId,
-          status: 'completed', payment_method: method,
+          user_id:       currentUser?.id || null,
+          package_id:    item.id,
+          package_title: item.plan_name,
+          country_code:  item.country_code || item.country?.iso_code || item.country?.code,
+          country_name:  item.country?.name,
+          validity_days: item.validity_days,
+          data_amount:   item.data_gb + ' GB',
+          price_sgd:     item.price_sgd,
+          order_code:    o.order_code,
+          iccid:         o.iccid,
+          qr_code:       o.qr_code,
+          qr_url:        o.qr_url,
+          customer_email: email,
+          customer_name:  name,
+          session_id:    sessionId,
+          status:        'completed',
+          payment_method: method,
+          // ── Reseller fields ──
+          reseller_code: resellerCode && resellerDiscount ? resellerCode.toUpperCase() : null,
+          discount_sgd:  itemDiscount,
         });
+
         results.push({ ...o, plan_name: item.plan_name, country: item.country });
 
         // Push notification — order confirmed (logged-in users only)
-        if (user?.id) {
+        if (currentUser?.id) {
           fetch(`${BACKEND_URL}/push/send`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId: user.id,
-              title: '📱 eSIM Order Confirmed',
-              body: `Your ${item.plan_name} eSIM is ready. Tap to view your QR code.`,
-              url: '/purchases',
+              userId: currentUser.id,
+              title:  '📱 eSIM Order Confirmed',
+              body:   `Your ${item.plan_name} eSIM is ready. Tap to view your QR code.`,
+              url:    '/purchases',
             }),
-          }).catch(() => {}); // fire-and-forget, don't block checkout
+          }).catch(() => {});
         }
+      }
+
+      // Save reseller code to profile (after all orders succeed)
+      if (currentUser?.id && resellerCode && resellerDiscount) {
+        await saveResellerToProfile(currentUser.id, resellerCode.toUpperCase());
+        // Clear localStorage ref now that it's saved to profile
+        localStorage.removeItem('esimconnect_ref');
       }
 
       setOrders(results);
@@ -193,7 +326,7 @@ export default function Checkout() {
     setLoading(false);
   };
 
-  const formatCard = (val) => val.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
+  const formatCard   = (val) => val.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
   const formatExpiry = (val) => { const cleaned = val.replace(/\D/g, '').slice(0, 4); return cleaned.length >= 3 ? cleaned.slice(0, 2) + '/' + cleaned.slice(2) : cleaned; };
 
   const StepIndicator = () => (
@@ -221,8 +354,70 @@ export default function Checkout() {
           {item.isVirtual ? `Virtual Number · 30 ${t('days')}` : `${item.plan_name} · ${item.data_gb}${t('gb')} · ${item.validity_days} ${t('days')}`}
         </div>
       </div>
-      <div style={{ fontWeight: 800, color: 'var(--accent)', fontSize: '14px', marginRight: '6px' }}>{t('sgd')} {item.isVirtual ? '5.00' : item.price_sgd}</div>
+      <div style={{ textAlign: 'right', marginRight: '6px' }}>
+        <div style={{ fontWeight: 800, color: 'var(--accent)', fontSize: '14px' }}>
+          {t('sgd')} {item.isVirtual ? '5.00' : item.price_sgd}
+        </div>
+        {!item.isVirtual && resellerDiscount && calculateDiscount(item.price_sgd) > 0 && (
+          <div style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>
+            -{t('sgd')} {calculateDiscount(item.price_sgd).toFixed(2)}
+          </div>
+        )}
+      </div>
       <button onClick={() => removeFromCart(item.cartId)} style={{ background: 'rgba(255,59,48,0.15)', border: '1px solid rgba(255,59,48,0.3)', borderRadius: '8px', color: '#ff3b30', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+    </div>
+  );
+
+  // ── Referral Code Field ────────────────────────────────────────────────────
+  const ReferralField = () => (
+    <div style={{ margin: '16px 0' }}>
+      <div style={{ fontSize: '13px', fontWeight: 600, color: '#b0c4e8', marginBottom: '8px' }}>
+        Referral / Promo Code
+        <span style={{ fontWeight: 400, color: '#6b7fa3', marginLeft: '6px', fontSize: '12px' }}>(optional)</span>
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <input
+          style={{
+            flex: 1, background: 'rgba(255,255,255,0.05)',
+            border: `1px solid ${resellerDiscount ? 'rgba(52,211,153,0.5)' : codeError ? 'rgba(248,113,113,0.5)' : 'rgba(255,255,255,0.15)'}`,
+            borderRadius: '8px', padding: '10px 14px', color: '#e8f0fe',
+            fontSize: '13px', fontFamily: "'Courier New', monospace",
+            letterSpacing: '1px', outline: 'none', textTransform: 'uppercase',
+          }}
+          placeholder="e.g. SG-JOHN-00001"
+          value={resellerCode}
+          onChange={e => {
+            setResellerCode(e.target.value.toUpperCase());
+            setResellerDiscount(null);
+            setCodeError('');
+          }}
+          onBlur={() => validateCode(resellerCode)}
+        />
+        <button
+          type="button"
+          onClick={() => validateCode(resellerCode)}
+          disabled={codeValidating || !resellerCode}
+          style={{
+            padding: '10px 16px', borderRadius: '8px',
+            background: 'rgba(0,200,200,0.15)', color: '#00c8c8',
+            border: '1px solid rgba(0,200,200,0.3)', fontSize: '13px',
+            fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+            opacity: (!resellerCode || codeValidating) ? 0.4 : 1,
+          }}
+        >
+          {codeValidating ? '…' : 'Apply'}
+        </button>
+      </div>
+      {resellerDiscount && (
+        <div style={{ marginTop: '8px', fontSize: '13px', color: '#34d399', fontWeight: 500 }}>
+          ✓ {resellerDiscount.message}
+        </div>
+      )}
+      {codeError && (
+        <div style={{ marginTop: '8px', fontSize: '13px', color: '#f87171' }}>
+          ✗ {codeError}
+        </div>
+      )}
     </div>
   );
 
@@ -340,9 +535,28 @@ export default function Checkout() {
               ) : (
                 <>
                   {cart.map(item => <CartItemRow key={item.cartId} item={item} />)}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '14px', marginTop: '4px', marginBottom: '24px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '15px' }}>{t('checkout_total')}</span>
-                    <span style={{ fontWeight: 800, color: 'var(--accent)', fontSize: '20px' }}>{t('sgd')} {cartTotal.toFixed(2)}</span>
+
+                  {/* ── Referral code field ── */}
+                  <ReferralField />
+
+                  {/* Totals */}
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '14px', marginTop: '4px', marginBottom: '24px' }}>
+                    {totalDiscount > 0 && (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '13px', color: 'var(--muted)' }}>Subtotal</span>
+                          <span style={{ fontSize: '13px' }}>{t('sgd')} {cartSubtotal.toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '13px', color: '#34d399' }}>Discount ({resellerCode})</span>
+                          <span style={{ fontSize: '13px', color: '#34d399', fontWeight: 600 }}>-{t('sgd')} {totalDiscount.toFixed(2)}</span>
+                        </div>
+                      </>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: '15px' }}>{t('checkout_total')}</span>
+                      <span style={{ fontWeight: 800, color: 'var(--accent)', fontSize: '20px' }}>{t('sgd')} {cartTotal.toFixed(2)}</span>
+                    </div>
                   </div>
                 </>
               )}
@@ -362,6 +576,11 @@ export default function Checkout() {
               <h2 style={{ marginBottom: '6px', fontWeight: 800 }}>{t('checkout_title')}</h2>
               <p style={{ color: 'var(--muted)', fontSize: '13px', marginBottom: '24px' }}>
                 {t('checkout_total')}: <strong style={{ color: 'var(--accent)' }}>{t('sgd')} {cartTotal.toFixed(2)}</strong>
+                {totalDiscount > 0 && (
+                  <span style={{ color: '#34d399', fontSize: '12px', marginLeft: '8px' }}>
+                    (saving {t('sgd')} {totalDiscount.toFixed(2)})
+                  </span>
+                )}
               </p>
 
               {error && (

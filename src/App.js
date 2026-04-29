@@ -3,7 +3,7 @@ import Purchases from './pages/Purchases';
 import FindMyOrder from './pages/FindMyOrder';
 import SavedItineraries from './pages/SavedItineraries';
 import TermsAndConditions from './pages/TermsAndConditions';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Plans from './pages/Plans';
@@ -15,8 +15,26 @@ import OrderConfirmation from './pages/OrderConfirmation';
 import LoginSuccess from './pages/LoginSuccess';
 import Footer from './components/Footer';
 import Wallet from './pages/Wallet';
+import Admin from './pages/Admin';
 
 function App() {
+
+  // Capture ?ref= reseller code on any page load — stores for 30 days
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      localStorage.setItem('esimconnect_ref', JSON.stringify({
+        code:    ref.toUpperCase(),
+        expires: Date.now() + 30 * 24 * 60 * 60 * 1000,
+      }));
+      // Clean ?ref= from URL without triggering a reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('ref');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -34,6 +52,7 @@ function App() {
         <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="/login-success" element={<LoginSuccess />} />
         <Route path="/wallet" element={<Wallet />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Footer />
