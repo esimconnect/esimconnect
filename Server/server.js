@@ -930,6 +930,50 @@ app.post('/order/complete', requireAuth, async (req, res) => {
   }
 });
 
+// GET /admin/referral-stats — all users with USR- codes + credit earned
+app.get('/admin/referral-stats', requireAdmin, async (req, res) => {
+  try {
+    // Get all profiles that have a referral_code
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, referral_code, referral_credit_earned')
+      .not('referral_code', 'is', null)
+      .order('referral_credit_earned', { ascending: false });
+
+    if (error) throw error;
+
+    // For each referrer, count how many profiles have referred_by = their code
+    const codes = profiles.map(p => p.referral_code);
+    const { data: referred } = await supabase
+      .from('profiles')
+      .select('referred_by')
+      .in('referred_by', codes.length ? codes : ['__none__']);
+
+    // Count referrals per code
+    const countMap = {};
+    (referred || []).forEach(r => {
+      countMap[r.referred_by] = (countMap[r.referred_by] || 0) + 1;
+    });
+
+    // Get emails from auth.users via admin endpoint
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const emailMap = {};
+    (authUsers?.users || []).forEach(u => { emailMap[u.id] = u.email; });
+
+    const result = profiles.map(p => ({
+      referral_code:          p.referral_code,
+      full_name:              p.full_name,
+      email:                  emailMap[p.id] || '—',
+      referred_count:         countMap[p.referral_code] || 0,
+      referral_credit_earned: p.referral_credit_earned || 0,
+    }));
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── START SERVER ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`esimconnect backend running on port ${PORT}`);

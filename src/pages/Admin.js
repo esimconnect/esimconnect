@@ -490,6 +490,29 @@ function ResellersTab() {
     notes: '', user_id: '', is_active: true,
   };
   const [form, setForm] = useState(blankForm);
+  const [emailLookup, setEmailLookup] = useState('');
+  const [emailLookupStatus, setEmailLookupStatus] = useState(''); // '', 'found', 'not_found', 'searching'
+
+  const lookupUserByEmail = async () => {
+    if (!emailLookup.trim()) return;
+    setEmailLookupStatus('searching');
+    try {
+      const token = await getToken();
+      const res = await fetch(`${BACKEND}/admin/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const users = await res.json();
+      const match = users.find(u => (u.email || '').toLowerCase() === emailLookup.trim().toLowerCase());
+      if (match) {
+        setForm(p => ({ ...p, user_id: match.id }));
+        setEmailLookupStatus('found');
+      } else {
+        setEmailLookupStatus('not_found');
+      }
+    } catch (err) {
+      setEmailLookupStatus('not_found');
+    }
+  };
 
   const load = useCallback(() => {
     adminFetch('/admin/resellers')
@@ -633,10 +656,41 @@ function ResellersTab() {
                 onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} />
             </div>
             <div className={styles.formGroup}>
-              <label>Link to User Account (user_id, optional)</label>
-              <input className={styles.formInput} value={form.user_id}
+              <label>Link to User Account — lookup by email</label>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                <input
+                  className={styles.formInput}
+                  value={emailLookup}
+                  onChange={e => { setEmailLookup(e.target.value); setEmailLookupStatus(''); }}
+                  placeholder="Enter reseller's account email…"
+                  style={{ flex: 1, marginBottom: 0 }}
+                />
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  onClick={lookupUserByEmail}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {emailLookupStatus === 'searching' ? 'Searching…' : 'Look Up'}
+                </button>
+              </div>
+              {emailLookupStatus === 'found' && (
+                <div style={{ fontSize: '12px', color: '#4cd964', marginBottom: '6px' }}>
+                  ✓ User found — UUID auto-filled below
+                </div>
+              )}
+              {emailLookupStatus === 'not_found' && (
+                <div style={{ fontSize: '12px', color: '#ff5050', marginBottom: '6px' }}>
+                  ✗ No user found with that email
+                </div>
+              )}
+              <input
+                className={styles.formInput}
+                value={form.user_id}
                 onChange={e => setForm(p => ({ ...p, user_id: e.target.value }))}
-                placeholder="Paste their Supabase user UUID" />
+                placeholder="User UUID (auto-filled after lookup, or paste manually)"
+                style={{ fontFamily: 'monospace', fontSize: '12px' }}
+              />
             </div>
             <div className={`${styles.formGroup} ${styles.formGroupFull}`}>
               <label>Internal Notes</label>
@@ -721,14 +775,19 @@ function ResellersTab() {
 // RESELLER SALES TAB
 // ═══════════════════════════════════════════════════════════════
 function ResellerSalesTab() {
-  const [data, setData]       = useState({ orders: [], summary: [] });
-  const [loading, setLoading] = useState(true);
-  const [view, setView]       = useState('summary'); // 'summary' | 'orders'
+  const [data, setData]             = useState({ orders: [], summary: [] });
+  const [referralData, setReferralData] = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [view, setView]             = useState('summary'); // 'summary' | 'orders' | 'referrals'
 
   useEffect(() => {
-    adminFetch('/admin/reseller-sales')
-      .then(setData)
-      .catch(console.error)
+    Promise.all([
+      adminFetch('/admin/reseller-sales'),
+      adminFetch('/admin/referral-stats'),
+    ]).then(([sales, referrals]) => {
+      setData(sales);
+      setReferralData(referrals || []);
+    }).catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
@@ -757,8 +816,9 @@ function ResellerSalesTab() {
     <div>
       <div className={styles.tabHeader}>
         <div className={styles.filterRow}>
-          <button className={`${styles.filterBtn} ${view === 'summary' ? styles.filterBtnActive : ''}`} onClick={() => setView('summary')}>Summary</button>
-          <button className={`${styles.filterBtn} ${view === 'orders'  ? styles.filterBtnActive : ''}`} onClick={() => setView('orders')}>All Orders</button>
+          <button className={`${styles.filterBtn} ${view === 'summary'   ? styles.filterBtnActive : ''}`} onClick={() => setView('summary')}>Summary</button>
+          <button className={`${styles.filterBtn} ${view === 'orders'    ? styles.filterBtnActive : ''}`} onClick={() => setView('orders')}>All Orders</button>
+          <button className={`${styles.filterBtn} ${view === 'referrals' ? styles.filterBtnActive : ''}`} onClick={() => setView('referrals')}>USR- Referrals</button>
         </div>
         <div className={styles.actionRow}>
           <div className={styles.tabMeta}>
@@ -819,6 +879,39 @@ function ResellerSalesTab() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {view === 'referrals' && (
+        <div>
+          <div className={styles.tabMeta} style={{ marginBottom: '16px' }}>
+            User referral codes (USR- prefix) — SGD 2.00 wallet credit per first referred purchase
+          </div>
+          {referralData.length === 0 ? (
+            <div className={styles.emptyState}>No referral activity yet</div>
+          ) : (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Referral Code</th><th>User</th><th>Email</th>
+                    <th>Friends Referred</th><th>Credit Earned (SGD)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {referralData.map(r => (
+                    <tr key={r.referral_code}>
+                      <td><code className={styles.resellerCode}>{r.referral_code}</code></td>
+                      <td className={styles.cellPrimary}>{r.full_name || '—'}</td>
+                      <td className={styles.cellSub}>{r.email || '—'}</td>
+                      <td>{r.referred_count}</td>
+                      <td><strong className={styles.commissionAmt}>SGD {parseFloat(r.referral_credit_earned || 0).toFixed(2)}</strong></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
