@@ -1,6 +1,6 @@
 # esimconnect — Living Project Context
 Last updated: April 29, 2026
-Latest commit: 74239aa2
+Latest commit: c52a295d
 
 ---
 
@@ -13,8 +13,8 @@ Latest commit: 74239aa2
 ## Supabase
 - URL: https://emsovpcmdnuxrhbyvnvb.supabase.co
 - Account email: dlimyk@gmail.com
-- Existing tables: countries, esim_plans, esims, orders, profiles, push_subscriptions, resellers, saved_itineraries, usage_logs, users, voip_calls, waitlist, wallet_topups
-- RLS: profiles, wallet_topups, voip_calls, push_subscriptions, resellers all have RLS enabled
+- Existing tables: countries, esim_plans, esims, orders, profiles, push_subscriptions, resellers, saved_itineraries, usage_logs, users, voip_calls, waitlist, wallet_topups, corporates, corp_invites
+- RLS: profiles, wallet_topups, voip_calls, push_subscriptions, resellers, corporates, corp_invites all have RLS enabled
 - Currency: SGD primary, GST 9% applied at checkout
 
 ## Stripe
@@ -34,6 +34,7 @@ Latest commit: 74239aa2
 - Build command: npm run build
 - Output directory: build
 - Worker: claude-proxy.kairosventure-io.workers.dev (bridges frontend → Claude API + Airalo)
+- SPA fallback: public/_redirects — explicit route list → /index.html 200
 
 ## Render (Backend Hosting)
 - Service: esimconnect-backend
@@ -118,23 +119,26 @@ A travel tech platform for tourists and business travellers targeting:
 ---
 
 ## Pages & Routes (App.js)
-| Route                | Component           | Status       |
-|----------------------|---------------------|--------------|
-| /                    | Home                | Built        |
-| /plans               | Plans               | Built        |
-| /login               | Login               | Built        |
-| /register            | Register            | Built        |
-| /dashboard           | Dashboard           | Built        |
-| /checkout            | Checkout            | Built        |
-| /order-confirmation  | OrderConfirmation   | Built        |
-| /itinerary           | Itinerary           | Built        |
-| /purchases           | Purchases           | Built        |
-| /find-order          | FindMyOrder         | Built        |
-| /saved-itineraries   | SavedItineraries    | Built        |
-| /terms               | TermsAndConditions  | Built        |
-| /login-success       | LoginSuccess        | Built        |
-| /wallet              | Wallet              | Built        |
-| /admin               | Admin               | Built        |
+| Route                    | Component           | Status       |
+|--------------------------|---------------------|--------------|
+| /                        | Home                | Built        |
+| /plans                   | Plans               | Built        |
+| /login                   | Login               | Built        |
+| /register                | Register            | Built        |
+| /dashboard               | Dashboard           | Built        |
+| /checkout                | Checkout            | Built        |
+| /order-confirmation      | OrderConfirmation   | Built        |
+| /itinerary               | Itinerary           | Built        |
+| /purchases               | Purchases           | Built        |
+| /find-order              | FindMyOrder         | Built        |
+| /saved-itineraries       | SavedItineraries    | Built        |
+| /terms                   | TermsAndConditions  | Built        |
+| /login-success           | LoginSuccess        | Built        |
+| /wallet                  | Wallet              | Built        |
+| /admin                   | Admin               | Built        |
+| /corporate/register      | CorporateRegister   | Built        |
+| /corporate/dashboard     | CorporateDashboard  | Built        |
+| /corporate/invite/:token | CorporateInvite     | Built        |
 
 ---
 
@@ -153,8 +157,9 @@ validity_days, data_amount, price_sgd,
 order_code, iccid, qr_code, qr_url,
 customer_email, customer_name, session_id,
 status,           -- completed | pending | failed
-payment_method,   -- 'card' | 'wallet' | 'gifted'
+payment_method,   -- 'card' | 'wallet' | 'corp_wallet' | 'gifted'
 reseller_code,    -- e.g. SG-JOHN-00001 (nullable)
+referral_code,    -- e.g. USR-DAVID-00001 (nullable)
 discount_sgd,     -- discount applied at checkout (default 0)
 created_at
 
@@ -168,6 +173,12 @@ wallet_balance numeric(10,2) DEFAULT 0.00,
 preferred_reseller_code text,
 reseller_linked_at timestamptz,
 reseller_last_purchase_at timestamptz,
+referral_code text,           -- USR-NAME-00001 format
+referred_by text,             -- referral code of who referred this user
+referral_credit_earned numeric(10,2) DEFAULT 0.00,
+is_corporate boolean DEFAULT false,
+corp_id uuid REFERENCES corporates(id) ON DELETE SET NULL,
+corp_role text DEFAULT 'staff',  -- 'admin' | 'staff'
 created_at timestamptz DEFAULT now(),
 updated_at timestamptz DEFAULT now()
 
@@ -194,6 +205,29 @@ account_type text DEFAULT 'individual',
 created_at timestamptz DEFAULT now()
 
 Sequence: reseller_code_seq (global, padded to 5 digits)
+RLS: enabled — service role only
+
+### corporates
+id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+company_name text NOT NULL,
+company_country text NOT NULL,
+uen text,                          -- Singapore UEN (optional, SG only)
+contact_email text NOT NULL,
+wallet_balance numeric(10,2) DEFAULT 0.00,
+is_active boolean DEFAULT false,   -- false until manually approved
+approval_status text DEFAULT 'pending',  -- 'pending' | 'approved' | 'suspended'
+created_at timestamptz DEFAULT now()
+
+RLS: enabled — service role + corp member read own row
+
+### corp_invites
+id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+corp_id uuid REFERENCES corporates(id) ON DELETE CASCADE,
+email text NOT NULL,
+token text UNIQUE NOT NULL,        -- 48-char hex, crypto.randomBytes(24)
+accepted boolean DEFAULT false,
+created_at timestamptz DEFAULT now()
+
 RLS: enabled — service role only
 
 ### wallet_topups
@@ -229,6 +263,10 @@ user_id, destination, trip_data (jsonb), stage, selected_places (jsonb), created
 - users — legacy (profiles is active)
 - waitlist — waitlist signups
 
+### Sequences
+- reseller_code_seq — global reseller code sequence
+- referral_code_seq — global USR- referral code sequence
+
 ---
 
 ## Reseller System
@@ -258,6 +296,71 @@ user_id, destination, trip_data (jsonb), stage, selected_places (jsonb), created
 
 ---
 
+## User Referral System (USR- codes)
+
+### Code format
+USR-[FIRSTNAME]-[SEQUENCE] e.g. USR-DAVID-00001
+- Global sequence (referral_code_seq), padded to 5 digits
+- Generated on first visit to Dashboard Referral tab
+- Stored in profiles.referral_code
+
+### Attribution
+- Same ?ref= localStorage capture as reseller codes
+- On first purchase by referred user → SGD 2.00 wallet credit to referrer
+- No self-referral, first purchase only, push notification fires to referrer
+- Stored in profiles.referred_by + profiles.referral_credit_earned
+
+### Admin visibility
+- Admin → Reseller Sales → USR- Referrals tab
+
+---
+
+## Corporate Accounts System
+
+### Account Structure
+- **Corporate Master Account** — company admin, manages wallet, staff, exports
+- **Staff Sub-accounts** — invited via email token, purchases charged to corp wallet
+
+### Registration Flow
+1. Company visits /corporate/register
+2. Step 1: Company name, country, UEN (SG only, optional), contact email (work email required — free domains blocked)
+3. Step 2: Admin personal details + password
+4. Account created with is_active=false, approval_status='pending'
+5. Admin (davidlim@esimconnect.world) receives email notification
+6. Applicant receives 48hr review email
+7. Admin approves via Admin → Corporate tab → ✓ Approve
+8. Company receives approval email, account unlocks
+
+### Free Email Domain Block
+20+ domains blocked including: gmail, outlook, hotmail, yahoo, icloud, protonmail etc.
+Enforced on both frontend (CorporateRegister.js) and backend (server.js).
+
+### Approval Guards
+- is_active=false by default (wallet and corp checkout blocked until approved)
+- Duplicate contact_email check (server-side)
+- Duplicate user_id check (server-side)
+- Honeypot field (frontend bot trap)
+
+### Staff Invitation Flow
+1. Corp admin sends invite from /corporate/dashboard
+2. Backend creates corp_invites row with 48-char hex token
+3. Staff visits /corporate/invite/:token
+4. Staff registers → profile upgraded (is_corporate=true, corp_role='staff')
+5. Staff purchases → corp wallet deducted at checkout
+
+### Corporate Wallet
+- Deducted directly from corporates.wallet_balance at checkout (payment_method='corp_wallet')
+- Only visible to corp staff with approved corp (is_active=true, approval_status='approved')
+- Stripe top-up: POST /corporate/wallet/topup → PaymentIntent → webhook credits via increment_corp_wallet()
+- Stripe top-up UI: TBD (currently shows "contact us" note in dashboard)
+
+### Admin Controls
+- Admin → Corporate tab — two sections: ⏳ Awaiting Approval / Approved Accounts
+- Approve button → POST /admin/corporates/:id/approve → is_active=true + email to company
+- Suspend / Reactivate toggle for approved accounts
+
+---
+
 ## Admin Dashboard (/admin)
 
 ### Access
@@ -273,14 +376,15 @@ user_id, destination, trip_data (jsonb), stage, selected_places (jsonb), created
 | Wallet Top-ups | Stripe history — read only |
 | Usage Logs | Itinerary search logs — read only |
 | Resellers | Create/edit/deactivate, set commission + discount |
-| Reseller Sales | Attribution, commission owed, CSV export |
-| Analytics | Revenue by day/month, top countries, plans, payment split, YTD |
+| Reseller Sales | Attribution, commission owed, USR- referrals, CSV export |
+| Analytics | Revenue by day/month, top countries, plans, payment split (incl. corp_wallet), YTD |
+| Corporate | Pending approvals + approved accounts, Approve/Suspend/Reactivate |
 
 ---
 
 ## Push Notifications (PWA)
 - VAPID keys in Render + Cloudflare env vars
-- Triggers: order confirmed, wallet top-up, gifted plan
+- Triggers: order confirmed, wallet top-up, gifted plan, referral credit earned
 - User control: Dashboard notifications toggle
 - iOS: requires home screen install (16.4+)
 
@@ -301,11 +405,17 @@ Logged in:  My Itinerary → Plans → Dashboard → Purchases → Saved Trips �
 - [x] i18n EN/中文/日本語/한국어
 - [x] MyItinerary — Claude AI chatbot + trip planner + Leaflet map
 - [x] Cloudflare Pages + Render deployment
-- [x] Admin dashboard (/admin) — 7 tabs
+- [x] Admin dashboard (/admin) — 8 tabs
 - [x] Reseller system — codes, attribution, commission, checkout integration
 - [x] ?ref= URL capture → localStorage
 - [x] ⚙️ Admin nav link (admin only)
 - [x] Analytics tab — revenue charts, top countries, plans, YTD
+- [x] Dashboard reseller portal tab
+- [x] User referral codes (USR- prefix, wallet credit reward)
+- [x] Corporate accounts — register, dashboard, invite, checkout, admin tab
+- [x] Corporate manual approval — 48hr review, pending banner, email notifications
+- [x] Work email enforcement for corporate (20+ free domains blocked)
+- [x] SPA route fallback (_redirects) for Cloudflare Pages
 - [x] Fixed Itinerary.js build error (unterminated string line 169)
 
 ---
@@ -313,21 +423,40 @@ Logged in:  My Itinerary → Plans → Dashboard → Purchases → Saved Trips �
 ## Remaining Work
 
 PHASE 3 — Growth ← CURRENT
-  [ ] Dashboard.js reseller portal tab
-  [ ] User referral codes (USR- prefix, wallet credit reward)
-  [ ] Purchases page — live eSIM status via Airalo API
+  [ ] Real email delivery — swap console.log sendEmail() in server.js for SendGrid or Resend
+  [ ] Corporate wallet Stripe top-up UI in CorporateDashboard Wallet tab
+  [ ] Corp Portal link in Navbar for corp admins (🏢)
+  [ ] Purchases page — live eSIM status via Airalo API (pending Airalo onboarding)
   [ ] Guest checkout improvements
   [ ] Multi-currency support
   [ ] Render upgrade to Starter $7/mo
 
 PHASE 4 — Expansion
   [ ] Rollover loyalty (unused data → wallet credit at plan expiry)
-  [ ] Plan tier grouping (cost/GB tiers)
-  [ ] Corporate accounts (master + sub-accounts, COD wallet)
+  [ ] Plan tier grouping — Country / Regional / Global tabs on Plans page
   [ ] Reseller mini-sites (/r/:slug)
   [ ] Wholesale pricing tier
   [ ] Self-serve reseller signup
   [ ] Twilio VoIP dialler
+  [ ] Corporate plan whitelist (corp admin selects allowed plans)
+  [ ] Corporate monthly statement CSV/PDF export
+
+---
+
+## Product Roadmap
+
+### Data Plan Categories (post-Airalo onboarding)
+Airalo provides fixed data+validity bundles — we cannot create custom plans.
+Our value-add is categorisation, branding, pricing markup, and account structure.
+
+| Category | Target User | Source |
+|---|---|---|
+| Standard — By Country | Tourists, short trips | Airalo single-country plans |
+| Regional | Frequent travellers, backpackers | Airalo regional plans (Asia, Europe, SEA etc.) |
+| Global | Business travellers | Airalo global plans |
+| Corporate Bundles | IT/travel managers | Airalo plans + our corporate account layer |
+
+Pay-As-You-Go is NOT available via Airalo — requires a different provider (future consideration).
 
 ---
 
@@ -343,9 +472,9 @@ PHASE 4 — Expansion
 | src/lib/pushNotifications.js | Web Push helpers |
 | src/pages/Home.js | Landing page |
 | src/pages/Plans.js | eSIM plan browser |
-| src/pages/Checkout.js | Checkout + reseller code field |
+| src/pages/Checkout.js | Checkout + reseller code + corp wallet |
 | src/pages/OrderConfirmation.js | Post-purchase |
-| src/pages/Dashboard.js | User dashboard + notifications |
+| src/pages/Dashboard.js | User dashboard — Overview / Referral / Reseller Portal tabs |
 | src/pages/Dashboard.module.css | Dashboard styles |
 | src/pages/Wallet.js | eWallet top-up |
 | src/pages/Wallet.module.css | Wallet styles |
@@ -353,8 +482,14 @@ PHASE 4 — Expansion
 | src/pages/Purchases.js | Order history |
 | src/pages/FindMyOrder.js | Guest order lookup |
 | src/pages/SavedItineraries.js | Saved itineraries |
-| src/pages/Admin.js | Admin dashboard — 7 tabs |
+| src/pages/Admin.js | Admin dashboard — 8 tabs |
 | src/pages/Admin.module.css | Admin styles |
+| src/pages/CorporateRegister.js | Corporate signup — 2-step + success screen |
+| src/pages/CorporateRegister.module.css | Corporate register styles |
+| src/pages/CorporateDashboard.js | Corporate admin dashboard |
+| src/pages/CorporateDashboard.module.css | Corporate dashboard styles |
+| src/pages/CorporateInvite.js | Staff invite acceptance |
+| src/pages/CorporateInvite.module.css | Invite styles |
 | src/components/Navbar.js | Nav + admin link |
 | src/components/Navbar.module.css | Navbar styles |
 | src/components/LanguageToggle.js | Language dropdown |
@@ -365,6 +500,7 @@ PHASE 4 — Expansion
 | src/styles/global.css | Global styles |
 | public/manifest.json | PWA manifest |
 | public/sw.js | Service worker + push handler |
+| public/_redirects | Cloudflare Pages SPA route fallback |
 | Server/server.js | Express backend — all endpoints |
 | Server/package.json | Backend deps (web-push) |
 | Server/.env | Backend env vars |
@@ -426,7 +562,48 @@ Files: Server/server.js, src/pages/Admin.js+css, src/pages/Checkout.js,
        src/pages/Itinerary.js, src/App.js, src/components/Navbar.js
 Commits: 6128c5f0, 479fec9a, 3f763221, 74239aa2
 
+### April 29, 2026 — Session 10 (Dashboard Reseller Tab + USR- Referral Codes)
+Completed:
+- Supabase: referral_code, referred_by, referral_credit_earned added to profiles; referral_code added to orders; referral_code_seq sequence; backfilled existing users (USR-DAVID-00001, USR-DAVID-00002)
+- Server/server.js: POST /referral/generate, GET /referral/my-stats, POST /order/complete (referral credit hook), GET /admin/referral-stats, /reseller/validate updated for USR- codes
+- Dashboard.js: tab bar (Overview / Referral / Reseller Portal), Referral tab (code, share link, copy button, stats, referred users), Reseller Portal tab (summary cards, share link, anonymised orders, read-only)
+- Admin.js: email lookup in Reseller creation (type email → Look Up → UUID auto-fills), USR- Referrals tab in Reseller Sales, Navbar added to Admin page
+- Fixed Server/.env (PORT + STRIPE_SECRET_KEY were merged, ADMIN_EMAIL was missing)
+- Referral logic: SGD 2.00 wallet credit on referred user's first purchase only, no self-referral, push notification fires to referrer
+
+Files: Server/server.js, Server/.env, src/pages/Dashboard.js, src/pages/Dashboard.module.css, src/pages/Admin.js
+Commits: 35dd3168, 20028670, 94a3bf5d, 425f85c5
+
+### April 29, 2026 — Session 11 (Corporate Accounts)
+Completed:
+- Supabase: corporates table (company_name, company_country, uen, contact_email, wallet_balance, is_active, approval_status), corp_invites table, profiles columns (is_corporate, corp_id, corp_role), referral_code_seq
+- Server/server.js: 9 new corporate endpoints:
+  POST /corporate/register (with free email block, duplicate guards, pending approval default)
+  POST /corporate/invite
+  GET /corporate/invite/:token
+  POST /corporate/invite/accept
+  GET /corporate/dashboard
+  POST /corporate/wallet/topup (Stripe PaymentIntent)
+  GET /admin/corporates
+  PATCH /admin/corporates/:id
+  POST /admin/corporates/:id/approve (+ approval email to company)
+- Webhook: corp_wallet_topup PaymentIntent type handled
+- CorporateRegister.js: 2-step form → success screen, country dropdown, SG UEN conditional, work email enforcement (20+ free domains blocked), honeypot bot trap, 48hr messaging
+- CorporateDashboard.js: sidebar nav, Overview/Staff/Orders/Wallet tabs, invite flow, CSV export, pending approval amber banner
+- CorporateInvite.js: token validation, staff registration, corp profile upgrade
+- Admin.js: 8th Corporate tab — pending (amber) + approved sections, ✓ Approve button, Suspend/Reactivate
+- Checkout.js: corp wallet payment option (staff only, approved corps only, corp_wallet payment_method)
+- App.js: 3 new corporate routes
+- public/_redirects: SPA fallback for all routes (Cloudflare Pages)
+- Manual approval flow: is_active=false on register → admin email notification → applicant 48hr email → admin approves → company approval email
+
+Files: Server/server.js, src/App.js, src/pages/Admin.js, src/pages/Checkout.js,
+       src/pages/CorporateRegister.js+css, src/pages/CorporateDashboard.js+css,
+       src/pages/CorporateInvite.js+css, public/_redirects
+Commits: ab59bade, df6dd779, 240d7089, c52a295d
+
 Next session should:
-- Dashboard.js reseller portal tab
-- Test admin dashboard with live data
-- User referral codes (USR- prefix)
+- Wire up real email delivery (SendGrid or Resend) to replace console.log sendEmail() in server.js
+- Build Stripe top-up UI in CorporateDashboard Wallet tab
+- Add 🏢 Corp Portal link to Navbar for corp admins
+- End-to-end test: register → pending → approve → invite staff → corp wallet checkout
