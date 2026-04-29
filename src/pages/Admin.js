@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import styles from './Admin.module.css';
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
-const TABS = ['Orders', 'Users', 'Wallet Top-ups', 'Usage Logs', 'Resellers', 'Reseller Sales'];
+const TABS = ['Orders', 'Users', 'Wallet Top-ups', 'Usage Logs', 'Resellers', 'Reseller Sales', 'Analytics'];
 
 // ── Country list for reseller form ───────────────────────────────────────────
 const COUNTRIES = [
@@ -826,6 +826,287 @@ function ResellerSalesTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// ANALYTICS TAB
+// ═══════════════════════════════════════════════════════════════
+function AnalyticsTab() {
+  const [orders, setOrders]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod]   = useState('month'); // 'today' | 'week' | 'month' | 'year' | 'all'
+
+  useEffect(() => {
+    adminFetch('/admin/orders')
+      .then(data => setOrders(data.filter(o => o.status === 'completed')))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  // ── Period filter ────────────────────────────────────────────
+  const filterByPeriod = (data) => {
+    const now = new Date();
+    return data.filter(o => {
+      const d = new Date(o.created_at);
+      if (period === 'today') return d.toDateString() === now.toDateString();
+      if (period === 'week')  { const w = new Date(now); w.setDate(now.getDate() - 7);  return d >= w; }
+      if (period === 'month') { const m = new Date(now); m.setDate(now.getDate() - 30); return d >= m; }
+      if (period === 'year')  { const y = new Date(now); y.setFullYear(now.getFullYear() - 1); return d >= y; }
+      return true; // 'all'
+    });
+  };
+
+  const filtered = filterByPeriod(orders);
+
+  // ── Key metrics ──────────────────────────────────────────────
+  const totalRevenue    = filtered.reduce((s, o) => s + parseFloat(o.price_sgd || 0), 0);
+  const totalDiscount   = filtered.reduce((s, o) => s + parseFloat(o.discount_sgd || 0), 0);
+  const netRevenue      = totalRevenue - totalDiscount;
+  const resellerOrders  = filtered.filter(o => o.reseller_code);
+  const resellerRevenue = resellerOrders.reduce((s, o) => s + parseFloat(o.price_sgd || 0), 0);
+  const walletOrders    = filtered.filter(o => o.payment_method === 'wallet').length;
+  const cardOrders      = filtered.filter(o => o.payment_method === 'card').length;
+
+  // ── Revenue by day (last 30 days) ────────────────────────────
+  const last30 = [...Array(30)].map((_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (29 - i));
+    const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const dayOrders = orders.filter(o => new Date(o.created_at).toDateString() === d.toDateString());
+    const rev = dayOrders.reduce((s, o) => s + parseFloat(o.price_sgd || 0), 0);
+    return { label, rev, count: dayOrders.length };
+  });
+  const maxRev = Math.max(...last30.map(d => d.rev), 1);
+
+  // ── Revenue by month (last 12) ───────────────────────────────
+  const last12 = [...Array(12)].map((_, i) => {
+    const d = new Date(); d.setMonth(d.getMonth() - (11 - i));
+    const y = d.getFullYear(); const m = d.getMonth();
+    const label = d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+    const monthOrders = orders.filter(o => {
+      const od = new Date(o.created_at);
+      return od.getFullYear() === y && od.getMonth() === m;
+    });
+    const rev = monthOrders.reduce((s, o) => s + parseFloat(o.price_sgd || 0), 0);
+    return { label, rev, count: monthOrders.length };
+  });
+  const maxMonthRev = Math.max(...last12.map(d => d.rev), 1);
+
+  // ── By country ───────────────────────────────────────────────
+  const byCountry = {};
+  filtered.forEach(o => {
+    const c = o.country_name || 'Unknown';
+    if (!byCountry[c]) byCountry[c] = { revenue: 0, orders: 0 };
+    byCountry[c].revenue += parseFloat(o.price_sgd || 0);
+    byCountry[c].orders++;
+  });
+  const topCountries = Object.entries(byCountry)
+    .sort((a, b) => b[1].revenue - a[1].revenue)
+    .slice(0, 10);
+  const maxCountryRev = Math.max(...topCountries.map(([, v]) => v.revenue), 1);
+
+  // ── By plan ──────────────────────────────────────────────────
+  const byPlan = {};
+  filtered.forEach(o => {
+    const p = o.package_title || 'Unknown';
+    if (!byPlan[p]) byPlan[p] = { revenue: 0, orders: 0 };
+    byPlan[p].revenue += parseFloat(o.price_sgd || 0);
+    byPlan[p].orders++;
+  });
+  const topPlans = Object.entries(byPlan)
+    .sort((a, b) => b[1].orders - a[1].orders)
+    .slice(0, 8);
+
+  // ── YTD comparison ───────────────────────────────────────────
+  const thisYear  = new Date().getFullYear();
+  const ytdRev    = orders.filter(o => new Date(o.created_at).getFullYear() === thisYear)
+                          .reduce((s, o) => s + parseFloat(o.price_sgd || 0), 0);
+  const lastYtdRev = orders.filter(o => new Date(o.created_at).getFullYear() === thisYear - 1)
+                           .reduce((s, o) => s + parseFloat(o.price_sgd || 0), 0);
+
+  const exportCSV = () => {
+    const rows = [
+      ['Date', 'Order Code', 'Customer', 'Country', 'Plan', 'Price SGD', 'Discount SGD', 'Net SGD', 'Payment', 'Reseller Code'],
+      ...filtered.map(o => [
+        new Date(o.created_at).toLocaleDateString(),
+        o.order_code, o.customer_name || o.guest_email || '',
+        o.country_name, o.package_title,
+        parseFloat(o.price_sgd || 0).toFixed(2),
+        parseFloat(o.discount_sgd || 0).toFixed(2),
+        (parseFloat(o.price_sgd || 0) - parseFloat(o.discount_sgd || 0)).toFixed(2),
+        o.payment_method, o.reseller_code || '',
+      ]),
+    ];
+    const csv  = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `esimconnect-revenue-${period}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  if (loading) return <div className={styles.loading}>Loading analytics…</div>;
+
+  return (
+    <div>
+      {/* Period selector + export */}
+      <div className={styles.tabHeader}>
+        <div className={styles.filterRow}>
+          {[
+            { key: 'today', label: 'Today' },
+            { key: 'week',  label: '7 Days' },
+            { key: 'month', label: '30 Days' },
+            { key: 'year',  label: '12 Months' },
+            { key: 'all',   label: 'All Time' },
+          ].map(p => (
+            <button key={p.key}
+              className={`${styles.filterBtn} ${period === p.key ? styles.filterBtnActive : ''}`}
+              onClick={() => setPeriod(p.key)}
+            >{p.label}</button>
+          ))}
+        </div>
+        <button className={styles.btnSecondary} onClick={exportCSV}>Export CSV</button>
+      </div>
+
+      {/* ── Key metric cards ── */}
+      <div className={styles.analyticsGrid}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricValue}>SGD {netRevenue.toFixed(2)}</div>
+          <div className={styles.metricLabel}>Net Revenue</div>
+          <div className={styles.metricSub}>Gross {totalRevenue.toFixed(2)} − Disc {totalDiscount.toFixed(2)}</div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricValue}>{filtered.length}</div>
+          <div className={styles.metricLabel}>Completed Orders</div>
+          <div className={styles.metricSub}>
+            Avg SGD {filtered.length ? (netRevenue / filtered.length).toFixed(2) : '0.00'} per order
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricValue}>{resellerOrders.length}</div>
+          <div className={styles.metricLabel}>Reseller Orders</div>
+          <div className={styles.metricSub}>
+            {filtered.length ? ((resellerOrders.length / filtered.length) * 100).toFixed(0) : 0}% of total · SGD {resellerRevenue.toFixed(2)}
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricValue}>SGD {ytdRev.toFixed(2)}</div>
+          <div className={styles.metricLabel}>Year to Date {thisYear}</div>
+          <div className={styles.metricSub}>
+            {lastYtdRev > 0
+              ? `vs SGD ${lastYtdRev.toFixed(2)} in ${thisYear - 1}`
+              : `No data for ${thisYear - 1}`}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Revenue by day (bar chart) ── */}
+      <div className={styles.chartSection}>
+        <div className={styles.chartTitle}>Daily Revenue — Last 30 Days</div>
+        <div className={styles.barChart}>
+          {last30.map((d, i) => (
+            <div key={i} className={styles.barCol} title={`${d.label}: SGD ${d.rev.toFixed(2)} (${d.count} orders)`}>
+              <div className={styles.barFill} style={{ height: `${(d.rev / maxRev) * 100}%`, opacity: d.rev > 0 ? 1 : 0.15 }} />
+              {i % 5 === 0 && <div className={styles.barLabel}>{d.label}</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Revenue by month ── */}
+      <div className={styles.chartSection}>
+        <div className={styles.chartTitle}>Monthly Revenue — Last 12 Months</div>
+        <div className={styles.barChart} style={{ height: '140px' }}>
+          {last12.map((d, i) => (
+            <div key={i} className={styles.barCol} title={`${d.label}: SGD ${d.rev.toFixed(2)} (${d.count} orders)`}>
+              <div className={styles.barFill} style={{ height: `${(d.rev / maxMonthRev) * 100}%`, background: 'rgba(124,58,237,0.7)', opacity: d.rev > 0 ? 1 : 0.15 }} />
+              <div className={styles.barLabel}>{d.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bottom two columns ── */}
+      <div className={styles.analyticsBottom}>
+
+        {/* Top countries */}
+        <div className={styles.chartSection} style={{ flex: 1 }}>
+          <div className={styles.chartTitle}>Revenue by Country (Top 10)</div>
+          {topCountries.length === 0 && <div className={styles.emptyState}>No data for this period</div>}
+          {topCountries.map(([country, v], i) => (
+            <div key={country} className={styles.rankRow}>
+              <div className={styles.rankNum}>{i + 1}</div>
+              <div className={styles.rankName}>{country}</div>
+              <div className={styles.rankBar}>
+                <div className={styles.rankBarFill} style={{ width: `${(v.revenue / maxCountryRev) * 100}%` }} />
+              </div>
+              <div className={styles.rankValue}>
+                <div>SGD {v.revenue.toFixed(2)}</div>
+                <div className={styles.rankSub}>{v.orders} order{v.orders !== 1 ? 's' : ''}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Top plans + payment split */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+          {/* Payment method split */}
+          <div className={styles.chartSection}>
+            <div className={styles.chartTitle}>Payment Method Split</div>
+            <div className={styles.splitRow}>
+              <div className={styles.splitItem}>
+                <div className={styles.splitVal} style={{ color: '#00c8c8' }}>{cardOrders}</div>
+                <div className={styles.splitLabel}>Card</div>
+                <div className={styles.splitPct}>
+                  {filtered.length ? ((cardOrders / filtered.length) * 100).toFixed(0) : 0}%
+                </div>
+              </div>
+              <div className={styles.splitDivider} />
+              <div className={styles.splitItem}>
+                <div className={styles.splitVal} style={{ color: '#a78bfa' }}>{walletOrders}</div>
+                <div className={styles.splitLabel}>eWallet</div>
+                <div className={styles.splitPct}>
+                  {filtered.length ? ((walletOrders / filtered.length) * 100).toFixed(0) : 0}%
+                </div>
+              </div>
+              <div className={styles.splitDivider} />
+              <div className={styles.splitItem}>
+                <div className={styles.splitVal} style={{ color: '#34d399' }}>{resellerOrders.length}</div>
+                <div className={styles.splitLabel}>Via Reseller</div>
+                <div className={styles.splitPct}>
+                  {filtered.length ? ((resellerOrders.length / filtered.length) * 100).toFixed(0) : 0}%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top plans */}
+          <div className={styles.chartSection}>
+            <div className={styles.chartTitle}>Best Selling Plans</div>
+            {topPlans.length === 0 && <div className={styles.emptyState}>No data for this period</div>}
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr><th>Plan</th><th>Orders</th><th>Revenue</th></tr>
+                </thead>
+                <tbody>
+                  {topPlans.map(([plan, v]) => (
+                    <tr key={plan}>
+                      <td className={styles.cellPrimary} style={{ fontSize: '12px' }}>{plan}</td>
+                      <td>{v.orders}</td>
+                      <td>SGD {v.revenue.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN ADMIN PAGE
 // ═══════════════════════════════════════════════════════════════
 export default function Admin() {
@@ -894,6 +1175,7 @@ export default function Admin() {
         {tab === 3 && <UsageTab />}
         {tab === 4 && <ResellersTab />}
         {tab === 5 && <ResellerSalesTab />}
+        {tab === 6 && <AnalyticsTab />}
       </div>
     </div>
   );

@@ -566,3 +566,213 @@ textarea.formInput { resize: vertical; font-family: inherit; }
 @media (max-width: 600px) {
   .statsBar { grid-template-columns: 1fr; }
 }
+
+/* ── Analytics ───────────────────────────────────────────────── */
+.analyticsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.metricCard {
+  background: #111e35;
+  border-radius: 10px;
+  padding: 20px;
+  border-left: 3px solid #00c8c8;
+}
+
+.metricValue {
+  font-size: 24px;
+  font-weight: 800;
+  color: #e8f0fe;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.metricLabel {
+  font-size: 12px;
+  color: #6b7fa3;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 4px;
+}
+
+.metricSub {
+  font-size: 11px;
+  color: #4a6080;
+}
+
+.chartSection {
+  background: #111e35;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.chartTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7fa3;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 16px;
+}
+
+/* ── Bar chart ───────────────────────────────────────────────── */
+.barChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 100px;
+  padding-bottom: 20px;
+  position: relative;
+}
+
+.barCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  position: relative;
+  cursor: default;
+}
+
+.barFill {
+  width: 100%;
+  background: rgba(0,200,200,0.6);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: background 0.2s;
+}
+
+.barCol:hover .barFill { background: rgba(0,200,200,0.9); }
+
+.barLabel {
+  position: absolute;
+  bottom: -18px;
+  font-size: 9px;
+  color: #4a6080;
+  white-space: nowrap;
+  transform: rotate(-30deg);
+  transform-origin: top left;
+}
+
+/* ── Rank rows (country) ─────────────────────────────────────── */
+.rankRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.rankNum {
+  font-size: 11px;
+  color: #4a6080;
+  width: 16px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.rankName {
+  font-size: 13px;
+  color: #b0c4e8;
+  width: 110px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rankBar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.rankBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #00c8c8, #1a6aff);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.rankValue {
+  font-size: 12px;
+  color: #e8f0fe;
+  font-weight: 600;
+  text-align: right;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.rankSub {
+  font-size: 11px;
+  color: #4a6080;
+  font-weight: 400;
+}
+
+/* ── Payment split ───────────────────────────────────────────── */
+.splitRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 12px 0;
+}
+
+.splitItem {
+  text-align: center;
+}
+
+.splitVal {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.splitLabel {
+  font-size: 12px;
+  color: #6b7fa3;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.splitPct {
+  font-size: 11px;
+  color: #4a6080;
+  margin-top: 2px;
+}
+
+.splitDivider {
+  width: 1px;
+  height: 50px;
+  background: rgba(255,255,255,0.08);
+}
+
+/* ── Bottom layout ───────────────────────────────────────────── */
+.analyticsBottom {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 24px;
+  color: #4a6080;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .analyticsGrid  { grid-template-columns: 1fr 1fr; }
+  .analyticsBottom { flex-direction: column; }
+}
+
+@media (max-width: 600px) {
+  .analyticsGrid { grid-template-columns: 1fr; }
+}
