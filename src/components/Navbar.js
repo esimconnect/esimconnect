@@ -5,6 +5,8 @@ import { useLang } from '../lib/i18n';
 import LanguageToggle from './LanguageToggle';
 import styles from './Navbar.module.css';
 
+const ADMIN_EMAIL = process.env.REACT_APP_ADMIN_EMAIL;
+
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [plansOpen, setPlansOpen] = useState(false);
@@ -30,6 +32,7 @@ export default function Navbar() {
   };
 
   const isActive = (path) => location.pathname === path ? styles.ctaBtn : '';
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   const PlansDropdown = () => (
     <div style={{ position: 'relative' }}
@@ -64,7 +67,7 @@ export default function Navbar() {
     <nav className={styles.nav}>
       <div className={styles.inner}>
 
-        {/* Logo: ~30% larger, eSimconnect on one line, unboxed 5G orbiting */}
+        {/* Logo */}
         <Link to="/" className={styles.logo} onClick={() => setMenuOpen(false)} style={{ overflow: 'visible' }}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 96" role="img"
             style={{ height: '88px', width: 'auto', display: 'block', filter: 'drop-shadow(0 4px 14px rgba(26,106,255,0.5))' }}>
@@ -129,16 +132,15 @@ export default function Navbar() {
                 style={{ textShadow: '0 0 6px rgba(0,200,255,0.8)' }}>5G</text>
             </g>
 
-            {/* Brand name: eSIMconnect on one line */}
+            {/* Brand name */}
             <text x="104" y="55" fontFamily="Arial, Helvetica, sans-serif" fontSize="24" fontWeight="700"
               fill="#ffffff" letterSpacing="-0.5">
               <tspan fontWeight="300" fill="#00c8ff">e</tspan>SIM<tspan fontWeight="300" fill="#00c8ff">connect</tspan>
             </text>
-
           </svg>
         </Link>
 
-        {/* Nav links - MyItinerary first */}
+        {/* Nav links */}
         <div className={`${styles.links} ${menuOpen ? styles.open : ''}`}>
           {user ? (
             <>
@@ -158,6 +160,24 @@ export default function Navbar() {
               <Link to="/terms" className={isActive('/terms')} onClick={() => setMenuOpen(false)}>
                 T&C
               </Link>
+              {/* Admin link — only visible to admin account */}
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className={isActive('/admin')}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    color: '#00c8c8',
+                    fontWeight: 700,
+                    border: '1px solid rgba(0,200,200,0.3)',
+                    borderRadius: '8px',
+                    padding: '4px 10px',
+                    fontSize: '13px',
+                  }}
+                >
+                  ⚙️ Admin
+                </Link>
+              )}
               <button className={styles.signOutBtn} onClick={handleSignOut}>
                 {t('nav_logout')}
               </button>
