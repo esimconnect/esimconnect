@@ -566,8 +566,24 @@ app.post('/reseller/validate', async (req, res) => {
 
     // Detect code type by prefix
     if (code.toUpperCase().startsWith('USR-')) {
-      // User referral code — Phase 3, not yet implemented
-      return res.json({ valid: false, message: 'User referral codes coming soon' });
+      // User referral code — look up in profiles
+      const { data: referrer, error: refError } = await supabase
+        .from('profiles')
+        .select('id, full_name, referral_code')
+        .eq('referral_code', code.toUpperCase())
+        .single();
+      if (refError || !referrer) {
+        return res.json({ valid: false, message: 'Referral code not found' });
+      }
+      const firstName = (referrer.full_name || 'A friend').split(' ')[0];
+      return res.json({
+        valid:          true,
+        code:           referrer.referral_code,
+        discount_value: 0,
+        discount_type:  'percent',
+        referrer_id:    referrer.id,
+        message:        `Referral code applied — referred by ${firstName}`,
+      });
     }
 
     // Reseller code lookup
@@ -695,6 +711,220 @@ app.get('/reseller/my-stats', requireReseller, async (req, res) => {
       },
       orders: enriched,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// REFERRAL — user USR- codes
+// ═══════════════════════════════════════════════════════════════
+
+// Middleware: verify any logged-in user
+async function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'No auth header' });
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return res.status(401).json({ error: 'Invalid token' });
+  req.authUser = user;
+  next();
+}
+
+// POST /referral/generate — generate a USR- code for users who don't have one
+app.post('/referral/generate', requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+
+    // Check if already has one
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('referral_code, full_name')
+      .eq('id', userId)
+      .single();
+
+    if (profile?.referral_code) {
+      return res.json({ referral_code: profile.referral_code });
+    }
+
+    // Generate new code using DB sequence
+    const { data: seqData, error: seqError } = await supabase
+      .rpc('nextval', { sequence_name: 'referral_code_seq' })
+      .single();
+
+    // Fallback: use timestamp-based suffix if RPC not available
+    const seq = seqData
+      ? String(seqData).padStart(5, '0')
+      : String(Date.now()).slice(-5);
+
+    const firstName = ((profile?.full_name || 'USER').split(' ')[0])
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 8);
+
+    const referral_code = `USR-${firstName}-${seq}`;
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ referral_code })
+      .eq('id', userId);
+
+    if (updateError) throw updateError;
+
+    res.json({ referral_code });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /referral/my-stats — logged-in user's referral summary
+app.get('/referral/my-stats', requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+
+    // Get user's referral code + credit earned
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('referral_code, referral_credit_earned, full_name')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) throw profileError;
+
+    const referral_code = profile?.referral_code || null;
+
+    if (!referral_code) {
+      return res.json({
+        referral_code: null,
+        share_url: null,
+        total_referrals: 0,
+        credit_earned_sgd: '0.00',
+        referred_users: [],
+      });
+    }
+
+    // Get all completed orders that used this referral code
+    const { data: orders, error: ordersError } = await supabase
+      .from('orders')
+      .select('id, user_id, created_at, price_sgd, country_name, package_title')
+      .eq('referral_code', referral_code)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false });
+
+    if (ordersError) throw ordersError;
+
+    // Get profiles who were referred (referred_by = this code) — first purchase only
+    const { data: referredProfiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, created_at')
+      .eq('referred_by', referral_code);
+
+    // Anonymised list — first name only
+    const referred_users = (referredProfiles || []).map(p => ({
+      name: (p.full_name || 'User').split(' ')[0],
+      joined_at: p.created_at,
+    }));
+
+    res.json({
+      referral_code,
+      share_url: `https://esimconnect.world?ref=${referral_code}`,
+      total_referrals: referred_users.length,
+      credit_earned_sgd: parseFloat(profile.referral_credit_earned || 0).toFixed(2),
+      referred_users,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /referral/credit — called internally when an order with a USR- code completes
+// Awards SGD 2.00 wallet credit to the referrer on the referred user's FIRST purchase
+async function processReferralCredit(referralCode, buyerUserId) {
+  if (!referralCode || !referralCode.startsWith('USR-')) return;
+
+  try {
+    // Find the referrer
+    const { data: referrer, error: refError } = await supabase
+      .from('profiles')
+      .select('id, wallet_balance, referral_credit_earned')
+      .eq('referral_code', referralCode)
+      .single();
+
+    if (refError || !referrer) {
+      console.warn('Referral credit: referrer not found for code', referralCode);
+      return;
+    }
+
+    // Don't self-refer
+    if (referrer.id === buyerUserId) return;
+
+    // Only credit on the buyer's FIRST purchase
+    const { data: priorOrders } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('user_id', buyerUserId)
+      .eq('referral_code', referralCode)
+      .eq('status', 'completed');
+
+    // priorOrders includes the current order, so >1 means repeat purchase
+    if (priorOrders && priorOrders.length > 1) {
+      console.log('Referral credit: not first purchase, skipping');
+      return;
+    }
+
+    const REFERRAL_CREDIT_SGD = 2.00;
+    const newBalance = parseFloat(((referrer.wallet_balance || 0) + REFERRAL_CREDIT_SGD).toFixed(2));
+    const newCreditEarned = parseFloat(((referrer.referral_credit_earned || 0) + REFERRAL_CREDIT_SGD).toFixed(2));
+
+    await supabase
+      .from('profiles')
+      .update({
+        wallet_balance: newBalance,
+        referral_credit_earned: newCreditEarned,
+      })
+      .eq('id', referrer.id);
+
+    // Mark buyer's profile with referred_by if not already set
+    await supabase
+      .from('profiles')
+      .update({ referred_by: referralCode })
+      .eq('id', buyerUserId)
+      .is('referred_by', null);
+
+    // Push notification to referrer
+    await sendPushToUser(referrer.id, {
+      title: '🎉 Referral Reward!',
+      body: `SGD ${REFERRAL_CREDIT_SGD.toFixed(2)} added to your wallet — someone used your referral code!`,
+      url: '/dashboard',
+    });
+
+    console.log(`Referral credit: SGD ${REFERRAL_CREDIT_SGD} credited to ${referrer.id} for code ${referralCode}`);
+  } catch (err) {
+    console.error('processReferralCredit error:', err.message);
+  }
+}
+
+// POST /order/complete — call this from frontend after a successful order
+// to trigger referral credit processing
+app.post('/order/complete', requireAuth, async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    const userId = req.authUser.id;
+    if (!orderId) return res.status(400).json({ error: 'Missing orderId' });
+
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select('referral_code, status, user_id')
+      .eq('id', orderId)
+      .single();
+
+    if (error || !order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status !== 'completed') return res.json({ ok: true, credited: false });
+
+    // Process referral credit if USR- code was used
+    await processReferralCredit(order.referral_code, userId);
+
+    res.json({ ok: true, credited: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
