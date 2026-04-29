@@ -968,30 +968,128 @@ app.get('/admin/referral-stats', requireAdmin, async (req, res) => {
 // CORPORATE ENDPOINTS
 // ═══════════════════════════════════════════════════════════════
 
+// Free email domain block list
+const FREE_EMAIL_DOMAINS = [
+  'gmail.com','googlemail.com','outlook.com','hotmail.com','live.com',
+  'msn.com','yahoo.com','yahoo.co.uk','yahoo.com.sg','ymail.com',
+  'icloud.com','me.com','mac.com','protonmail.com','proton.me',
+  'aol.com','aim.com','zoho.com','mail.com','email.com',
+  'tutanota.com','tuta.io','gmx.com','gmx.net','fastmail.com','hey.com',
+];
+
+function isWorkEmail(email) {
+  const domain = (email || '').split('@')[1]?.toLowerCase();
+  return domain && !FREE_EMAIL_DOMAINS.includes(domain);
+}
+
+// Simple console email logger — swap for SendGrid/Resend in production
+async function sendEmail({ to, subject, text }) {
+  console.log(`[EMAIL] To: ${to}\nSubject: ${subject}\n${text}\n`);
+  // TODO: integrate SendGrid or Resend here
+}
+
 // POST /corporate/register — create corporates row + upgrade founding user
 app.post('/corporate/register', async (req, res) => {
-  const { company_name, uen, contact_email, user_id, full_name } = req.body;
-  if (!company_name || !contact_email || !user_id) {
-    return res.status(400).json({ error: 'company_name, contact_email and user_id are required' });
+  const { company_name, company_country, uen, contact_email, user_id, full_name } = req.body;
+
+  if (!company_name || !contact_email || !user_id || !company_country) {
+    return res.status(400).json({ error: 'company_name, company_country, contact_email and user_id are required' });
   }
+
+  // Block free email domains
+  if (!isWorkEmail(contact_email)) {
+    return res.status(400).json({ error: 'Please use a work email address. Free email providers (Gmail, Outlook etc.) are not accepted.' });
+  }
+
   try {
+    // Block duplicate contact_email
+    const { data: existingCorp } = await supabase
+      .from('corporates')
+      .select('id')
+      .eq('contact_email', contact_email.toLowerCase())
+      .maybeSingle();
+    if (existingCorp) {
+      return res.status(409).json({ error: 'A corporate account with this contact email already exists.' });
+    }
+
+    // Block user already linked to a corp
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('is_corporate')
+      .eq('id', user_id)
+      .maybeSingle();
+    if (existingProfile?.is_corporate) {
+      return res.status(409).json({ error: 'This account is already linked to a corporate account.' });
+    }
+
+    // Create corporates row — pending approval, inactive by default
     const { data: corp, error: corpErr } = await supabase
       .from('corporates')
-      .insert({ company_name, uen: uen || null, contact_email, is_active: true })
+      .insert({
+        company_name,
+        company_country,
+        uen: uen || null,
+        contact_email: contact_email.toLowerCase(),
+        is_active: false,
+        approval_status: 'pending',
+      })
       .select()
       .single();
     if (corpErr) throw corpErr;
 
+    // Upgrade profile to corp admin
     const { error: profErr } = await supabase
       .from('profiles')
       .update({
         is_corporate: true,
-        corp_id: corp.id,
-        corp_role: 'admin',
-        full_name: full_name || undefined,
+        corp_id:      corp.id,
+        corp_role:    'admin',
+        full_name:    full_name || undefined,
       })
       .eq('id', user_id);
     if (profErr) throw profErr;
+
+    // Email admin for review
+    await sendEmail({
+      to: process.env.ADMIN_EMAIL,
+      subject: `[eSIMConnect] New Corporate Account Pending Approval — ${company_name}`,
+      text: [
+        `A new corporate account is awaiting your approval.`,
+        ``,
+        `Company:       ${company_name}`,
+        `Country:       ${company_country}`,
+        `UEN:           ${uen || 'N/A'}`,
+        `Contact Email: ${contact_email}`,
+        `Admin Name:    ${full_name}`,
+        ``,
+        `Please review and approve within 48 hours:`,
+        `https://esimconnect.world/admin`,
+      ].join('\n'),
+    });
+
+    // Email applicant with 48hr expectation
+    await sendEmail({
+      to: contact_email,
+      subject: `Your eSIMConnect Corporate Account is Under Review — ${company_name}`,
+      text: [
+        `Hi ${full_name || 'there'},`,
+        ``,
+        `Thank you for registering ${company_name} on eSIMConnect.`,
+        ``,
+        `Your corporate account is currently under review. We aim to approve`,
+        `all applications within 48 hours.`,
+        ``,
+        `You will receive a separate email once your account is approved and`,
+        `ready to use.`,
+        ``,
+        `If you have any questions, reply to this email or contact us at`,
+        `hello@esimconnect.world.`,
+        ``,
+        `The eSIMConnect Team`,
+      ].join('\n'),
+    });
+
+    console.log(`[CORP] New pending corporate: ${company_name} (${company_country}) — admin: ${user_id}`);
 
     return res.json({ success: true, corp_id: corp.id, company_name: corp.company_name });
   } catch (err) {
@@ -1247,4 +1345,47 @@ app.patch('/admin/corporates/:id', requireAdmin, async (req, res) => {
 // ── START SERVER ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`esimconnect backend running on port ${PORT}`);
+});
+
+// POST /admin/corporates/:id/approve — approve a pending corporate account
+app.post('/admin/corporates/:id/approve', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { data: corp, error } = await supabase
+      .from('corporates')
+      .update({ is_active: true, approval_status: 'approved' })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    // Email the company contact
+    await sendEmail({
+      to: corp.contact_email,
+      subject: `Your eSIMConnect Corporate Account is Approved — ${corp.company_name}`,
+      text: [
+        `Hi there,`,
+        ``,
+        `Great news! ${corp.company_name}'s eSIMConnect corporate account`,
+        `has been approved and is now active.`,
+        ``,
+        `You can now:`,
+        `  - Log in and access your corporate dashboard`,
+        `  - Top up your corporate wallet`,
+        `  - Invite staff members`,
+        `  - Start placing eSIM orders`,
+        ``,
+        `Log in here: https://esimconnect.world/login`,
+        ``,
+        `Welcome aboard,`,
+        `The eSIMConnect Team`,
+      ].join('\n'),
+    });
+
+    console.log(`[CORP] Approved: ${corp.company_name} (${id})`);
+    return res.json({ success: true, corp });
+  } catch (err) {
+    console.error('POST /admin/corporates/:id/approve', err);
+    return res.status(500).json({ error: err.message });
+  }
 });

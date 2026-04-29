@@ -123,7 +123,7 @@ export default function Checkout() {
               .select('company_name, wallet_balance, is_active')
               .eq('id', profile.corp_id)
               .single();
-            if (corp && corp.is_active) {
+            if (corp && corp.is_active && corp.approval_status === 'approved') {
               setCorpBalance(parseFloat(corp.wallet_balance || 0));
               setCorpName(corp.company_name);
             }

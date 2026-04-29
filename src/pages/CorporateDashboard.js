@@ -123,6 +123,8 @@ export default function CorporateDashboard() {
   if (error) return <div className={styles.errorPage}>{error}</div>;
   if (!corp) return null;
 
+  const isPending = corp.approval_status === 'pending';
+
   const completedOrders = orders.filter(o => o.status === 'completed');
 
   return (
@@ -159,6 +161,27 @@ export default function CorporateDashboard() {
 
       {/* ── Main ─────────────────────────────────────────────────── */}
       <main className={styles.main}>
+
+        {/* ── Pending approval banner ─────────────────────────────── */}
+        {isPending && (
+          <div style={{
+            background: '#fffbeb', border: '1.5px solid #f59e0b',
+            borderRadius: '14px', padding: '18px 24px',
+            marginBottom: '28px', display: 'flex', gap: '14px', alignItems: 'flex-start',
+          }}>
+            <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>⏳</span>
+            <div>
+              <div style={{ fontWeight: 700, color: '#92400e', fontSize: '0.95rem', marginBottom: '4px' }}>
+                Account Pending Approval
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#78350f', lineHeight: 1.5 }}>
+                Your corporate account is currently under review. We aim to approve all applications
+                within <strong>48 hours</strong>. You will receive an email confirmation once approved.
+                You will not be able to top up the wallet or place orders until your account is approved.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ══ OVERVIEW ══════════════════════════════════════════════ */}
         {tab === 'overview' && (

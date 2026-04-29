@@ -1191,9 +1191,10 @@ function AnalyticsTab() {
 // CORPORATE TAB
 // ═══════════════════════════════════════════════════════════════
 function CorporateTab() {
-  const [corps, setCorps]       = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [toast, setToast]       = useState('');
+  const [corps, setCorps]     = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast]     = useState('');
+  const [approvingId, setApprovingId] = useState(null);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
@@ -1206,15 +1207,29 @@ function CorporateTab() {
 
   useEffect(() => { load(); }, [load]);
 
-  const toggleActive = async (id, currentStatus, companyName) => {
-    const action = currentStatus ? 'Suspend' : 'Activate';
+  const approveCorprate = async (id, companyName) => {
+    if (!window.confirm(`Approve ${companyName}? They will be notified by email.`)) return;
+    setApprovingId(id);
+    try {
+      await adminFetch(`/admin/corporates/${id}/approve`, { method: 'POST' });
+      showToast(`${companyName} approved — confirmation email sent`);
+      load();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const toggleSuspend = async (id, currentStatus, companyName) => {
+    const action = currentStatus ? 'Suspend' : 'Reactivate';
     if (!window.confirm(`${action} ${companyName}?`)) return;
     try {
       await adminFetch(`/admin/corporates/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ is_active: !currentStatus }),
+        body: JSON.stringify({ is_active: !currentStatus, approval_status: currentStatus ? 'suspended' : 'approved' }),
       });
-      showToast(`${companyName} ${currentStatus ? 'suspended' : 'activated'}`);
+      showToast(`${companyName} ${currentStatus ? 'suspended' : 'reactivated'}`);
       load();
     } catch (err) {
       alert('Error: ' + err.message);
@@ -1223,7 +1238,75 @@ function CorporateTab() {
 
   if (loading) return <div className={styles.loading}>Loading corporate accounts…</div>;
 
+  const pending  = corps.filter(c => c.approval_status === 'pending');
+  const approved = corps.filter(c => c.approval_status !== 'pending');
   const totalCorpWallet = corps.reduce((s, c) => s + parseFloat(c.wallet_balance || 0), 0);
+
+  const CorpTable = ({ rows }) => (
+    <div className={styles.tableWrap}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Country</th>
+            <th>Contact Email</th>
+            <th>Staff</th>
+            <th>Wallet (SGD)</th>
+            <th>Status</th>
+            <th>Applied</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(c => (
+            <tr key={c.id}>
+              <td>
+                <div className={styles.cellPrimary}>{c.company_name}</div>
+                {c.uen && <div className={styles.cellSub}>UEN: {c.uen}</div>}
+              </td>
+              <td className={styles.cellSub}>{c.company_country || '—'}</td>
+              <td className={styles.cellSub}>{c.contact_email}</td>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>{c.staff_count}</td>
+              <td><strong>SGD {parseFloat(c.wallet_balance || 0).toFixed(2)}</strong></td>
+              <td>
+                {c.approval_status === 'pending' && (
+                  <span className={`${styles.badge} ${styles.badgeAmber}`}>pending</span>
+                )}
+                {c.approval_status === 'approved' && c.is_active && (
+                  <span className={`${styles.badge} ${styles.badgeGreen}`}>active</span>
+                )}
+                {(c.approval_status === 'suspended' || (c.approval_status === 'approved' && !c.is_active)) && (
+                  <span className={`${styles.badge} ${styles.badgeRed}`}>suspended</span>
+                )}
+              </td>
+              <td className={styles.cellSub}>{new Date(c.created_at).toLocaleDateString()}</td>
+              <td>
+                <div className={styles.actionRow}>
+                  {c.approval_status === 'pending' && (
+                    <button
+                      className={styles.btnPrimary}
+                      onClick={() => approveCorprate(c.id, c.company_name)}
+                      disabled={approvingId === c.id}
+                    >
+                      {approvingId === c.id ? 'Approving…' : '✓ Approve'}
+                    </button>
+                  )}
+                  {c.approval_status !== 'pending' && (
+                    <button
+                      className={c.is_active ? styles.btnDanger : styles.btnSecondary}
+                      onClick={() => toggleSuspend(c.id, c.is_active, c.company_name)}
+                    >
+                      {c.is_active ? 'Suspend' : 'Reactivate'}
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div>
@@ -1231,51 +1314,35 @@ function CorporateTab() {
 
       <div className={styles.tabHeader}>
         <div className={styles.tabMeta}>
-          {corps.length} corporate account{corps.length !== 1 ? 's' : ''} · SGD {totalCorpWallet.toFixed(2)} total wallet balance
+          {corps.length} account{corps.length !== 1 ? 's' : ''} · {pending.length} pending · SGD {totalCorpWallet.toFixed(2)} total wallet
         </div>
       </div>
 
-      {corps.length === 0 ? (
+      {/* Pending section */}
+      {pending.length > 0 && (
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+            ⏳ Awaiting Approval ({pending.length})
+          </div>
+          <CorpTable rows={pending} />
+        </div>
+      )}
+
+      {/* Approved / suspended */}
+      {approved.length > 0 && (
+        <div>
+          {pending.length > 0 && (
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+              Approved Accounts ({approved.length})
+            </div>
+          )}
+          <CorpTable rows={approved} />
+        </div>
+      )}
+
+      {corps.length === 0 && (
         <div className={styles.emptyState}>
           No corporate accounts yet. They sign up via <code>/corporate/register</code>.
-        </div>
-      ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>UEN</th>
-                <th>Contact Email</th>
-                <th>Staff</th>
-                <th>Wallet (SGD)</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {corps.map(c => (
-                <tr key={c.id}>
-                  <td className={styles.cellPrimary}>{c.company_name}</td>
-                  <td className={styles.cellSub}>{c.uen || '—'}</td>
-                  <td className={styles.cellSub}>{c.contact_email}</td>
-                  <td style={{ textAlign: 'center', fontWeight: 700 }}>{c.staff_count}</td>
-                  <td><strong>SGD {parseFloat(c.wallet_balance || 0).toFixed(2)}</strong></td>
-                  <td><Badge status={c.is_active ? 'active' : 'inactive'} /></td>
-                  <td className={styles.cellSub}>{new Date(c.created_at).toLocaleDateString()}</td>
-                  <td>
-                    <button
-                      className={c.is_active ? styles.btnDanger : styles.btnPrimary}
-                      onClick={() => toggleActive(c.id, c.is_active, c.company_name)}
-                    >
-                      {c.is_active ? 'Suspend' : 'Activate'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       )}
     </div>
