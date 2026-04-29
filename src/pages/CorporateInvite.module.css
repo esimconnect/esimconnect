@@ -1,0 +1,224 @@
+/* CorporateInvite.module.css */
+
+.page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0c1a2e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.32);
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────── */
+.header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  padding: 32px 36px 26px;
+  text-align: center;
+  color: #fff;
+}
+
+.companyBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 99px;
+  padding: 5px 14px;
+  margin-bottom: 16px;
+}
+
+.companyIcon { font-size: 0.9rem; }
+
+.companyName {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #bae6fd;
+  letter-spacing: 0.02em;
+}
+
+.title {
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  margin: 0 0 8px;
+  color: #fff;
+}
+
+.subtitle {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.subtitle strong { color: #bae6fd; }
+
+/* ── Email notice ────────────────────────── */
+.emailNotice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f0f9ff;
+  border-bottom: 1px solid #bae6fd;
+  padding: 14px 36px;
+}
+
+.emailIcon { font-size: 1.1rem; }
+
+.emailLabel {
+  font-size: 0.72rem;
+  color: #0369a1;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.emailValue {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* ── Form ───────────────────────────────── */
+.form {
+  padding: 24px 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.input {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.12);
+  background: #fff;
+}
+
+/* ── Perks ───────────────────────────────── */
+.perksBox {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.perkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.83rem;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.perkIcon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+/* ── Button ──────────────────────────────── */
+.primaryBtn {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: opacity 0.15s, transform 0.15s;
+  width: 100%;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.primaryBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Error ───────────────────────────────── */
+.errorBanner {
+  margin: 0 36px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: #b91c1c;
+}
+
+/* ── Invalid / loading states ────────────── */
+.loadingState {
+  padding: 60px 40px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.errorState {
+  padding: 48px 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.errorIcon { font-size: 2.5rem; }
+
+.errorState h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.errorState p {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .card { border-radius: 0; }
+  .header { padding: 26px 24px 22px; }
+  .emailNotice { padding: 12px 24px; }
+  .form { padding: 20px 24px 28px; }
+  .errorBanner { margin: 0 24px; }
+}

@@ -58,9 +58,15 @@ export default function Checkout() {
   const [walletBalance, setWalletBalance] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('card');
 
+  // ── Corporate wallet ───────────────────────────────────────────────────────
+  const [isCorporateStaff, setIsCorporateStaff] = useState(false);
+  const [corpId, setCorpId]                     = useState(null);
+  const [corpBalance, setCorpBalance]           = useState(null);
+  const [corpName, setCorpName]                 = useState('');
+
   // ── Reseller code ──────────────────────────────────────────────────────────
   const [resellerCode, setResellerCode]         = useState('');
-  const [resellerDiscount, setResellerDiscount] = useState(null); // { discount_value, discount_type, message }
+  const [resellerDiscount, setResellerDiscount] = useState(null);
   const [codeValidating, setCodeValidating]     = useState(false);
   const [codeError, setCodeError]               = useState('');
 
@@ -92,7 +98,7 @@ export default function Checkout() {
     if (!silent) setCodeValidating(false);
   }, []);
 
-  // ── Load user + wallet balance ─────────────────────────────────────────────
+  // ── Load user + wallet balance + corp status ───────────────────────────────
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       const u = data?.user || null;
@@ -102,11 +108,27 @@ export default function Checkout() {
         setName(u.user_metadata?.full_name || '');
         const { data: profile } = await supabase
           .from('profiles')
-          .select('wallet_balance, preferred_reseller_code')
+          .select('wallet_balance, preferred_reseller_code, is_corporate, corp_id, corp_role')
           .eq('id', u.id)
           .single();
         if (profile) {
           setWalletBalance(parseFloat(profile.wallet_balance) || 0);
+
+          // ── Corporate staff detection ──────────────────────────
+          if (profile.is_corporate && profile.corp_id && profile.corp_role === 'staff') {
+            setIsCorporateStaff(true);
+            setCorpId(profile.corp_id);
+            const { data: corp } = await supabase
+              .from('corporates')
+              .select('company_name, wallet_balance, is_active')
+              .eq('id', profile.corp_id)
+              .single();
+            if (corp && corp.is_active) {
+              setCorpBalance(parseFloat(corp.wallet_balance || 0));
+              setCorpName(corp.company_name);
+            }
+          }
+
           // Auto-load saved reseller code from profile
           if (profile.preferred_reseller_code) {
             setResellerCode(profile.preferred_reseller_code);
@@ -241,6 +263,11 @@ export default function Checkout() {
 
   const handleWalletPay = () => { if (walletBalance === null || walletBalance < cartTotal) return; handleConfirmOrder('wallet'); };
 
+  const handleCorpWalletPay = () => {
+    if (corpBalance === null || corpBalance < cartTotal) return;
+    handleConfirmOrder('corp_wallet');
+  };
+
   const handleConfirmOrder = async (method = 'card') => {
     setLoading(true);
     setError(null);
@@ -249,11 +276,24 @@ export default function Checkout() {
       const sessionId = 'EC-' + Date.now();
       const results = [];
 
+      // ── Personal wallet deduction ──────────────────────────────
       if (method === 'wallet') {
         const newBalance = parseFloat((walletBalance - cartTotal).toFixed(2));
         const { error: walletErr } = await supabase.from('profiles').update({ wallet_balance: newBalance }).eq('id', currentUser.id);
         if (walletErr) throw new Error('Wallet deduction failed: ' + walletErr.message);
         setWalletBalance(newBalance);
+      }
+
+      // ── Corporate wallet deduction ─────────────────────────────
+      if (method === 'corp_wallet') {
+        if (!isCorporateStaff || !corpId) throw new Error('Corporate account not linked. Contact your admin.');
+        if (corpBalance < cartTotal) throw new Error('Insufficient company wallet balance.');
+        const { error: corpErr } = await supabase
+          .from('corporates')
+          .update({ wallet_balance: corpBalance - cartTotal })
+          .eq('id', corpId);
+        if (corpErr) throw new Error('Corporate wallet deduction failed: ' + corpErr.message);
+        setCorpBalance(prev => parseFloat((prev - cartTotal).toFixed(2)));
       }
 
       for (const item of cart) {
@@ -316,7 +356,6 @@ export default function Checkout() {
       // Save reseller code to profile (after all orders succeed)
       if (currentUser?.id && resellerCode && resellerDiscount) {
         await saveResellerToProfile(currentUser.id, resellerCode.toUpperCase());
-        // Clear localStorage ref now that it's saved to profile
         localStorage.removeItem('esimconnect_ref');
       }
 
@@ -587,38 +626,71 @@ export default function Checkout() {
                 <div style={{ background: 'rgba(255,59,48,0.1)', border: '1px solid rgba(255,59,48,0.3)', borderRadius: '10px', padding: '12px 16px', color: '#ff3b30', fontSize: '13px', marginBottom: '16px' }}>{error}</div>
               )}
 
-              {/* eWallet option (logged-in only) */}
-              {user && walletBalance !== null && (
+              {user && (
                 <div style={{ marginBottom: '20px' }}>
-                  {walletBalance >= cartTotal ? (
-                    <div onClick={() => setPaymentMethod('wallet')} style={{ background: paymentMethod === 'wallet' ? 'rgba(0,200,255,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${paymentMethod === 'wallet' ? 'var(--accent)' : 'rgba(255,255,255,0.12)'}`, borderRadius: '14px', padding: '16px', cursor: 'pointer', marginBottom: '10px', transition: 'all 0.2s' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '22px' }}>💳</span>
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: '14px' }}>{t('checkout_wallet')}</div>
-                            <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                              {t('checkout_balance')}: {t('sgd')} {walletBalance.toFixed(2)} → {t('sgd')} {(walletBalance - cartTotal).toFixed(2)} after
+
+                  {/* ── Corporate wallet option (staff only) ── */}
+                  {isCorporateStaff && corpBalance !== null && (
+                    corpBalance >= cartTotal ? (
+                      <div onClick={() => setPaymentMethod('corp_wallet')} style={{ background: paymentMethod === 'corp_wallet' ? 'rgba(56,189,248,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${paymentMethod === 'corp_wallet' ? '#38bdf8' : 'rgba(255,255,255,0.12)'}`, borderRadius: '14px', padding: '16px', cursor: 'pointer', marginBottom: '10px', transition: 'all 0.2s' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '22px' }}>🏢</span>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '14px' }}>Company Wallet — {corpName}</div>
+                              <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                                Balance: {t('sgd')} {corpBalance.toFixed(2)} → {t('sgd')} {(corpBalance - cartTotal).toFixed(2)} after
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0, background: paymentMethod === 'wallet' ? 'var(--accent)' : 'rgba(255,255,255,0.1)', border: '2px solid ' + (paymentMethod === 'wallet' ? 'var(--accent)' : 'rgba(255,255,255,0.25)'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#000', fontWeight: 700 }}>
-                          {paymentMethod === 'wallet' ? '✓' : ''}
+                          <div style={{ width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0, background: paymentMethod === 'corp_wallet' ? '#38bdf8' : 'rgba(255,255,255,0.1)', border: '2px solid ' + (paymentMethod === 'corp_wallet' ? '#38bdf8' : 'rgba(255,255,255,0.25)'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#000', fontWeight: 700 }}>
+                            {paymentMethod === 'corp_wallet' ? '✓' : ''}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div style={{ background: 'rgba(255,180,0,0.07)', border: '1px solid rgba(255,180,0,0.25)', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '13px', color: '#ffb400' }}>💳 {t('wallet_title')}: {t('sgd')} {walletBalance.toFixed(2)}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>{t('checkout_insufficient')} — need {t('sgd')} {(cartTotal - walletBalance).toFixed(2)} more</div>
+                    ) : (
+                      <div style={{ background: 'rgba(255,180,0,0.07)', border: '1px solid rgba(255,180,0,0.25)', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '13px', color: '#ffb400' }}>🏢 Company Wallet — {corpName}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
+                          Balance {t('sgd')} {corpBalance.toFixed(2)} — insufficient. Ask your admin to top up.
+                        </div>
                       </div>
-                      <button type="button" onClick={() => window.open('/wallet', '_blank')} style={{ background: 'rgba(255,180,0,0.15)', border: '1px solid rgba(255,180,0,0.3)', borderRadius: '8px', padding: '7px 12px', color: '#ffb400', fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        {t('checkout_topup')} →
-                      </button>
-                    </div>
+                    )
                   )}
 
+                  {/* ── Personal eWallet option ── */}
+                  {walletBalance !== null && (
+                    walletBalance >= cartTotal ? (
+                      <div onClick={() => setPaymentMethod('wallet')} style={{ background: paymentMethod === 'wallet' ? 'rgba(0,200,255,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${paymentMethod === 'wallet' ? 'var(--accent)' : 'rgba(255,255,255,0.12)'}`, borderRadius: '14px', padding: '16px', cursor: 'pointer', marginBottom: '10px', transition: 'all 0.2s' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '22px' }}>💳</span>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '14px' }}>{t('checkout_wallet')}</div>
+                              <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                                {t('checkout_balance')}: {t('sgd')} {walletBalance.toFixed(2)} → {t('sgd')} {(walletBalance - cartTotal).toFixed(2)} after
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0, background: paymentMethod === 'wallet' ? 'var(--accent)' : 'rgba(255,255,255,0.1)', border: '2px solid ' + (paymentMethod === 'wallet' ? 'var(--accent)' : 'rgba(255,255,255,0.25)'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#000', fontWeight: 700 }}>
+                            {paymentMethod === 'wallet' ? '✓' : ''}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ background: 'rgba(255,180,0,0.07)', border: '1px solid rgba(255,180,0,0.25)', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '13px', color: '#ffb400' }}>💳 {t('wallet_title')}: {t('sgd')} {walletBalance.toFixed(2)}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>{t('checkout_insufficient')} — need {t('sgd')} {(cartTotal - walletBalance).toFixed(2)} more</div>
+                        </div>
+                        <button type="button" onClick={() => window.open('/wallet', '_blank')} style={{ background: 'rgba(255,180,0,0.15)', border: '1px solid rgba(255,180,0,0.3)', borderRadius: '8px', padding: '7px 12px', color: '#ffb400', fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          {t('checkout_topup')} →
+                        </button>
+                      </div>
+                    )
+                  )}
+
+                  {/* ── Card option ── */}
                   <div onClick={() => setPaymentMethod('card')} style={{ background: paymentMethod === 'card' ? 'rgba(0,200,255,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${paymentMethod === 'card' ? 'var(--accent)' : 'rgba(255,255,255,0.12)'}`, borderRadius: '14px', padding: '14px 16px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.2s' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span style={{ fontSize: '22px' }}>🏦</span>
@@ -664,12 +736,22 @@ export default function Checkout() {
                 </form>
               )}
 
-              {/* Wallet Pay Button */}
+              {/* Personal Wallet Pay Button */}
               {user && paymentMethod === 'wallet' && walletBalance >= cartTotal && (
                 <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
                   <button type="button" onClick={() => setStep(2)} style={{ flex: 1, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '12px', padding: '14px', color: 'inherit', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>← {t('back')}</button>
                   <button type="button" onClick={handleWalletPay} className={styles.submitBtn} style={{ flex: 2 }} disabled={loading}>
                     {loading ? <span className={styles.spinner}></span> : `${t('checkout_pay')} ${t('sgd')} ${cartTotal.toFixed(2)} →`}
+                  </button>
+                </div>
+              )}
+
+              {/* Corporate Wallet Pay Button */}
+              {user && paymentMethod === 'corp_wallet' && corpBalance !== null && corpBalance >= cartTotal && (
+                <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                  <button type="button" onClick={() => setStep(2)} style={{ flex: 1, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '12px', padding: '14px', color: 'inherit', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>← {t('back')}</button>
+                  <button type="button" onClick={handleCorpWalletPay} className={styles.submitBtn} style={{ flex: 2, background: 'linear-gradient(135deg, #0f172a, #1e3a5f)' }} disabled={loading}>
+                    {loading ? <span className={styles.spinner}></span> : `Pay via ${corpName} · ${t('sgd')} ${cartTotal.toFixed(2)} →`}
                   </button>
                 </div>
               )}

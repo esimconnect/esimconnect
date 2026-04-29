@@ -5,7 +5,7 @@ import Navbar from '../components/Navbar';
 import styles from './Admin.module.css';
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
-const TABS = ['Orders', 'Users', 'Wallet Top-ups', 'Usage Logs', 'Resellers', 'Reseller Sales', 'Analytics'];
+const TABS = ['Orders', 'Users', 'Wallet Top-ups', 'Usage Logs', 'Resellers', 'Reseller Sales', 'Analytics', 'Corporate'];
 
 // ── Country list for reseller form ───────────────────────────────────────────
 const COUNTRIES = [
@@ -198,7 +198,7 @@ function UsersTab() {
   const [users, setUsers]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
-  const [modal, setModal]       = useState(null); // { type: 'credits'|'gift'|'reset', user }
+  const [modal, setModal]       = useState(null);
   const [creditAmt, setCreditAmt] = useState('');
   const [giftForm, setGiftForm] = useState({ country_name: '', package_title: '', data_amount: '', validity_days: '', price_sgd: '0' });
   const [busy, setBusy]         = useState(false);
@@ -492,7 +492,7 @@ function ResellersTab() {
   };
   const [form, setForm] = useState(blankForm);
   const [emailLookup, setEmailLookup] = useState('');
-  const [emailLookupStatus, setEmailLookupStatus] = useState(''); // '', 'found', 'not_found', 'searching'
+  const [emailLookupStatus, setEmailLookupStatus] = useState('');
 
   const lookupUserByEmail = async () => {
     if (!emailLookup.trim()) return;
@@ -526,7 +526,6 @@ function ResellersTab() {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
-  // Auto-suggest short_name from first word of name
   const handleNameChange = (e) => {
     const name = e.target.value;
     const suggested = name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g, '').slice(0, 8);
@@ -537,7 +536,6 @@ function ResellersTab() {
     setForm(prev => ({ ...prev, country_iso: e.target.value }));
   };
 
-  // Preview the code that will be generated
   const codePreview = form.country_iso && form.short_name
     ? `${form.country_iso.toUpperCase()}-${form.short_name.toUpperCase()}-#####`
     : '—';
@@ -597,7 +595,6 @@ function ResellersTab() {
     <div>
       {toast && <div className={styles.toast}>{toast}</div>}
 
-      {/* Create / Edit Form */}
       {showForm && (
         <div className={styles.resellerForm}>
           <h3 className={styles.formTitle}>{editId ? 'Edit Reseller' : 'Create New Reseller'}</h3>
@@ -779,7 +776,7 @@ function ResellerSalesTab() {
   const [data, setData]             = useState({ orders: [], summary: [] });
   const [referralData, setReferralData] = useState([]);
   const [loading, setLoading]       = useState(true);
-  const [view, setView]             = useState('summary'); // 'summary' | 'orders' | 'referrals'
+  const [view, setView]             = useState('summary');
 
   useEffect(() => {
     Promise.all([
@@ -925,7 +922,7 @@ function ResellerSalesTab() {
 function AnalyticsTab() {
   const [orders, setOrders]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod]   = useState('month'); // 'today' | 'week' | 'month' | 'year' | 'all'
+  const [period, setPeriod]   = useState('month');
 
   useEffect(() => {
     adminFetch('/admin/orders')
@@ -934,7 +931,6 @@ function AnalyticsTab() {
       .finally(() => setLoading(false));
   }, []);
 
-  // ── Period filter ────────────────────────────────────────────
   const filterByPeriod = (data) => {
     const now = new Date();
     return data.filter(o => {
@@ -943,13 +939,12 @@ function AnalyticsTab() {
       if (period === 'week')  { const w = new Date(now); w.setDate(now.getDate() - 7);  return d >= w; }
       if (period === 'month') { const m = new Date(now); m.setDate(now.getDate() - 30); return d >= m; }
       if (period === 'year')  { const y = new Date(now); y.setFullYear(now.getFullYear() - 1); return d >= y; }
-      return true; // 'all'
+      return true;
     });
   };
 
   const filtered = filterByPeriod(orders);
 
-  // ── Key metrics ──────────────────────────────────────────────
   const totalRevenue    = filtered.reduce((s, o) => s + parseFloat(o.price_sgd || 0), 0);
   const totalDiscount   = filtered.reduce((s, o) => s + parseFloat(o.discount_sgd || 0), 0);
   const netRevenue      = totalRevenue - totalDiscount;
@@ -957,8 +952,8 @@ function AnalyticsTab() {
   const resellerRevenue = resellerOrders.reduce((s, o) => s + parseFloat(o.price_sgd || 0), 0);
   const walletOrders    = filtered.filter(o => o.payment_method === 'wallet').length;
   const cardOrders      = filtered.filter(o => o.payment_method === 'card').length;
+  const corpOrders      = filtered.filter(o => o.payment_method === 'corp_wallet').length;
 
-  // ── Revenue by day (last 30 days) ────────────────────────────
   const last30 = [...Array(30)].map((_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (29 - i));
     const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -968,7 +963,6 @@ function AnalyticsTab() {
   });
   const maxRev = Math.max(...last30.map(d => d.rev), 1);
 
-  // ── Revenue by month (last 12) ───────────────────────────────
   const last12 = [...Array(12)].map((_, i) => {
     const d = new Date(); d.setMonth(d.getMonth() - (11 - i));
     const y = d.getFullYear(); const m = d.getMonth();
@@ -982,7 +976,6 @@ function AnalyticsTab() {
   });
   const maxMonthRev = Math.max(...last12.map(d => d.rev), 1);
 
-  // ── By country ───────────────────────────────────────────────
   const byCountry = {};
   filtered.forEach(o => {
     const c = o.country_name || 'Unknown';
@@ -995,7 +988,6 @@ function AnalyticsTab() {
     .slice(0, 10);
   const maxCountryRev = Math.max(...topCountries.map(([, v]) => v.revenue), 1);
 
-  // ── By plan ──────────────────────────────────────────────────
   const byPlan = {};
   filtered.forEach(o => {
     const p = o.package_title || 'Unknown';
@@ -1007,7 +999,6 @@ function AnalyticsTab() {
     .sort((a, b) => b[1].orders - a[1].orders)
     .slice(0, 8);
 
-  // ── YTD comparison ───────────────────────────────────────────
   const thisYear  = new Date().getFullYear();
   const ytdRev    = orders.filter(o => new Date(o.created_at).getFullYear() === thisYear)
                           .reduce((s, o) => s + parseFloat(o.price_sgd || 0), 0);
@@ -1040,7 +1031,6 @@ function AnalyticsTab() {
 
   return (
     <div>
-      {/* Period selector + export */}
       <div className={styles.tabHeader}>
         <div className={styles.filterRow}>
           {[
@@ -1059,7 +1049,6 @@ function AnalyticsTab() {
         <button className={styles.btnSecondary} onClick={exportCSV}>Export CSV</button>
       </div>
 
-      {/* ── Key metric cards ── */}
       <div className={styles.analyticsGrid}>
         <div className={styles.metricCard}>
           <div className={styles.metricValue}>SGD {netRevenue.toFixed(2)}</div>
@@ -1091,7 +1080,6 @@ function AnalyticsTab() {
         </div>
       </div>
 
-      {/* ── Revenue by day (bar chart) ── */}
       <div className={styles.chartSection}>
         <div className={styles.chartTitle}>Daily Revenue — Last 30 Days</div>
         <div className={styles.barChart}>
@@ -1104,7 +1092,6 @@ function AnalyticsTab() {
         </div>
       </div>
 
-      {/* ── Revenue by month ── */}
       <div className={styles.chartSection}>
         <div className={styles.chartTitle}>Monthly Revenue — Last 12 Months</div>
         <div className={styles.barChart} style={{ height: '140px' }}>
@@ -1117,10 +1104,7 @@ function AnalyticsTab() {
         </div>
       </div>
 
-      {/* ── Bottom two columns ── */}
       <div className={styles.analyticsBottom}>
-
-        {/* Top countries */}
         <div className={styles.chartSection} style={{ flex: 1 }}>
           <div className={styles.chartTitle}>Revenue by Country (Top 10)</div>
           {topCountries.length === 0 && <div className={styles.emptyState}>No data for this period</div>}
@@ -1139,10 +1123,7 @@ function AnalyticsTab() {
           ))}
         </div>
 
-        {/* Top plans + payment split */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
-
-          {/* Payment method split */}
           <div className={styles.chartSection}>
             <div className={styles.chartTitle}>Payment Method Split</div>
             <div className={styles.splitRow}>
@@ -1163,6 +1144,14 @@ function AnalyticsTab() {
               </div>
               <div className={styles.splitDivider} />
               <div className={styles.splitItem}>
+                <div className={styles.splitVal} style={{ color: '#38bdf8' }}>{corpOrders}</div>
+                <div className={styles.splitLabel}>Corp Wallet</div>
+                <div className={styles.splitPct}>
+                  {filtered.length ? ((corpOrders / filtered.length) * 100).toFixed(0) : 0}%
+                </div>
+              </div>
+              <div className={styles.splitDivider} />
+              <div className={styles.splitItem}>
                 <div className={styles.splitVal} style={{ color: '#34d399' }}>{resellerOrders.length}</div>
                 <div className={styles.splitLabel}>Via Reseller</div>
                 <div className={styles.splitPct}>
@@ -1172,7 +1161,6 @@ function AnalyticsTab() {
             </div>
           </div>
 
-          {/* Top plans */}
           <div className={styles.chartSection}>
             <div className={styles.chartTitle}>Best Selling Plans</div>
             {topPlans.length === 0 && <div className={styles.emptyState}>No data for this period</div>}
@@ -1193,9 +1181,103 @@ function AnalyticsTab() {
               </table>
             </div>
           </div>
-
         </div>
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CORPORATE TAB
+// ═══════════════════════════════════════════════════════════════
+function CorporateTab() {
+  const [corps, setCorps]       = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [toast, setToast]       = useState('');
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  const load = useCallback(() => {
+    adminFetch('/admin/corporates')
+      .then(setCorps)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const toggleActive = async (id, currentStatus, companyName) => {
+    const action = currentStatus ? 'Suspend' : 'Activate';
+    if (!window.confirm(`${action} ${companyName}?`)) return;
+    try {
+      await adminFetch(`/admin/corporates/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_active: !currentStatus }),
+      });
+      showToast(`${companyName} ${currentStatus ? 'suspended' : 'activated'}`);
+      load();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  if (loading) return <div className={styles.loading}>Loading corporate accounts…</div>;
+
+  const totalCorpWallet = corps.reduce((s, c) => s + parseFloat(c.wallet_balance || 0), 0);
+
+  return (
+    <div>
+      {toast && <div className={styles.toast}>{toast}</div>}
+
+      <div className={styles.tabHeader}>
+        <div className={styles.tabMeta}>
+          {corps.length} corporate account{corps.length !== 1 ? 's' : ''} · SGD {totalCorpWallet.toFixed(2)} total wallet balance
+        </div>
+      </div>
+
+      {corps.length === 0 ? (
+        <div className={styles.emptyState}>
+          No corporate accounts yet. They sign up via <code>/corporate/register</code>.
+        </div>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>UEN</th>
+                <th>Contact Email</th>
+                <th>Staff</th>
+                <th>Wallet (SGD)</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {corps.map(c => (
+                <tr key={c.id}>
+                  <td className={styles.cellPrimary}>{c.company_name}</td>
+                  <td className={styles.cellSub}>{c.uen || '—'}</td>
+                  <td className={styles.cellSub}>{c.contact_email}</td>
+                  <td style={{ textAlign: 'center', fontWeight: 700 }}>{c.staff_count}</td>
+                  <td><strong>SGD {parseFloat(c.wallet_balance || 0).toFixed(2)}</strong></td>
+                  <td><Badge status={c.is_active ? 'active' : 'inactive'} /></td>
+                  <td className={styles.cellSub}>{new Date(c.created_at).toLocaleDateString()}</td>
+                  <td>
+                    <button
+                      className={c.is_active ? styles.btnDanger : styles.btnPrimary}
+                      onClick={() => toggleActive(c.id, c.is_active, c.company_name)}
+                    >
+                      {c.is_active ? 'Suspend' : 'Activate'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -1217,7 +1299,6 @@ export default function Admin() {
         navigate('/'); return;
       }
       setChecking(false);
-      // Load stats
       try {
         const s = await adminFetch('/admin/stats');
         setStats(s);
@@ -1242,7 +1323,6 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Stats Bar */}
       {stats && (
         <div className={styles.statsBar}>
           <StatCard label="Total Orders"    value={stats.totalOrders}      sub={`${stats.completedOrders} completed`} accent="#00c8c8" />
@@ -1252,7 +1332,6 @@ export default function Admin() {
         </div>
       )}
 
-      {/* Tabs */}
       <div className={styles.tabs}>
         {TABS.map((t, i) => (
           <button
@@ -1271,6 +1350,7 @@ export default function Admin() {
         {tab === 4 && <ResellersTab />}
         {tab === 5 && <ResellerSalesTab />}
         {tab === 6 && <AnalyticsTab />}
+        {tab === 7 && <CorporateTab />}
       </div>
     </div>
   );

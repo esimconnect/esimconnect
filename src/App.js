@@ -16,6 +16,9 @@ import LoginSuccess from './pages/LoginSuccess';
 import Footer from './components/Footer';
 import Wallet from './pages/Wallet';
 import Admin from './pages/Admin';
+import CorporateRegister from './pages/CorporateRegister';
+import CorporateDashboard from './pages/CorporateDashboard';
+import CorporateInvite from './pages/CorporateInvite';
 
 function App() {
 
@@ -53,6 +56,9 @@ function App() {
         <Route path="/login-success" element={<LoginSuccess />} />
         <Route path="/wallet" element={<Wallet />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/corporate/register" element={<CorporateRegister />} />
+        <Route path="/corporate/dashboard" element={<CorporateDashboard />} />
+        <Route path="/corporate/invite/:token" element={<CorporateInvite />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Footer />

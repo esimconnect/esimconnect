@@ -136,6 +136,21 @@ app.post('/webhook', async (req, res) => {
 
   if (event.type === 'payment_intent.succeeded') {
     const intent = event.data.object;
+
+    // ── Corporate wallet top-up ───────────────────────────────
+    if (intent.metadata?.type === 'corp_wallet_topup') {
+      const { corp_id } = intent.metadata;
+      const amountSgd = intent.amount / 100;
+      try {
+        await supabase.rpc('increment_corp_wallet', { p_corp_id: corp_id, p_amount: amountSgd });
+        console.log(`[CORP WALLET] Topped up SGD${amountSgd} for corp ${corp_id}`);
+      } catch (err) {
+        console.error('Corp wallet top-up webhook error:', err.message);
+      }
+      return res.json({ received: true });
+    }
+
+    // ── Personal wallet top-up ────────────────────────────────
     const userId = intent.metadata?.user_id;
     const amountSgd = intent.amount / 100;
     if (!userId) {
@@ -642,7 +657,6 @@ app.get('/reseller/my-stats', requireReseller, async (req, res) => {
     if (error) throw error;
 
     // Build anonymised customer map — consistent first-name alias
-    // We only have user_id to work with; we fetch first names from profiles
     const userIds = [...new Set(orders.filter(o => o.user_id).map(o => o.user_id))];
     const { data: profileData } = await supabase
       .from('profiles')
@@ -651,12 +665,10 @@ app.get('/reseller/my-stats', requireReseller, async (req, res) => {
 
     const nameMap = {};
     (profileData || []).forEach(p => {
-      // Show first name only
       const firstName = (p.full_name || 'Customer').split(' ')[0];
       nameMap[p.id] = firstName;
     });
 
-    // Track which user_ids are "new" vs "returning" for this reseller
     const seenUsers = new Set();
     const enriched = orders.map(o => {
       const netPrice   = parseFloat(o.price_sgd || 0) - parseFloat(o.discount_sgd || 0);
@@ -678,7 +690,6 @@ app.get('/reseller/my-stats', requireReseller, async (req, res) => {
       };
     });
 
-    // Summary stats
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const twelveMonthsAgo = new Date(now);
@@ -689,7 +700,6 @@ app.get('/reseller/my-stats', requireReseller, async (req, res) => {
       .filter(o => new Date(o.created_at) >= startOfMonth)
       .reduce((s, o) => s + parseFloat(o.commission_sgd), 0);
 
-    // Active customers (purchased in last 12 months)
     const activeCustomerIds = new Set(
       orders
         .filter(o => new Date(o.created_at) >= twelveMonthsAgo && o.user_id)
@@ -736,7 +746,6 @@ app.post('/referral/generate', requireAuth, async (req, res) => {
   try {
     const userId = req.authUser.id;
 
-    // Check if already has one
     const { data: profile } = await supabase
       .from('profiles')
       .select('referral_code, full_name')
@@ -747,12 +756,10 @@ app.post('/referral/generate', requireAuth, async (req, res) => {
       return res.json({ referral_code: profile.referral_code });
     }
 
-    // Generate new code using DB sequence
     const { data: seqData, error: seqError } = await supabase
       .rpc('nextval', { sequence_name: 'referral_code_seq' })
       .single();
 
-    // Fallback: use timestamp-based suffix if RPC not available
     const seq = seqData
       ? String(seqData).padStart(5, '0')
       : String(Date.now()).slice(-5);
@@ -782,7 +789,6 @@ app.get('/referral/my-stats', requireAuth, async (req, res) => {
   try {
     const userId = req.authUser.id;
 
-    // Get user's referral code + credit earned
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('referral_code, referral_credit_earned, full_name')
@@ -803,7 +809,6 @@ app.get('/referral/my-stats', requireAuth, async (req, res) => {
       });
     }
 
-    // Get all completed orders that used this referral code
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
       .select('id, user_id, created_at, price_sgd, country_name, package_title')
@@ -813,13 +818,11 @@ app.get('/referral/my-stats', requireAuth, async (req, res) => {
 
     if (ordersError) throw ordersError;
 
-    // Get profiles who were referred (referred_by = this code) — first purchase only
     const { data: referredProfiles } = await supabase
       .from('profiles')
       .select('id, full_name, created_at')
       .eq('referred_by', referral_code);
 
-    // Anonymised list — first name only
     const referred_users = (referredProfiles || []).map(p => ({
       name: (p.full_name || 'User').split(' ')[0],
       joined_at: p.created_at,
@@ -837,13 +840,11 @@ app.get('/referral/my-stats', requireAuth, async (req, res) => {
   }
 });
 
-// POST /referral/credit — called internally when an order with a USR- code completes
-// Awards SGD 2.00 wallet credit to the referrer on the referred user's FIRST purchase
+// POST /referral/credit — awards SGD 2.00 wallet credit to referrer on first purchase
 async function processReferralCredit(referralCode, buyerUserId) {
   if (!referralCode || !referralCode.startsWith('USR-')) return;
 
   try {
-    // Find the referrer
     const { data: referrer, error: refError } = await supabase
       .from('profiles')
       .select('id, wallet_balance, referral_credit_earned')
@@ -855,10 +856,8 @@ async function processReferralCredit(referralCode, buyerUserId) {
       return;
     }
 
-    // Don't self-refer
     if (referrer.id === buyerUserId) return;
 
-    // Only credit on the buyer's FIRST purchase
     const { data: priorOrders } = await supabase
       .from('orders')
       .select('id')
@@ -866,7 +865,6 @@ async function processReferralCredit(referralCode, buyerUserId) {
       .eq('referral_code', referralCode)
       .eq('status', 'completed');
 
-    // priorOrders includes the current order, so >1 means repeat purchase
     if (priorOrders && priorOrders.length > 1) {
       console.log('Referral credit: not first purchase, skipping');
       return;
@@ -884,14 +882,12 @@ async function processReferralCredit(referralCode, buyerUserId) {
       })
       .eq('id', referrer.id);
 
-    // Mark buyer's profile with referred_by if not already set
     await supabase
       .from('profiles')
       .update({ referred_by: referralCode })
       .eq('id', buyerUserId)
       .is('referred_by', null);
 
-    // Push notification to referrer
     await sendPushToUser(referrer.id, {
       title: '🎉 Referral Reward!',
       body: `SGD ${REFERRAL_CREDIT_SGD.toFixed(2)} added to your wallet — someone used your referral code!`,
@@ -904,8 +900,7 @@ async function processReferralCredit(referralCode, buyerUserId) {
   }
 }
 
-// POST /order/complete — call this from frontend after a successful order
-// to trigger referral credit processing
+// POST /order/complete — trigger referral credit processing after order
 app.post('/order/complete', requireAuth, async (req, res) => {
   try {
     const { orderId } = req.body;
@@ -921,7 +916,6 @@ app.post('/order/complete', requireAuth, async (req, res) => {
     if (error || !order) return res.status(404).json({ error: 'Order not found' });
     if (order.status !== 'completed') return res.json({ ok: true, credited: false });
 
-    // Process referral credit if USR- code was used
     await processReferralCredit(order.referral_code, userId);
 
     res.json({ ok: true, credited: true });
@@ -933,7 +927,6 @@ app.post('/order/complete', requireAuth, async (req, res) => {
 // GET /admin/referral-stats — all users with USR- codes + credit earned
 app.get('/admin/referral-stats', requireAdmin, async (req, res) => {
   try {
-    // Get all profiles that have a referral_code
     const { data: profiles, error } = await supabase
       .from('profiles')
       .select('id, full_name, referral_code, referral_credit_earned')
@@ -942,20 +935,17 @@ app.get('/admin/referral-stats', requireAdmin, async (req, res) => {
 
     if (error) throw error;
 
-    // For each referrer, count how many profiles have referred_by = their code
     const codes = profiles.map(p => p.referral_code);
     const { data: referred } = await supabase
       .from('profiles')
       .select('referred_by')
       .in('referred_by', codes.length ? codes : ['__none__']);
 
-    // Count referrals per code
     const countMap = {};
     (referred || []).forEach(r => {
       countMap[r.referred_by] = (countMap[r.referred_by] || 0) + 1;
     });
 
-    // Get emails from auth.users via admin endpoint
     const { data: authUsers } = await supabase.auth.admin.listUsers();
     const emailMap = {};
     (authUsers?.users || []).forEach(u => { emailMap[u.id] = u.email; });
@@ -971,6 +961,286 @@ app.get('/admin/referral-stats', requireAdmin, async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CORPORATE ENDPOINTS
+// ═══════════════════════════════════════════════════════════════
+
+// POST /corporate/register — create corporates row + upgrade founding user
+app.post('/corporate/register', async (req, res) => {
+  const { company_name, uen, contact_email, user_id, full_name } = req.body;
+  if (!company_name || !contact_email || !user_id) {
+    return res.status(400).json({ error: 'company_name, contact_email and user_id are required' });
+  }
+  try {
+    const { data: corp, error: corpErr } = await supabase
+      .from('corporates')
+      .insert({ company_name, uen: uen || null, contact_email, is_active: true })
+      .select()
+      .single();
+    if (corpErr) throw corpErr;
+
+    const { error: profErr } = await supabase
+      .from('profiles')
+      .update({
+        is_corporate: true,
+        corp_id: corp.id,
+        corp_role: 'admin',
+        full_name: full_name || undefined,
+      })
+      .eq('id', user_id);
+    if (profErr) throw profErr;
+
+    return res.json({ success: true, corp_id: corp.id, company_name: corp.company_name });
+  } catch (err) {
+    console.error('POST /corporate/register', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /corporate/invite — send staff invite (stored in corp_invites)
+app.post('/corporate/invite', async (req, res) => {
+  const { corp_id, email, invited_by_user_id } = req.body;
+  if (!corp_id || !email) {
+    return res.status(400).json({ error: 'corp_id and email are required' });
+  }
+  try {
+    const { data: profile, error: pErr } = await supabase
+      .from('profiles')
+      .select('corp_id, corp_role')
+      .eq('id', invited_by_user_id)
+      .single();
+    if (pErr || !profile) return res.status(403).json({ error: 'Profile not found' });
+    if (profile.corp_id !== corp_id || profile.corp_role !== 'admin') {
+      return res.status(403).json({ error: 'Only corp admins can invite staff' });
+    }
+
+    const { data: existing } = await supabase
+      .from('corp_invites')
+      .select('id, accepted')
+      .eq('corp_id', corp_id)
+      .eq('email', email)
+      .maybeSingle();
+    if (existing && !existing.accepted) {
+      return res.status(409).json({ error: 'Invite already pending for this email' });
+    }
+    if (existing && existing.accepted) {
+      return res.status(409).json({ error: 'This email is already a member' });
+    }
+
+    const token = require('crypto').randomBytes(24).toString('hex');
+
+    const { error: invErr } = await supabase
+      .from('corp_invites')
+      .insert({ corp_id, email, token, accepted: false });
+    if (invErr) throw invErr;
+
+    const { data: corp } = await supabase
+      .from('corporates')
+      .select('company_name')
+      .eq('id', corp_id)
+      .single();
+
+    const inviteUrl = `https://esimconnect.world/corporate/invite/${token}`;
+    console.log(`[CORP INVITE] To: ${email} | Company: ${corp?.company_name} | URL: ${inviteUrl}`);
+
+    return res.json({ success: true, invite_url: inviteUrl });
+  } catch (err) {
+    console.error('POST /corporate/invite', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /corporate/invite/:token — returns invite metadata for the accept page
+app.get('/corporate/invite/:token', async (req, res) => {
+  const { token } = req.params;
+  try {
+    const { data: invite, error } = await supabase
+      .from('corp_invites')
+      .select('id, corp_id, email, accepted, corporates(company_name)')
+      .eq('token', token)
+      .single();
+    if (error || !invite) return res.status(404).json({ error: 'Invite not found' });
+    if (invite.accepted) return res.status(410).json({ error: 'Invite already used' });
+    return res.json({
+      email: invite.email,
+      corp_id: invite.corp_id,
+      company_name: invite.corporates?.company_name || '',
+      token,
+    });
+  } catch (err) {
+    console.error('GET /corporate/invite/:token', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /corporate/invite/accept — marks invite accepted + upgrades staff profile
+app.post('/corporate/invite/accept', async (req, res) => {
+  const { token, user_id } = req.body;
+  if (!token || !user_id) return res.status(400).json({ error: 'token and user_id required' });
+  try {
+    const { data: invite, error: iErr } = await supabase
+      .from('corp_invites')
+      .select('id, corp_id, email, accepted')
+      .eq('token', token)
+      .single();
+    if (iErr || !invite) return res.status(404).json({ error: 'Invite not found' });
+    if (invite.accepted) return res.status(410).json({ error: 'Invite already used' });
+
+    await supabase
+      .from('corp_invites')
+      .update({ accepted: true })
+      .eq('id', invite.id);
+
+    const { error: profErr } = await supabase
+      .from('profiles')
+      .update({ is_corporate: true, corp_id: invite.corp_id, corp_role: 'staff' })
+      .eq('id', user_id);
+    if (profErr) throw profErr;
+
+    return res.json({ success: true, corp_id: invite.corp_id });
+  } catch (err) {
+    console.error('POST /corporate/invite/accept', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /corporate/dashboard — full dashboard data for corp admin
+app.get('/corporate/dashboard', async (req, res) => {
+  const { corp_id, user_id } = req.query;
+  if (!corp_id || !user_id) return res.status(400).json({ error: 'corp_id and user_id required' });
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('corp_id, corp_role')
+      .eq('id', user_id)
+      .single();
+    if (!profile || profile.corp_id !== corp_id || profile.corp_role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { data: corp } = await supabase
+      .from('corporates')
+      .select('*')
+      .eq('id', corp_id)
+      .single();
+
+    const { data: staff } = await supabase
+      .from('profiles')
+      .select('id, full_name, phone, wallet_balance, corp_role, created_at')
+      .eq('corp_id', corp_id)
+      .order('created_at', { ascending: true });
+
+    const { data: pendingInvites } = await supabase
+      .from('corp_invites')
+      .select('id, email, created_at')
+      .eq('corp_id', corp_id)
+      .eq('accepted', false)
+      .order('created_at', { ascending: false });
+
+    const staffIds = (staff || []).map(s => s.id);
+    let orders = [];
+    if (staffIds.length > 0) {
+      const { data: ord } = await supabase
+        .from('orders')
+        .select('id, order_code, customer_name, customer_email, package_title, country_name, price_sgd, status, payment_method, created_at, user_id')
+        .in('user_id', staffIds)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      orders = ord || [];
+    }
+
+    const totalSpend = orders
+      .filter(o => o.status === 'completed')
+      .reduce((sum, o) => sum + parseFloat(o.price_sgd || 0), 0);
+
+    return res.json({
+      corp,
+      staff: staff || [],
+      pending_invites: pendingInvites || [],
+      orders,
+      total_spend: totalSpend.toFixed(2),
+    });
+  } catch (err) {
+    console.error('GET /corporate/dashboard', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /corporate/wallet/topup — Stripe PaymentIntent for corporate wallet
+app.post('/corporate/wallet/topup', async (req, res) => {
+  const { corp_id, amount_sgd, user_id } = req.body;
+  if (!corp_id || !amount_sgd || !user_id) {
+    return res.status(400).json({ error: 'corp_id, amount_sgd and user_id required' });
+  }
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('corp_id, corp_role')
+      .eq('id', user_id)
+      .single();
+    if (!profile || profile.corp_id !== corp_id || profile.corp_role !== 'admin') {
+      return res.status(403).json({ error: 'Only corp admins can top up the corporate wallet' });
+    }
+
+    const amountCents = Math.round(parseFloat(amount_sgd) * 100);
+    if (amountCents < 500) return res.status(400).json({ error: 'Minimum top-up is SGD 5.00' });
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountCents,
+      currency: 'sgd',
+      metadata: { type: 'corp_wallet_topup', corp_id, user_id },
+    });
+
+    return res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (err) {
+    console.error('POST /corporate/wallet/topup', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /admin/corporates — list all corporate accounts (admin only)
+app.get('/admin/corporates', requireAdmin, async (req, res) => {
+  try {
+    const { data: corps, error } = await supabase
+      .from('corporates')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const enriched = await Promise.all(
+      (corps || []).map(async (c) => {
+        const { count } = await supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('corp_id', c.id)
+          .eq('is_corporate', true);
+        return { ...c, staff_count: count || 0 };
+      })
+    );
+
+    return res.json(enriched);
+  } catch (err) {
+    console.error('GET /admin/corporates', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /admin/corporates/:id — toggle is_active or edit details
+app.patch('/admin/corporates/:id', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  try {
+    const allowed = ['company_name', 'uen', 'contact_email', 'is_active'];
+    const clean = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
+    const { error } = await supabase.from('corporates').update(clean).eq('id', id);
+    if (error) throw error;
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('PATCH /admin/corporates/:id', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
