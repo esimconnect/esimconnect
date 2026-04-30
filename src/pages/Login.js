@@ -13,6 +13,26 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError('Enter your email address above first, then click Forgot Password.');
+      return;
+    }
+    setResetLoading(true);
+    setError('');
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: 'https://esimconnect.world/dashboard',
+    });
+    setResetLoading(false);
+    if (error) {
+      setError(error.message);
+    } else {
+      setResetSent(true);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -72,6 +92,26 @@ export default function Login() {
             <button type="submit" className={styles.submitBtn} disabled={loading}>
               {loading ? <span className={styles.spinner}></span> : `${t('auth_login')} →`}
             </button>
+
+            <div style={{ textAlign: 'right', marginTop: '8px' }}>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={resetLoading}
+                style={{
+                  background: 'none', border: 'none', color: '#38bdf8',
+                  fontSize: '0.83rem', cursor: 'pointer', padding: 0,
+                  textDecoration: 'underline',
+                }}
+              >
+                {resetLoading ? 'Sending…' : 'Forgot password?'}
+              </button>
+            </div>
+            {resetSent && (
+              <p style={{ color: '#34d399', fontSize: '0.85rem', margin: '8px 0 0', textAlign: 'center' }}>
+                ✅ Password reset email sent — check your inbox.
+              </p>
+            )}
           </form>
 
           <p className={styles.switchText}>
