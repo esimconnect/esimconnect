@@ -2,8 +2,114 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import styles from './CorporateDashboard.module.css';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
+
+// ── Stripe top-up inner form ────────────────────────────────────────────────
+function TopUpForm({ corpId, userId, onSuccess }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [amount, setAmount] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const PRESETS = [50, 100, 200, 500];
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError(''); setSuccess('');
+    const amountSgd = parseFloat(amount);
+    if (!amountSgd || amountSgd < 5) {
+      setError('Minimum top-up is SGD 5.00');
+      return;
+    }
+    if (!stripe || !elements) return;
+    setLoading(true);
+    try {
+      // 1. Create PaymentIntent on backend
+      const res = await fetch(`${BACKEND}/corporate/wallet/topup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ corp_id: corpId, user_id: userId, amount_sgd: amountSgd }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // 2. Confirm card payment
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+        data.clientSecret,
+        { payment_method: { card: elements.getElement(CardElement) } }
+      );
+      if (stripeError) throw new Error(stripeError.message);
+      if (paymentIntent.status === 'succeeded') {
+        setSuccess(`SGD ${amountSgd.toFixed(2)} added to your corporate wallet!`);
+        setAmount('');
+        elements.getElement(CardElement).clear();
+        setTimeout(() => { setSuccess(''); onSuccess(); }, 2500);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className={styles.topUpForm}>
+      <div className={styles.presetRow}>
+        {PRESETS.map(p => (
+          <button
+            key={p}
+            type="button"
+            className={`${styles.presetBtn} ${parseFloat(amount) === p ? styles.presetActive : ''}`}
+            onClick={() => setAmount(String(p))}
+          >
+            SGD {p}
+          </button>
+        ))}
+      </div>
+      <div className={styles.amountRow}>
+        <span className={styles.currencyLabel}>SGD</span>
+        <input
+          className={styles.amountInput}
+          type="number"
+          min="5"
+          step="1"
+          placeholder="Other amount"
+          value={amount}
+          onChange={e => setAmount(e.target.value)}
+        />
+      </div>
+      <div className={styles.cardWrap}>
+        <CardElement options={{
+          style: {
+            base: { fontSize: '15px', color: '#1e293b', fontFamily: '-apple-system, sans-serif',
+                    '::placeholder': { color: '#94a3b8' } },
+            invalid: { color: '#dc2626' },
+          },
+        }} />
+      </div>
+      {error && <p className={styles.errorMsg}>{error}</p>}
+      {success && <p className={styles.successMsg}>✅ {success}</p>}
+      <button
+        type="submit"
+        className={styles.primaryBtn}
+        disabled={loading || !stripe}
+        style={{ width: '100%', marginTop: '4px', padding: '13px' }}
+      >
+        {loading ? 'Processing…' : `Top Up${amount ? ` SGD ${parseFloat(amount || 0).toFixed(2)}` : ''}`}
+      </button>
+      <p style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'center', margin: '8px 0 0' }}>
+        🔒 Secured by Stripe · SGD only · Credited instantly on payment
+      </p>
+    </form>
+  );
+}
 
 export default function CorporateDashboard() {
   const navigate = useNavigate();
@@ -347,8 +453,7 @@ export default function CorporateDashboard() {
               </div>
               <p className={styles.walletNote}>
                 Staff purchases are automatically deducted from this balance.
-                Top up via bank transfer or contact us at{' '}
-                <a href="mailto:hello@esimconnect.world">hello@esimconnect.world</a>.
+                Top up below using a card — credited instantly.
               </p>
             </div>
 
@@ -362,6 +467,23 @@ export default function CorporateDashboard() {
                 <span className={styles.wStatLabel}>Completed Orders</span>
               </div>
             </div>
+
+            {isPending ? (
+              <div className={styles.emptyState} style={{ marginTop: '20px' }}>
+                ⏳ Top-up is unavailable until your account is approved.
+              </div>
+            ) : (
+              <div className={styles.topUpCard}>
+                <h3 className={styles.subTitle} style={{ marginBottom: '20px' }}>Top Up Wallet</h3>
+                <Elements stripe={stripePromise}>
+                  <TopUpForm
+                    corpId={corpId}
+                    userId={userId}
+                    onSuccess={fetchDashboard}
+                  />
+                </Elements>
+              </div>
+            )}
           </div>
         )}
       </main>

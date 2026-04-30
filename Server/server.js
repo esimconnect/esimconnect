@@ -982,10 +982,32 @@ function isWorkEmail(email) {
   return domain && !FREE_EMAIL_DOMAINS.includes(domain);
 }
 
-// Simple console email logger — swap for SendGrid/Resend in production
-async function sendEmail({ to, subject, text }) {
-  console.log(`[EMAIL] To: ${to}\nSubject: ${subject}\n${text}\n`);
-  // TODO: integrate SendGrid or Resend here
+// ── EMAIL via Resend ─────────────────────────────────────────────────────────
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+async function sendEmail({ to, subject, text, html }) {
+  if (!process.env.RESEND_API_KEY) {
+    // Fallback: log only (dev / missing key)
+    console.log(`[EMAIL-NOOP] To: ${to}\nSubject: ${subject}\n${text}\n`);
+    return;
+  }
+  try {
+    const { data, error } = await resend.emails.send({
+      from: 'eSIMConnect <hello@esimconnect.world>',
+      to,
+      subject,
+      text,
+      ...(html ? { html } : {}),
+    });
+    if (error) {
+      console.error(`[EMAIL] Resend error to ${to}:`, error);
+    } else {
+      console.log(`[EMAIL] Sent to ${to} — id: ${data?.id}`);
+    }
+  } catch (err) {
+    console.error(`[EMAIL] Unexpected error sending to ${to}:`, err.message);
+  }
 }
 
 // POST /corporate/register — create corporates row + upgrade founding user
@@ -1142,8 +1164,25 @@ app.post('/corporate/invite', async (req, res) => {
       .single();
 
     const inviteUrl = `https://esimconnect.world/corporate/invite/${token}`;
-    console.log(`[CORP INVITE] To: ${email} | Company: ${corp?.company_name} | URL: ${inviteUrl}`);
 
+    await sendEmail({
+      to: email,
+      subject: `You've been invited to join ${corp?.company_name} on eSIMConnect`,
+      text: [
+        `Hi there,`,
+        ``,
+        `You've been invited to join ${corp?.company_name}'s corporate account on eSIMConnect.`,
+        ``,
+        `Click the link below to accept your invitation and create your account:`,
+        `${inviteUrl}`,
+        ``,
+        `This invite link is single-use. If you did not expect this email, you can safely ignore it.`,
+        ``,
+        `The eSIMConnect Team`,
+      ].join('\n'),
+    });
+
+    console.log(`[CORP INVITE] Invite email sent to: ${email} | Company: ${corp?.company_name}`);
     return res.json({ success: true, invite_url: inviteUrl });
   } catch (err) {
     console.error('POST /corporate/invite', err);

@@ -11,6 +11,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [plansOpen, setPlansOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [isCorpAdmin, setIsCorpAdmin] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useLang();
@@ -18,12 +19,24 @@ export default function Navbar() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user) checkCorpAdmin(session.user.id);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) checkCorpAdmin(session.user.id);
+      else setIsCorpAdmin(false);
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  async function checkCorpAdmin(userId) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_corporate, corp_role')
+      .eq('id', userId)
+      .single();
+    setIsCorpAdmin(profile?.is_corporate && profile?.corp_role === 'admin');
+  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -160,6 +173,24 @@ export default function Navbar() {
               <Link to="/terms" className={isActive('/terms')} onClick={() => setMenuOpen(false)}>
                 T&C
               </Link>
+              {/* Corp Portal link — only visible to corporate admins */}
+              {isCorpAdmin && (
+                <Link
+                  to="/corporate/dashboard"
+                  className={isActive('/corporate/dashboard')}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    color: '#38bdf8',
+                    fontWeight: 700,
+                    border: '1px solid rgba(56,189,248,0.3)',
+                    borderRadius: '8px',
+                    padding: '4px 10px',
+                    fontSize: '13px',
+                  }}
+                >
+                  🏢 Corp Portal
+                </Link>
+              )}
               {/* Admin link — only visible to admin account */}
               {isAdmin && (
                 <Link
