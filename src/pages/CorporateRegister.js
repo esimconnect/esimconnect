@@ -13,6 +13,7 @@ export default function CorporateRegister() {
 
   // Company details
   const [companyName, setCompanyName] = useState('');
+  const [companyCountry, setCompanyCountry] = useState('');
   const [uen, setUen] = useState('');
   const [contactEmail, setContactEmail] = useState('');
 
@@ -30,6 +31,7 @@ export default function CorporateRegister() {
     e.preventDefault();
     setError('');
     if (!companyName.trim()) return setError('Company name is required.');
+    if (!companyCountry) return setError('Please select a country.');
     if (!contactEmail.trim()) return setError('Contact email is required.');
     setStep(2);
   }
@@ -60,6 +62,7 @@ export default function CorporateRegister() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           company_name: companyName.trim(),
+          company_country: companyCountry,
           uen: uen.trim() || null,
           contact_email: contactEmail.trim(),
           user_id: userId,
@@ -122,6 +125,38 @@ export default function CorporateRegister() {
                 onChange={e => setCompanyName(e.target.value)}
                 required
               />
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>Country *</label>
+              <select
+                className={styles.input}
+                value={companyCountry}
+                onChange={e => setCompanyCountry(e.target.value)}
+                required
+              >
+                <option value="">Select country…</option>
+                <option value="Singapore">Singapore</option>
+                <option value="Malaysia">Malaysia</option>
+                <option value="Indonesia">Indonesia</option>
+                <option value="Thailand">Thailand</option>
+                <option value="Philippines">Philippines</option>
+                <option value="Vietnam">Vietnam</option>
+                <option value="Hong Kong">Hong Kong</option>
+                <option value="Japan">Japan</option>
+                <option value="South Korea">South Korea</option>
+                <option value="China">China</option>
+                <option value="India">India</option>
+                <option value="Australia">Australia</option>
+                <option value="New Zealand">New Zealand</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="United States">United States</option>
+                <option value="Canada">Canada</option>
+                <option value="Germany">Germany</option>
+                <option value="France">France</option>
+                <option value="Netherlands">Netherlands</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
 
             <div className={styles.field}>
