@@ -1,6 +1,6 @@
 # esimconnect — Living Project Context
-Last updated: April 29, 2026
-Latest commit: c52a295d
+Last updated: April 30, 2026
+Latest commit: c299f6ce
 
 ---
 
@@ -16,6 +16,7 @@ Latest commit: c52a295d
 - Existing tables: countries, esim_plans, esims, orders, profiles, push_subscriptions, resellers, saved_itineraries, usage_logs, users, voip_calls, waitlist, wallet_topups, corporates, corp_invites
 - RLS: profiles, wallet_topups, voip_calls, push_subscriptions, resellers, corporates, corp_invites all have RLS enabled
 - Currency: SGD primary, GST 9% applied at checkout
+- URL Configuration: Site URL = https://esimconnect.world, Redirect URLs = https://esimconnect.world/**
 
 ## Stripe
 - Account: Kairos Axiom (acct_1TBAKEBOsstkemgx)
@@ -23,8 +24,14 @@ Latest commit: c52a295d
 - Live keys: available under Kairos Axiom (sk_live_...05tE created 10 Apr — for production later)
 - Currency: SGD
 - Top-up: one-off PaymentIntent (not subscription)
-- Webhook: esimconnect-wallet-topup (Active) — listens for payment_intent.succeeded
+- Webhook: esimconnect-webhook (Active) — in Workbench → Webhooks, listens for payment_intent.succeeded
 - Webhook URL: https://esimconnect-backend.onrender.com/webhook
+
+## Resend (Email)
+- Account: kairosventure.io@gmail.com
+- Domain: esimconnect.world (Verified, Tokyo region)
+- From address: eSIMConnect <hello@esimconnect.world>
+- API key: stored in Render + Server/.env as RESEND_API_KEY
 
 ## Cloudflare
 - Account: kairosventure.io@gmail.com
@@ -65,6 +72,7 @@ SUPABASE_SERVICE_ROLE_KEY=[supabase service role key]
 VAPID_PUBLIC_KEY=BHWKg9LMTkn1uA9pgQweT2DNyCfNAvMTYqO2QXSN8YJhlxrysfS3Br_iZpGVCbZfslZZ9g_0bfWRnyKncrKHG4k
 VAPID_PRIVATE_KEY=Or2S1ilMhCMjwsBuU3-55tuFXonU87lmSgZW5XmPqnU
 ADMIN_EMAIL=davidlim@esimconnect.world
+RESEND_API_KEY=re_[resend api key]
 PORT=4000
 
 ### Cloudflare Pages Environment Variables
@@ -83,6 +91,7 @@ SUPABASE_SERVICE_ROLE_KEY=[supabase service role key]
 VAPID_PUBLIC_KEY=BHWKg9LMTkn1uA9pgQweT2DNyCfNAvMTYqO2QXSN8YJhlxrysfS3Br_iZpGVCbZfslZZ9g_0bfWRnyKncrKHG4k
 VAPID_PRIVATE_KEY=Or2S1ilMhCMjwsBuU3-55tuFXonU87lmSgZW5XmPqnU
 ADMIN_EMAIL=davidlim@esimconnect.world
+RESEND_API_KEY=re_[resend api key]
 PORT=4000
 
 ---
@@ -108,6 +117,7 @@ A travel tech platform for tourists and business travellers targeting:
 | Styling     | CSS Modules + global.css            |
 | Auth + DB   | Supabase                            |
 | Payments    | Stripe (Stripe.js + CardElement)    |
+| Email       | Resend (transactional email)        |
 | VoIP        | Twilio (TBC — post-launch)          |
 | Hosting     | Cloudflare Pages                    |
 | Backend     | Node.js (Express) on Render         |
@@ -323,13 +333,18 @@ USR-[FIRSTNAME]-[SEQUENCE] e.g. USR-DAVID-00001
 
 ### Registration Flow
 1. Company visits /corporate/register
-2. Step 1: Company name, country, UEN (SG only, optional), contact email (work email required — free domains blocked)
+2. Step 1: Company name, country (dropdown), UEN (SG only, optional), contact email (work email required — free domains blocked)
 3. Step 2: Admin personal details + password
 4. Account created with is_active=false, approval_status='pending'
-5. Admin (davidlim@esimconnect.world) receives email notification
-6. Applicant receives 48hr review email
+5. Admin (davidlim@esimconnect.world) receives email notification via Resend
+6. Applicant receives 48hr review email via Resend
 7. Admin approves via Admin → Corporate tab → ✓ Approve
-8. Company receives approval email, account unlocks
+8. Company receives approval email via Resend, account unlocks
+
+### Known Bug
+- After registration, profiles.is_corporate / corp_id / corp_role are not always auto-updated
+- Workaround: manually set in Supabase → Table Editor → profiles
+- Fix planned for next session
 
 ### Free Email Domain Block
 20+ domains blocked including: gmail, outlook, hotmail, yahoo, icloud, protonmail etc.
@@ -344,15 +359,16 @@ Enforced on both frontend (CorporateRegister.js) and backend (server.js).
 ### Staff Invitation Flow
 1. Corp admin sends invite from /corporate/dashboard
 2. Backend creates corp_invites row with 48-char hex token
-3. Staff visits /corporate/invite/:token
-4. Staff registers → profile upgraded (is_corporate=true, corp_role='staff')
-5. Staff purchases → corp wallet deducted at checkout
+3. Resend delivers invite email with single-use link to staff
+4. Staff visits /corporate/invite/:token
+5. Staff registers → profile upgraded (is_corporate=true, corp_role='staff')
+6. Staff purchases → corp wallet deducted at checkout
 
 ### Corporate Wallet
 - Deducted directly from corporates.wallet_balance at checkout (payment_method='corp_wallet')
 - Only visible to corp staff with approved corp (is_active=true, approval_status='approved')
 - Stripe top-up: POST /corporate/wallet/topup → PaymentIntent → webhook credits via increment_corp_wallet()
-- Stripe top-up UI: TBD (currently shows "contact us" note in dashboard)
+- Stripe top-up UI: built in CorporateDashboard Wallet tab (preset amounts + CardElement)
 
 ### Admin Controls
 - Admin → Corporate tab — two sections: ⏳ Awaiting Approval / Approved Accounts
@@ -392,7 +408,7 @@ Enforced on both frontend (CorporateRegister.js) and backend (server.js).
 
 ## Navbar
 Logged out: My Itinerary → Plans → T&C → Register → Login → Language Toggle
-Logged in:  My Itinerary → Plans → Dashboard → Purchases → Saved Trips → T&C → ⚙️ Admin (admin only) → Logout → Language Toggle
+Logged in:  My Itinerary → Plans → Dashboard → Purchases → Saved Trips → T&C → 🏢 Corp Portal (corp admins only) → ⚙️ Admin (admin only) → Logout → Language Toggle
 
 ---
 
@@ -417,21 +433,26 @@ Logged in:  My Itinerary → Plans → Dashboard → Purchases → Saved Trips �
 - [x] Work email enforcement for corporate (20+ free domains blocked)
 - [x] SPA route fallback (_redirects) for Cloudflare Pages
 - [x] Fixed Itinerary.js build error (unterminated string line 169)
+- [x] Real email delivery via Resend (all transactional emails)
+- [x] Corporate wallet Stripe top-up UI (preset amounts, CardElement, webhook)
+- [x] 🏢 Corp Portal navbar link for corp admins
+- [x] Forgot Password link on Login page
+- [x] Fixed CorporateRegister.js missing country dropdown
 
 ---
 
 ## Remaining Work
 
 PHASE 3 — Growth ← CURRENT
-  [ ] Real email delivery — swap console.log sendEmail() in server.js for SendGrid or Resend
-  [ ] Corporate wallet Stripe top-up UI in CorporateDashboard Wallet tab
-  [ ] Corp Portal link in Navbar for corp admins (🏢)
+  [ ] Fix corp registration profile bug (is_corporate/corp_id/corp_role not always set on signup)
+  [ ] Password strength enforcement on registration (uppercase, digits, special chars)
   [ ] Purchases page — live eSIM status via Airalo API (pending Airalo onboarding)
   [ ] Guest checkout improvements
   [ ] Multi-currency support
   [ ] Render upgrade to Starter $7/mo
 
 PHASE 4 — Expansion
+  [ ] Airalo API integration — map out and display live data plans
   [ ] Rollover loyalty (unused data → wallet credit at plan expiry)
   [ ] Plan tier grouping — Country / Regional / Global tabs on Plans page
   [ ] Reseller mini-sites (/r/:slug)
@@ -472,6 +493,7 @@ Pay-As-You-Go is NOT available via Airalo — requires a different provider (fut
 | src/lib/pushNotifications.js | Web Push helpers |
 | src/pages/Home.js | Landing page |
 | src/pages/Plans.js | eSIM plan browser |
+| src/pages/Login.js | Login + Forgot Password |
 | src/pages/Checkout.js | Checkout + reseller code + corp wallet |
 | src/pages/OrderConfirmation.js | Post-purchase |
 | src/pages/Dashboard.js | User dashboard — Overview / Referral / Reseller Portal tabs |
@@ -484,13 +506,13 @@ Pay-As-You-Go is NOT available via Airalo — requires a different provider (fut
 | src/pages/SavedItineraries.js | Saved itineraries |
 | src/pages/Admin.js | Admin dashboard — 8 tabs |
 | src/pages/Admin.module.css | Admin styles |
-| src/pages/CorporateRegister.js | Corporate signup — 2-step + success screen |
+| src/pages/CorporateRegister.js | Corporate signup — 2-step + country dropdown |
 | src/pages/CorporateRegister.module.css | Corporate register styles |
-| src/pages/CorporateDashboard.js | Corporate admin dashboard |
+| src/pages/CorporateDashboard.js | Corporate admin dashboard + Stripe wallet top-up |
 | src/pages/CorporateDashboard.module.css | Corporate dashboard styles |
 | src/pages/CorporateInvite.js | Staff invite acceptance |
 | src/pages/CorporateInvite.module.css | Invite styles |
-| src/components/Navbar.js | Nav + admin link |
+| src/components/Navbar.js | Nav + admin link + corp portal link |
 | src/components/Navbar.module.css | Navbar styles |
 | src/components/LanguageToggle.js | Language dropdown |
 | src/components/LanguageToggle.module.css | Language styles |
@@ -501,8 +523,8 @@ Pay-As-You-Go is NOT available via Airalo — requires a different provider (fut
 | public/manifest.json | PWA manifest |
 | public/sw.js | Service worker + push handler |
 | public/_redirects | Cloudflare Pages SPA route fallback |
-| Server/server.js | Express backend — all endpoints |
-| Server/package.json | Backend deps (web-push) |
+| Server/server.js | Express backend — all endpoints + Resend email |
+| Server/package.json | Backend deps (web-push, resend) |
 | Server/.env | Backend env vars |
 
 ---
@@ -602,8 +624,26 @@ Files: Server/server.js, src/App.js, src/pages/Admin.js, src/pages/Checkout.js,
        src/pages/CorporateInvite.js+css, public/_redirects
 Commits: ab59bade, df6dd779, 240d7089, c52a295d
 
+### April 30, 2026 — Session 12 (Email, Corp Wallet Top-up, Corp Portal Navbar, E2E Test)
+Completed:
+- Resend email integration — replaced console.log sendEmail() with real Resend API
+- Staff invite email wired up in /corporate/invite endpoint (was console.log only)
+- Corporate wallet Stripe top-up UI — preset amounts (SGD 50/100/200/500), CardElement, webhook balance credit confirmed working
+- 🏢 Corp Portal navbar link for corp admins (checkCorpAdmin queries profiles on auth state change)
+- Fixed CorporateRegister.js — missing company_country dropdown (was causing all registrations to fail silently)
+- Stripe webhook recreated in new Workbench UI (old interface deprecated)
+- Fixed STRIPE_WEBHOOK_SECRET whitespace issue in Render env vars
+- Added Forgot Password link to Login page (type email → click link → Supabase sends reset email)
+- Supabase URL Configuration set: Site URL = https://esimconnect.world, Redirect = https://esimconnect.world/**
+- End-to-end test passed: register → pending → approve (email delivered) → invite staff (email delivered) → corp wallet top-up SGD 50 confirmed
+- npm install resend in Server/
+
+Files: Server/server.js, Server/package.json, src/pages/CorporateDashboard.js,
+       src/pages/CorporateDashboard.module.css, src/components/Navbar.js,
+       src/pages/CorporateRegister.js, src/pages/Login.js
+Commits: a39437c2, 71a46bd9, c299f6ce
+
 Next session should:
-- Wire up real email delivery (SendGrid or Resend) to replace console.log sendEmail() in server.js
-- Build Stripe top-up UI in CorporateDashboard Wallet tab
-- Add 🏢 Corp Portal link to Navbar for corp admins
-- End-to-end test: register → pending → approve → invite staff → corp wallet checkout
+- Fix corp registration profile bug (is_corporate/corp_id/corp_role not set on signup)
+- Password strength enforcement on registration forms
+- Airalo API integration — map out and display live data plans
