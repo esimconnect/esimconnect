@@ -309,19 +309,24 @@ Don't include this if they're just browsing or comparing options.
             You
           </div>
           <div ref={leftColRef} style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {messages.filter(m => m.role === 'user').map((msg, i) => (
-              <div key={i} style={{
-                background: 'linear-gradient(135deg, rgba(0,200,255,0.12), rgba(191,90,242,0.08))',
-                border: '1px solid rgba(0,200,255,0.2)',
-                borderRadius: '12px',
-                padding: '10px 14px',
-                fontSize: '13px',
-                lineHeight: 1.6,
-                color: 'var(--text)',
-                fontWeight: 600,
-              }}>
-                {msg.text}
-              </div>
+            {messages.filter(m => m.role === 'user').map((msg, i, arr) => (
+              <React.Fragment key={i}>
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(0,200,255,0.12), rgba(191,90,242,0.08))',
+                  border: '1px solid rgba(0,200,255,0.2)',
+                  borderRadius: '12px',
+                  padding: '10px 14px',
+                  fontSize: '13px',
+                  lineHeight: 1.6,
+                  color: 'var(--text)',
+                  fontWeight: 600,
+                }}>
+                  {msg.text}
+                </div>
+                {i < arr.length - 1 && (
+                  <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)', margin: '4px 0' }} />
+                )}
+              </React.Fragment>
             ))}
             {messages.filter(m => m.role === 'user').length === 0 && (
               <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)', fontStyle: 'italic', marginTop: '8px' }}>
@@ -337,29 +342,34 @@ Don't include this if they're just browsing or comparing options.
             Travel Assistant
           </div>
           <div ref={rightColRef} style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {messages.filter(m => m.role === 'assistant').map((msg, i) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '12px',
-                  padding: '10px 14px',
-                  fontSize: '13px',
-                  lineHeight: 1.7,
-                  color: 'var(--text)',
-                  whiteSpace: 'pre-wrap',
-                }}>
-                  {renderMarkdown(msg.text)}
+            {messages.filter(m => m.role === 'assistant').map((msg, i, arr) => (
+              <React.Fragment key={i}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '12px',
+                    padding: '10px 14px',
+                    fontSize: '13px',
+                    lineHeight: 1.7,
+                    color: 'var(--text)',
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    {renderMarkdown(msg.text)}
+                  </div>
+                  {msg.planDestination && (
+                    <button
+                      onClick={() => onSelectDestination(msg.planDestination)}
+                      style={{ alignSelf: 'flex-start', background: 'linear-gradient(135deg, var(--accent), var(--accent2))', border: 'none', borderRadius: '10px', padding: '8px 18px', color: '#000', fontWeight: 800, fontSize: '12px', cursor: 'pointer', fontFamily: 'var(--font-head)' }}
+                    >
+                      🗺️ Plan {msg.planDestination} →
+                    </button>
+                  )}
                 </div>
-                {msg.planDestination && (
-                  <button
-                    onClick={() => onSelectDestination(msg.planDestination)}
-                    style={{ alignSelf: 'flex-start', background: 'linear-gradient(135deg, var(--accent), var(--accent2))', border: 'none', borderRadius: '10px', padding: '8px 18px', color: '#000', fontWeight: 800, fontSize: '12px', cursor: 'pointer', fontFamily: 'var(--font-head)' }}
-                  >
-                    🗺️ Plan {msg.planDestination} →
-                  </button>
+                {i < arr.length - 1 && (
+                  <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)', margin: '4px 0' }} />
                 )}
-              </div>
+              </React.Fragment>
             ))}
             {loading && (
               <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '12px 16px', display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
