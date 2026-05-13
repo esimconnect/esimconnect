@@ -384,7 +384,11 @@ export default function Itinerary() {
   const [gateReason, setGateReason] = React.useState('guest');
   const [isPlanBuyer, setIsPlanBuyer] = React.useState(false);
   const [itineraryCount, setItineraryCount] = React.useState(0);
-  const [itinTab, setItinTab] = React.useState('chat'); // 'chat' | 'plan'
+  const [itinTab, setItinTab] = React.useState('plan'); // 'plan' | 'chat' — plan is the default landing; chat is the optional explorer
+  const [customSearches, setCustomSearches] = React.useState([]); // array of free-form interest queries
+  const [customSearchInput, setCustomSearchInput] = React.useState('');
+  const [countryAdvisory, setCountryAdvisory] = React.useState(null); // { hasAdvisory, level, summary }
+  const [loadingAdvisory, setLoadingAdvisory] = React.useState(false);
 
   const IS_DEV = false;
 
@@ -538,17 +542,39 @@ export default function Itinerary() {
     setShowInterests(true);
     setShowManual(false);
     setLoadingExtra(true);
-    try {
-      const response = await fetch(CLAUDE_API, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content: `For a trip to ${trip.destination}, suggest 3-5 destination-specific activity categories that are unique or especially relevant to this destination beyond generic categories like food, shopping, attractions. Return ONLY a JSON array, no other text, no markdown:\n[{"id":"dest_1","label":"🎌 Example Category","desc":"Brief description"}]` }] })
-      });
-      const data = await response.json();
+    setLoadingAdvisory(true);
+    setCountryAdvisory(null);
+
+    // Fire both calls in parallel — extra categories + safety advisory
+    const extraCategoriesPromise = fetch(CLAUDE_API, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content: `For a trip to ${trip.destination}, suggest 3-5 destination-specific activity categories that are unique or especially relevant to this destination beyond generic categories like food, shopping, attractions. Return ONLY a JSON array, no other text, no markdown:\n[{"id":"dest_1","label":"🎌 Example Category","desc":"Brief description"}]` }] })
+    }).then(r => r.json()).then(data => {
       const text = data.content?.map(b => b.text || '').join('');
       const clean = text.replace(/```json|```/g, '').trim();
-      setExtraCategories(JSON.parse(clean));
-    } catch (e) { setExtraCategories([]); }
-    setLoadingExtra(false);
+      try { setExtraCategories(JSON.parse(clean)); } catch(e) { setExtraCategories([]); }
+    }).catch(() => setExtraCategories([])).finally(() => setLoadingExtra(false));
+
+    const advisoryPromise = fetch(CLAUDE_API, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: `For travellers considering ${trip.destination}, is there currently any major travel advisory from governments such as the US State Department, UK FCDO, or Australia DFAT (e.g. "reconsider travel", "do not travel", active conflict, civil unrest, major health emergency)?\n\nReturn ONLY valid JSON, no markdown:\n{"hasAdvisory": true|false, "level": "info"|"caution"|"warning", "summary": "Brief 1-2 sentence neutral summary, or null if no advisory"}\n\nGuidance:\n- If you are not highly confident based on widely reported, persistent information, return hasAdvisory: false.\n- Do NOT fabricate or speculate. Tourist hotspots with no major advisory should return false.\n- Levels: "info" = minor caveats (e.g. petty crime hotspot warnings), "caution" = "reconsider travel" / partial regions affected, "warning" = "do not travel" / active conflict.\n- Always frame the user as needing to check their own government's current advisory — don't present this as authoritative.`
+        }]
+      })
+    }).then(r => r.json()).then(data => {
+      const text = data.content?.map(b => b.text || '').join('');
+      const clean = text.replace(/```json|```/g, '').trim();
+      try {
+        const parsed = JSON.parse(clean);
+        if (parsed.hasAdvisory) setCountryAdvisory(parsed);
+      } catch(e) {}
+    }).catch(() => {}).finally(() => setLoadingAdvisory(false));
+
+    await Promise.allSettled([extraCategoriesPromise, advisoryPromise]);
   };
 
   const toggleInterest = (id) => setSelectedInterests(prev => ({ ...prev, [id]: !prev[id] }));
@@ -560,7 +586,9 @@ export default function Itinerary() {
 
   const generateSuggestions = async () => {
     const interests = selectedInterestLabels();
-    if (interests.length === 0) { setError('Please select at least one interest.'); return; }
+    const hasInterests = interests.length > 0;
+    const hasCustom = customSearches.length > 0;
+    if (!hasInterests && !hasCustom) { setError('Select at least one interest or add a free-form search.'); return; }
     const allowed = await checkGate();
     if (!allowed) return;
     setError('');
@@ -573,7 +601,12 @@ export default function Itinerary() {
     setRoutedPlan(null);
 
     const start = new Date(activeTrip.startDate);
-    const prompt = `You are an expert travel curator. Generate a rich flat list of suggested places for a ${activeTrip.duration}-day trip to ${activeTrip.destination}. Interests: ${interests.join(', ')}. DO NOT group by day — return a flat list across all categories giving the user maximum choice. ${hotelAddress ? "The traveller is staying at: " + hotelAddress + "." : ""} Rules: 1. Only real verifiable establishments. 2. For Food & Dining: cast a wide net — include Michelin-starred and Michelin Bib Gourmand restaurants, but ALSO include highly regarded local restaurants recommended by the destination's national or regional tourism board, popular spots featured in local food guides and review sites (e.g. Yelp, TripAdvisor top-rated, Google 4.5+ stars with many reviews), beloved street food stalls or hawker centres, and hidden gems known to locals. Do NOT limit food to fine dining — include a mix of budget-friendly, mid-range, and premium options. 3. For non-food categories, prioritise UNESCO, national tourism board, and trusted review sources. 4. Never invent names or addresses. 5. Accurate lat/lng. 6. Note the trust source for each place (e.g. "Michelin Star", "Bib Gourmand", "Tourism Board Recommended", "TripAdvisor Top-Rated", "Local Favourite", "UNESCO"). 7. Include meal options breakfast lunch dinner plus interest-specific venues. 8. Aim for ${Math.ceil(parseInt(activeTrip.duration) * 6)} suggestions. Return ONLY valid JSON no markdown: {"destination":"${activeTrip.destination}","flag":"🌏","disclaimer":"AI-generated from verified sources — includes Michelin, tourism board, and community recommendations","places":[{"id":"p1","name":"Place Name","category":"Food & Dining","subcategory":"Breakfast","address":"Full address","desc":"Short description","duration":"1 hr","trustSource":"Bib Gourmand","lat":1.3521,"lng":103.8198}]}`;
+    const customBlock = hasCustom
+      ? `\n\nADDITIONAL USER REQUESTS — the traveller has specifically asked for places matching these queries. Include real, verifiable places that match each one, in addition to the interest-based suggestions:\n${customSearches.map((q, i) => `  ${i+1}. "${q}"`).join('\n')}\n`
+      : '';
+    const interestsBlock = hasInterests ? `Interests: ${interests.join(', ')}.` : 'No general interests selected — focus entirely on the additional user requests below.';
+
+    const prompt = `You are an expert travel curator. Generate a rich flat list of suggested places for a ${activeTrip.duration}-day trip to ${activeTrip.destination}. ${interestsBlock}${customBlock} DO NOT group by day — return a flat list across all categories giving the user maximum choice. ${hotelAddress ? "The traveller is staying at: " + hotelAddress + "." : ""} Rules: 1. Only real verifiable establishments. 2. For Food & Dining: cast a wide net — include Michelin-starred and Michelin Bib Gourmand restaurants, but ALSO include highly regarded local restaurants recommended by the destination's national or regional tourism board, popular spots featured in local food guides and review sites (e.g. Yelp, TripAdvisor top-rated, Google 4.5+ stars with many reviews), beloved street food stalls or hawker centres, and hidden gems known to locals. Do NOT limit food to fine dining — include a mix of budget-friendly, mid-range, and premium options. 3. For non-food categories, prioritise UNESCO, national tourism board, and trusted review sources. 4. Never invent names or addresses. 5. Accurate lat/lng. 6. Note the trust source for each place (e.g. "Michelin Star", "Bib Gourmand", "Tourism Board Recommended", "TripAdvisor Top-Rated", "Local Favourite", "UNESCO"). 7. Include meal options breakfast lunch dinner plus interest-specific venues. 8. Aim for ${Math.ceil(parseInt(activeTrip.duration) * 6)} suggestions${hasCustom ? `, ensuring at least 2-3 places per user request above are included.` : '.'} 9. SAFETY NOTES: For each place, include a "safetyNote" field (string or null). Set to null for most places. Only add a note when there is well-documented, widely-reported concern about the area or category — e.g. "Tourist-heavy area — common reports of menu-switching and inflated pricing; verify prices before ordering", "Petty-crime hotspot — keep valuables secured", "This neighbourhood is frequently mentioned in scam reports for the [specific scam pattern]". NEVER accuse a specific named venue of being a scam. Frame as area-level patterns or category-level traveller reports. Phrase neutrally as "frequently reported by travellers" or "common reports of". If unsure, set to null. Return ONLY valid JSON no markdown: {"destination":"${activeTrip.destination}","flag":"🌏","disclaimer":"AI-generated from verified sources — includes Michelin, tourism board, and community recommendations","places":[{"id":"p1","name":"Place Name","category":"Food & Dining","subcategory":"Breakfast","address":"Full address","desc":"Short description","duration":"1 hr","trustSource":"Bib Gourmand","safetyNote":null,"lat":1.3521,"lng":103.8198}]}`;
 
     try {
       const response = await fetch(CLAUDE_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: MODEL, max_tokens: 8000, messages: [{ role: 'user', content: prompt }] }) });
@@ -587,6 +620,7 @@ export default function Itinerary() {
         if (!item.address) item.address = item.name + ', ' + parsed.destination;
         if (!item.trustSource) item.trustSource = item.source || '';
         if (!item.desc) item.desc = item.type || '';
+        if (item.safetyNote === undefined) item.safetyNote = null;
       });
       setSuggestions(parsed);
       const preSelected = {};
@@ -717,30 +751,31 @@ export default function Itinerary() {
       <main className={styles.main}>
         <div className={styles.header}>
           <div>
-            <h1 className={styles.title}>{t('itin_title')} ✈️</h1>
+            <h1 className={styles.title}>Plan My Itinerary ✈️</h1>
             <p style={{ fontSize: '14px', color: 'var(--muted)' }}>AI-powered travel plans — verified places, real addresses, optimised routes</p>
           </div>
         </div>
 
-        {/* STEP 1: Trip Selection + Chatbot */}
+        {/* STEP 1: Trip Selection (default) — Explore Destinations is a secondary view, opened from a small link */}
         {!showInterests && !generating && !suggestions && !routedPlan && (
           <>
-            {/* Tab switcher */}
-            <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '14px', padding: '4px', maxWidth: '360px', marginBottom: '24px' }}>
-              {[{ id: 'chat', label: '💬 Explore Destinations' }, { id: 'plan', label: '🗺️ Plan a Trip' }].map(tab => (
-                <button key={tab.id} onClick={() => setItinTab(tab.id)} style={{ flex: 1, background: itinTab === tab.id ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 'transparent', color: itinTab === tab.id ? '#000' : 'var(--muted)', border: 'none', borderRadius: '10px', padding: '9px 12px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'var(--font-head)' }}>{tab.label}</button>
-              ))}
-            </div>
-
-            {/* Chat tab */}
+            {/* Explore Destinations secondary view */}
             {itinTab === 'chat' && (
-              <DestinationChatbot onSelectDestination={(dest) => {
-                setDestination(dest);
-                setItinTab('plan');
-              }} />
+              <>
+                <button
+                  onClick={() => setItinTab('plan')}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '13px', cursor: 'pointer', padding: '4px 0', marginBottom: '16px', fontWeight: 600 }}
+                >
+                  ← Back to planning
+                </button>
+                <DestinationChatbot onSelectDestination={(dest) => {
+                  setDestination(dest);
+                  setItinTab('plan');
+                }} />
+              </>
             )}
 
-            {/* Plan tab */}
+            {/* Plan a Trip — default view */}
             {itinTab === 'plan' && (
               <>
                 {detectedTrip && !showManual && (
@@ -769,14 +804,23 @@ export default function Itinerary() {
 
                 {(!detectedTrip || showManual) && (
                   <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '20px', padding: '28px', maxWidth: '520px', marginBottom: '20px' }}>
-                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: '18px', fontWeight: 800, marginBottom: '20px' }}>
+                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
                       {showManual ? 'Plan a Different Trip' : 'Plan a Trip'}
                     </h2>
+                    <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '20px' }}>Tell us where you're heading and we'll build a custom itinerary.</p>
                     <form onSubmit={(e) => { e.preventDefault(); proceedToInterests({ destination, startDate, duration, flag: '🌍', hotelAddress }); }}
                       style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={labelStyle}>{t('itin_destination')}</label>
                         <input type="text" placeholder="e.g. Tokyo, Japan" value={destination} onChange={e => setDestination(e.target.value)} required style={inputStyle} />
+                        {/* Not sure? Explore destinations link */}
+                        <button
+                          type="button"
+                          onClick={() => setItinTab('chat')}
+                          style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '12px', cursor: 'pointer', padding: '4px 0', marginTop: '2px', textAlign: 'left', textDecoration: 'underline', fontWeight: 600, alignSelf: 'flex-start' }}
+                        >
+                          💬 Not sure where to go? Explore destinations →
+                        </button>
                       </div>
                       <div style={{ display: 'flex', gap: '12px' }}>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -810,6 +854,28 @@ export default function Itinerary() {
                 Select your interests — we'll suggest verified, accredited places for {activeTrip?.destination}.
               </p>
             </div>
+
+            {/* Country-level travel advisory banner */}
+            {countryAdvisory && countryAdvisory.hasAdvisory && (() => {
+              const lvl = countryAdvisory.level || 'info';
+              const styling = lvl === 'warning'
+                ? { bg: 'rgba(255,80,80,0.08)', bd: 'rgba(255,80,80,0.35)', fg: '#ff6b6b', icon: '🚨', title: 'Travel warning' }
+                : lvl === 'caution'
+                ? { bg: 'rgba(245,166,35,0.08)', bd: 'rgba(245,166,35,0.35)', fg: '#f5a623', icon: '⚠️', title: 'Travel caution' }
+                : { bg: 'rgba(0,200,255,0.06)', bd: 'rgba(0,200,255,0.25)', fg: '#00c8ff', icon: 'ℹ️', title: 'Travel notice' };
+              return (
+                <div style={{ background: styling.bg, border: `1px solid ${styling.bd}`, borderRadius: '14px', padding: '14px 18px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '20px', lineHeight: 1 }}>{styling.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, fontSize: '13px', color: styling.fg, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{styling.title} — {activeTrip?.destination}</div>
+                    <div style={{ fontSize: '13px', color: 'var(--text)', lineHeight: 1.6 }}>{countryAdvisory.summary}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px', lineHeight: 1.5 }}>
+                      ⓘ AI-generated guidance, not official advice. Always check your government's current travel advisory before booking (e.g. US <a href="https://travel.state.gov" target="_blank" rel="noopener noreferrer" style={{ color: styling.fg }}>travel.state.gov</a>, UK <a href="https://www.gov.uk/foreign-travel-advice" target="_blank" rel="noopener noreferrer" style={{ color: styling.fg }}>gov.uk/foreign-travel-advice</a>).
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div style={{ marginBottom: '24px' }}>
               <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Standard Categories</div>
@@ -845,14 +911,75 @@ export default function Itinerary() {
               )}
             </div>
 
+            {/* Free-form search — let the user describe exactly what they want */}
+            <div style={{ marginBottom: '28px', background: 'rgba(191,90,242,0.04)', border: '1px solid rgba(191,90,242,0.2)', borderRadius: '16px', padding: '18px 20px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#bf5af2', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                🔎 Anything specific in mind?
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+                Tell us in your own words. e.g. <em>"jazz bars in Shinjuku"</em>, <em>"vintage bookshops near my hotel"</em>, <em>"rooftop sunset cocktails"</em>, <em>"vegetarian ramen"</em>. We'll find matching places and weave them into your itinerary.
+              </p>
+
+              {/* Chips for added queries */}
+              {customSearches.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                  {customSearches.map((q, i) => (
+                    <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(191,90,242,0.15)', border: '1px solid rgba(191,90,242,0.35)', color: '#d8a8ff', borderRadius: '999px', padding: '5px 10px 5px 14px', fontSize: '12px', fontWeight: 600 }}>
+                      <span>{q}</span>
+                      <button
+                        type="button"
+                        onClick={() => setCustomSearches(prev => prev.filter((_, idx) => idx !== i))}
+                        style={{ background: 'rgba(0,0,0,0.25)', border: 'none', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', cursor: 'pointer', fontSize: '11px', lineHeight: 1, padding: 0, fontWeight: 700 }}
+                        aria-label="Remove"
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Input + Add button */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={customSearchInput}
+                  onChange={e => setCustomSearchInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const v = customSearchInput.trim();
+                      if (v) { setCustomSearches(prev => [...prev, v]); setCustomSearchInput(''); }
+                    }
+                  }}
+                  placeholder={customSearches.length === 0 ? `What do you want to do or visit in ${activeTrip?.destination || 'your destination'}?` : 'Add another...'}
+                  style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 14px', color: 'var(--text)', fontSize: '13px', outline: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const v = customSearchInput.trim();
+                    if (v) { setCustomSearches(prev => [...prev, v]); setCustomSearchInput(''); }
+                  }}
+                  disabled={!customSearchInput.trim()}
+                  style={{ background: !customSearchInput.trim() ? 'rgba(255,255,255,0.08)' : 'rgba(191,90,242,0.2)', border: '1px solid rgba(191,90,242,0.4)', color: !customSearchInput.trim() ? 'var(--muted)' : '#d8a8ff', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 700, cursor: !customSearchInput.trim() ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  {customSearches.length === 0 ? '+ Add' : '+ Add more'}
+                </button>
+              </div>
+            </div>
+
             {error && <div style={{ background: 'rgba(255,80,80,0.1)', border: '1px solid rgba(255,80,80,0.25)', color: '#ff6b6b', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', marginBottom: '16px' }}>{error}</div>}
 
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <button onClick={() => { setShowInterests(false); setExtraCategories([]); setError(''); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '12px', padding: '12px 20px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>← {t('back')}</button>
-              <button onClick={generateSuggestions} disabled={Object.values(selectedInterests).filter(Boolean).length === 0}
-                style={{ background: Object.values(selectedInterests).filter(Boolean).length === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, var(--accent), var(--accent2))', color: Object.values(selectedInterests).filter(Boolean).length === 0 ? 'var(--muted)' : '#000', border: 'none', borderRadius: '12px', padding: '12px 28px', fontWeight: 800, fontSize: '15px', fontFamily: 'var(--font-head)', cursor: Object.values(selectedInterests).filter(Boolean).length === 0 ? 'not-allowed' : 'pointer' }}>
-                {t('itin_generate')} →
-              </button>
+              <button onClick={() => { setShowInterests(false); setExtraCategories([]); setError(''); setCountryAdvisory(null); setCustomSearches([]); setCustomSearchInput(''); }} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '12px', padding: '12px 20px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>← {t('back')}</button>
+              {(() => {
+                const canGenerate = Object.values(selectedInterests).filter(Boolean).length > 0 || customSearches.length > 0;
+                return (
+                  <button onClick={generateSuggestions} disabled={!canGenerate}
+                    style={{ background: !canGenerate ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, var(--accent), var(--accent2))', color: !canGenerate ? 'var(--muted)' : '#000', border: 'none', borderRadius: '12px', padding: '12px 28px', fontWeight: 800, fontSize: '15px', fontFamily: 'var(--font-head)', cursor: !canGenerate ? 'not-allowed' : 'pointer' }}>
+                    {t('itin_generate')} →
+                  </button>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -926,6 +1053,12 @@ export default function Itinerary() {
                             </div>
                             <div style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '3px' }}>{item.desc}</div>
                             {item.address && <div style={{ fontSize: '11px', color: 'var(--muted2)', marginTop: '4px' }}>📍 {item.address}</div>}
+                            {item.safetyNote && (
+                              <div style={{ marginTop: '8px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', color: '#f5a623', lineHeight: 1.5, display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                                <span style={{ flexShrink: 0 }}>⚠️</span>
+                                <span><strong>Traveller advisory:</strong> {item.safetyNote}</span>
+                              </div>
+                            )}
                             <div style={{ marginTop: '6px' }}><a href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name + ' ' + (item.address || ''))} target='_blank' rel='noopener noreferrer' style={{ fontSize: '11px', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600, background: 'rgba(0,200,255,0.08)', border: '1px solid rgba(0,200,255,0.2)', borderRadius: '6px', padding: '2px 8px' }}>View on Maps</a></div>
                           </div>
                         </label>

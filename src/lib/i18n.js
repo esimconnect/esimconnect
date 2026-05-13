@@ -16,7 +16,7 @@ const translations = {
   en: {
     // Navbar
     nav_plans:        'Plans',
-    nav_itinerary:    'My Itinerary',
+    nav_itinerary:    'Plan My Itinerary',
     nav_purchases:    'My Purchases',
     nav_dashboard:    'Dashboard',
     nav_wallet:       'Wallet',
@@ -71,7 +71,7 @@ const translations = {
     wallet_history:   'Top-up History',
 
     // Itinerary
-    itin_title:       'My Itinerary',
+    itin_title:       'Plan My Itinerary',
     itin_destination: 'Where are you going?',
     itin_dates:       'Travel dates',
     itin_interests:   'Your interests',
@@ -128,7 +128,7 @@ const translations = {
   // ─────────────────────────── 中文 ───────────────────────────
   zh: {
     nav_plans:        '套餐',
-    nav_itinerary:    '我的行程',
+    nav_itinerary:    '规划我的行程',
     nav_purchases:    '我的订单',
     nav_dashboard:    '控制台',
     nav_wallet:       '钱包',
@@ -177,7 +177,7 @@ const translations = {
     wallet_success:   '充值成功！',
     wallet_history:   '充值记录',
 
-    itin_title:       '我的行程',
+    itin_title:       '规划我的行程',
     itin_destination: '您要去哪里？',
     itin_dates:       '出行日期',
     itin_interests:   '您的兴趣',
@@ -229,7 +229,7 @@ const translations = {
   // ─────────────────────────── 日本語 ───────────────────────────
   ja: {
     nav_plans:        'プラン',
-    nav_itinerary:    '旅程',
+    nav_itinerary:    '旅程を計画',
     nav_purchases:    '購入履歴',
     nav_dashboard:    'ダッシュボード',
     nav_wallet:       'ウォレット',
@@ -278,7 +278,7 @@ const translations = {
     wallet_success:   'チャージが完了しました！',
     wallet_history:   'チャージ履歴',
 
-    itin_title:       '旅程',
+    itin_title:       '旅程を計画',
     itin_destination: 'どこへ行きますか？',
     itin_dates:       '旅行日程',
     itin_interests:   '興味・関心',
@@ -330,7 +330,7 @@ const translations = {
   // ─────────────────────────── 한국어 ───────────────────────────
   ko: {
     nav_plans:        '플랜',
-    nav_itinerary:    '내 일정',
+    nav_itinerary:    '내 일정 계획',
     nav_purchases:    '구매 내역',
     nav_dashboard:    '대시보드',
     nav_wallet:       '지갑',
@@ -379,7 +379,7 @@ const translations = {
     wallet_success:   '충전이 완료되었습니다!',
     wallet_history:   '충전 내역',
 
-    itin_title:       '내 일정',
+    itin_title:       '내 일정 계획',
     itin_destination: '어디로 가시나요?',
     itin_dates:       '여행 날짜',
     itin_interests:   '관심사',
